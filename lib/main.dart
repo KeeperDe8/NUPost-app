@@ -6,6 +6,7 @@ import 'screens/requests_screen.dart';
 import 'screens/create_request_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/post_calendar_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +37,7 @@ class NUPostApp extends StatelessWidget {
         '/create': (_) => const CreateRequestScreen(),
         '/notifications': (_) => const NotificationsScreen(),
         '/profile': (_) => const ProfileScreen(),
+        '/calendar': (_) => const PostCalendarScreen(),
       },
     );
   }

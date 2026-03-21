@@ -163,6 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
+
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _buildMenuCard(

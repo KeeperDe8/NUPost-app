@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'create_request_screen.dart';
 import '../app_bottom_nav.dart';
+import '../services/api_service.dart';
+import '../services/session_store.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,6 +13,36 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  int _pendingCount = 0;
+  int _approvedCount = 0;
+  int _postedCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final userId = SessionStore.userId;
+      if (userId == null || userId == 0) {
+        return;
+      }
+
+      final profileData = await ApiService.fetchProfile(userId: userId);
+      if (profileData['success'] == true) {
+        final stats = profileData['data']['stats'] ?? {};
+        setState(() {
+          _pendingCount = stats['pending'] ?? 0;
+          _approvedCount = stats['approved'] ?? 0;
+          _postedCount = stats['total'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error loading home stats: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +84,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: _buildCreateButton(),
                       ),
+                      const SizedBox(height: 12),
 
+                      // ── View Post Calendar button ──────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildCalendarButton(),
+                      ),
                       const SizedBox(height: 24),
 
                       // ── Recent Requests heading ────────
@@ -153,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: _StatCard(
             icon: _buildClockIcon(),
-            value: '0',
+            value: '$_pendingCount',
             label: 'Pending',
           ),
         ),
@@ -161,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: _StatCard(
             icon: _buildCheckIcon(),
-            value: '0',
+            value: '$_approvedCount',
             label: 'Approved',
           ),
         ),
@@ -169,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: _StatCard(
             icon: _buildShareIcon(),
-            value: '0',
+            value: '$_postedCount',
             label: 'Posted',
           ),
         ),
@@ -287,6 +325,32 @@ class _HomeScreenState extends State<HomeScreen> {
             fontWeight: FontWeight.w500,
             fontSize: 15,
             color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── View Post Calendar Button ────────────────────────────
+  Widget _buildCalendarButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton(
+        onPressed: () {
+          Navigator.of(context).pushNamed('/calendar');
+        },
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFF003366), width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text(
+          'View Post Calendar',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
+            fontSize: 15,
+            color: Color(0xFF003366),
           ),
         ),
       ),

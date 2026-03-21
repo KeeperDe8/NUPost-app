@@ -162,6 +162,47 @@ class ApiService {
     throw Exception('No caption text returned by AI');
   }
 
+  static Future<Map<String, dynamic>> fetchCalendar({
+    required int userId,
+    int? month,
+    int? year,
+    bool publicView = false,
+  }) async {
+    final now = DateTime.now();
+    final m = month ?? now.month;
+    final y = year ?? now.year;
+
+    final uri = _buildUri(_baseUrl, 'calendar.php', {
+      'user_id': '$userId',
+      'month': '$m',
+      'year': '$y',
+      'public': publicView ? '1' : '0',
+    });
+    return _getJson(uri, fallbackMessage: 'Failed to load calendar');
+  }
+
+  static Future<Map<String, dynamic>> updatePublicProfile({
+    required int userId,
+    required bool isPublic,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'update_profile.php', null);
+    return _postJson(uri, {
+      'user_id': '$userId',
+      'public_profile': isPublic ? '1' : '0',
+    }, fallbackMessage: 'Failed to update profile');
+  }
+
+  static Future<Map<String, dynamic>> updatePublicCalendar({
+    required int userId,
+    required bool isPublic,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'update_profile.php', null);
+    return _postJson(uri, {
+      'user_id': '$userId',
+      'public_calendar': isPublic ? '1' : '0',
+    }, fallbackMessage: 'Failed to update calendar');
+  }
+
   static Uri _buildUri(
     String base,
     String endpoint,

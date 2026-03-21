@@ -10,7 +10,7 @@ if ($userId <= 0) {
     json_response(422, ['success' => false, 'message' => 'user_id is required']);
 }
 
-$userQ = mysqli_query($conn, "SELECT id, name, email, phone, organization, role FROM users WHERE id=$userId LIMIT 1");
+$userQ = mysqli_query($conn, "SELECT id, name, email, phone, organization, role, public_profile FROM users WHERE id=$userId LIMIT 1");
 if (!$userQ || mysqli_num_rows($userQ) !== 1) {
     json_response(404, ['success' => false, 'message' => 'User not found']);
 }
@@ -35,6 +35,7 @@ json_response(200, [
         'phone' => $user['phone'] ?? '',
         'organization' => $user['organization'] ?? '',
         'role' => $user['role'] ?? 'staff',
+        'public_profile' => (int)($user['public_profile'] ?? 0),
         'stats' => [
             'total' => $total,
             'approved' => $approved,
