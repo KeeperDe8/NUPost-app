@@ -153,6 +153,34 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // ── Calendar card ──────────────────
+                      if (_isPublicCalendar)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, color: Color(0xFF3B82F6), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Public view is ON — Showing all users\' scheduled posts',
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 12,
+                                    color: Color(0xFF1E40AF),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       _buildCalendarCard(),
 
                       const SizedBox(height: 16),
@@ -261,11 +289,13 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          const Padding(
-            padding: EdgeInsets.only(left: 36),
+          Padding(
+            padding: const EdgeInsets.only(left: 36),
             child: Text(
-              'Schedule and track posts',
-              style: TextStyle(
+              _isPublicCalendar
+                  ? "Showing all users' scheduled posts"
+                  : 'Schedule and track your posts',
+              style: const TextStyle(
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w400,
                 fontSize: 12.8,
@@ -567,10 +597,11 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
-                          // Public view: show scheduled posts with status colors
+                          // Show posts with proper styling
                           if (_isPublicCalendar)
+                            // Public view: blue for mine, grey for others
                             ...scheduledPosts
-                                .take(1)
+                                .take(2)
                                 .map(
                                   (post) => Container(
                                     margin: const EdgeInsets.only(top: 2),
@@ -579,7 +610,9 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: post.color, // Status color
+                                      color: post.isMine
+                                          ? const Color(0xFF3B82F6)  // Blue for mine
+                                          : const Color(0xFF9CA3AF), // Grey for others
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -594,7 +627,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                     ),
                                   ),
                                 ),
-                          // Private view: show request dates (grey) and scheduled dates (blue)
+                          // Private view: grey for request date, blue for scheduled date
                           if (!_isPublicCalendar)
                             ...requestPosts
                                 .take(1)
@@ -633,33 +666,6 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF3B82F6), // Blue for scheduled date
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      post.label,
-                                      style: const TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 6.9,
-                                        color: Colors.white,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                          // Public view: show scheduled posts from others (status-based colors)
-                          if (_isPublicCalendar)
-                            ...scheduledPosts
-                                .take(1)
-                                .map(
-                                  (post) => Container(
-                                    margin: const EdgeInsets.only(top: 2),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: post.color, // Status-based color
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -723,21 +729,37 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             Row(
               children: [
                 _LegendItem(
-                  color: const Color(0xFF059669),
-                  label: 'Approved',
+                  color: const Color(0xFF3B82F6),
+                  label: 'Your request',
                   isFilled: true,
                 ),
                 const SizedBox(width: 16),
                 _LegendItem(
-                  color: const Color(0xFF7C3AED),
-                  label: 'Posted',
+                  color: const Color(0xFF9CA3AF),
+                  label: "Others' request",
+                  isFilled: true,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _LegendItem(
+                  color: const Color(0xFF16A34A),
+                  label: 'Open day',
                   isFilled: true,
                 ),
                 const SizedBox(width: 16),
                 _LegendItem(
-                  color: const Color(0xFFD97706),
-                  label: 'Review',
+                  color: const Color(0xFFDC2626),
+                  label: 'Busy day',
                   isFilled: true,
+                ),
+                const SizedBox(width: 16),
+                _LegendItem(
+                  color: const Color(0xFF2B7FFF),
+                  label: 'Today',
+                  isFilled: false,
                 ),
               ],
             ),

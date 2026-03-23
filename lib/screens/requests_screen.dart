@@ -265,6 +265,152 @@ class _RequestsScreenState extends State<RequestsScreen>
     }
   }
 
+  Future<void> _openRequestDetails(
+    BuildContext context,
+    _RequestPreview req,
+  ) async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF003366)),
+      ),
+    );
+
+    try {
+      final response = await ApiService.fetchRequestDetails(requestId: req.id);
+
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close loading
+
+      if (response['success'] == true) {
+        final data = response['data'] ?? {};
+        final request = data['request'] ?? {};
+        final activities = (data['activities'] as List?) ?? [];
+
+        // Build tracking events from activities
+        final events = <TrackingEvent>[];
+
+        // Add submission event
+        final createdAt = request['created_at'] ?? '';
+        events.add(
+          TrackingEvent(
+            icon: Icons.send_outlined,
+            title: 'Request Submitted',
+            subtitle: 'Your request was sent successfully.',
+            timestamp: _formatTimestamp(createdAt),
+          ),
+        );
+
+        // Add activity events
+        for (final activity in activities) {
+          final action = (activity['action'] ?? '').toString();
+          final activityTime = activity['created_at'] ?? '';
+
+          IconData icon = Icons.info_outline;
+          String title = 'Update';
+          String subtitle = action;
+
+          if (action.contains('Under Review')) {
+            icon = Icons.rate_review_outlined;
+            title = 'Under Review';
+            subtitle = 'Marketing team is evaluating your request.';
+          } else if (action.contains('Approved')) {
+            icon = Icons.check_circle_outline;
+            title = 'Approved';
+            subtitle = 'Your request has been approved.';
+          } else if (action.contains('Rejected')) {
+            icon = Icons.cancel_outlined;
+            title = 'Rejected';
+            subtitle = 'Your request was not approved.';
+          } else if (action.contains('Posted')) {
+            icon = Icons.publish;
+            title = 'Posted';
+            subtitle = 'Your content has been published.';
+          } else if (action.contains('Pending')) {
+            icon = Icons.hourglass_empty;
+            title = 'Pending Review';
+            subtitle = 'Your request is waiting for review.';
+          } else if (action.contains('Internal note')) {
+            icon = Icons.comment_outlined;
+            title = 'Note Added';
+            subtitle = action.replaceFirst('Internal note: ', '');
+          }
+
+          events.add(
+            TrackingEvent(
+              icon: icon,
+              title: title,
+              subtitle: subtitle,
+              timestamp: _formatTimestamp(activityTime),
+            ),
+          );
+        }
+
+        final currentStatus = request['status'] ?? 'Pending';
+        String statusMessage = 'Your request is being processed.';
+        if (currentStatus == 'Pending') {
+          statusMessage = 'Your request is currently queued for review.';
+        } else if (currentStatus == 'Approved') {
+          statusMessage =
+              'Your request has been approved by the Marketing Office.';
+        } else if (currentStatus == 'Posted') {
+          statusMessage = 'Your content has been successfully published.';
+        } else if (currentStatus == 'Rejected') {
+          statusMessage =
+              'Your request was not approved. Please check feedback.';
+        }
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RequestTrackingScreen(
+              requestNumber: req.number,
+              requestTitle: req.title,
+              currentStatus: currentStatus,
+              currentStatusMessage: statusMessage,
+              events: events,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      }
+    }
+  }
+
+  String _formatTimestamp(String datetime) {
+    if (datetime.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(datetime);
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+      final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+      final min = dt.minute.toString().padLeft(2, '0');
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year} • $hour:$min $ampm';
+    } catch (_) {
+      return datetime;
+    }
+  }
+
   Widget _buildRequestList(String activeTab) {
     final items = activeTab == 'All'
         ? _requests
@@ -309,48 +455,7 @@ class _RequestsScreenState extends State<RequestsScreen>
         final req = items[index];
         return InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => RequestTrackingScreen(
-                  requestNumber: req.number,
-                  requestTitle: req.title,
-                  currentStatus: req.status,
-                  currentStatusMessage: req.status == 'Pending'
-                      ? 'Your request is currently queued for review.'
-                      : 'Your request has been approved by the Marketing Office.',
-                  events: [
-                    TrackingEvent(
-                      icon: Icons.send_outlined,
-                      title: 'Request Submitted',
-                      subtitle: 'Your request was sent successfully.',
-                      timestamp: req.submittedAt,
-                    ),
-                    const TrackingEvent(
-                      icon: Icons.rate_review_outlined,
-                      title: 'Under Review',
-                      subtitle: 'Marketing team is evaluating your request.',
-                      timestamp: 'In progress',
-                    ),
-                    TrackingEvent(
-                      icon: req.status == 'Approved'
-                          ? Icons.check_circle_outline
-                          : Icons.hourglass_bottom_outlined,
-                      title: req.status == 'Approved'
-                          ? 'Approved'
-                          : 'Awaiting Approval',
-                      subtitle: req.status == 'Approved'
-                          ? 'Ready for scheduling and posting.'
-                          : 'Waiting for final decision.',
-                      timestamp: req.status == 'Approved'
-                          ? 'Mar 13, 2026 • 2:16 PM'
-                          : 'In progress',
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+          onTap: () => _openRequestDetails(context, req),
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(

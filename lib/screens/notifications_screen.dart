@@ -409,6 +409,7 @@ class _NotificationCard extends StatelessWidget {
       case 'posted':
       case 'comment':
         return const Color(0xFF7C3AED);
+      case 'review':
       case 'under_review':
       case 'received':
         return const Color(0xFFD97706);
@@ -427,6 +428,7 @@ class _NotificationCard extends StatelessWidget {
         return Icons.share;
       case 'comment':
         return Icons.chat_bubble_outline;
+      case 'review':
       case 'under_review':
       case 'received':
         return Icons.access_time;

@@ -233,6 +233,15 @@ class ApiService {
     }, fallbackMessage: 'Failed to mark notifications as read');
   }
 
+  static Future<Map<String, dynamic>> fetchRequestDetails({
+    required int requestId,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'request_details.php', {
+      'request_id': '$requestId',
+    });
+    return _getJson(uri, fallbackMessage: 'Failed to load request details');
+  }
+
   static Uri _buildUri(
     String base,
     String endpoint,
