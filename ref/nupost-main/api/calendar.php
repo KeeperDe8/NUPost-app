@@ -30,7 +30,7 @@ $user = mysqli_fetch_assoc($userQ);
 $requester = mysqli_real_escape_string($conn, $user['name']);
 
 // Fetch requests for this month
-// Public view: only scheduled dates (preferred_date)
+// Public view: ALL posts with BOTH request and scheduled dates visible
 // Private view: BOTH created_at (request date) AND preferred_date (scheduled date)
 if ($publicView) {
     $query = "
@@ -38,16 +38,19 @@ if ($publicView) {
             r.id,
             r.title,
             r.status,
+            r.priority,
+            r.created_at,
             r.preferred_date,
             r.requester
         FROM requests r
-        INNER JOIN users u ON r.requester = u.name
-        WHERE r.preferred_date IS NOT NULL
-        AND r.preferred_date != ''
-        AND MONTH(r.preferred_date) = $month
-        AND YEAR(r.preferred_date) = $year
-        AND u.public_calendar = 1
-        ORDER BY r.preferred_date ASC
+        WHERE (
+            (r.preferred_date IS NOT NULL AND r.preferred_date != ''
+             AND MONTH(r.preferred_date) = $month AND YEAR(r.preferred_date) = $year)
+            OR
+            (r.created_at IS NOT NULL AND r.created_at != ''
+             AND MONTH(r.created_at) = $month AND YEAR(r.created_at) = $year)
+        )
+        ORDER BY r.preferred_date ASC, r.created_at ASC
     ";
 } else {
     $query = "
@@ -55,6 +58,7 @@ if ($publicView) {
             id,
             title,
             status,
+            priority,
             created_at,
             preferred_date
         FROM requests
@@ -81,7 +85,8 @@ while ($row = mysqli_fetch_assoc($result)) {
         'id' => (int)$row['id'],
         'title' => $row['title'] ?? '',
         'status' => $row['status'] ?? 'Pending',
-        'request_date' => $publicView ? null : ($row['created_at'] ?? ''),
+        'priority' => $row['priority'] ?? 'normal',
+        'request_date' => $row['created_at'] ?? '',
         'scheduled_date' => $row['preferred_date'] ?? '',
         'requester' => $publicView ? ($row['requester'] ?? '') : null,
     ];

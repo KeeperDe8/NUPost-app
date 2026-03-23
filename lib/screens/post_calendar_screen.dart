@@ -25,7 +25,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
     _loadScheduledPosts();
   }
 
-  Future<void> _loadScheduledPosts({bool? forcePublicView, bool updateToggle = false}) async {
+  Future<void> _loadScheduledPosts({
+    bool? forcePublicView,
+    bool updateToggle = false,
+  }) async {
     final publicView = forcePublicView ?? _isPublicCalendar;
 
     try {
@@ -46,11 +49,14 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
         final postsList = data['posts'] ?? [];
         final nextPosts = <_CalendarPost>[];
 
-        print('PUBLIC VIEW: $publicView, Posts count: ${postsList is List ? postsList.length : 0}');
+        print(
+          'PUBLIC VIEW: $publicView, Posts count: ${postsList is List ? postsList.length : 0}',
+        );
 
         if (postsList is List) {
           for (var post in postsList) {
             final status = post['status'] ?? 'Pending';
+            final priority = post['priority'] ?? 'normal';
             final requester = (post['requester'] ?? '').toString();
             final isMine =
                 requester.isNotEmpty && requester == (SessionStore.name ?? '');
@@ -70,6 +76,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
               _CalendarPost(
                 label: post['title'] ?? 'Post',
                 status: status,
+                priority: priority,
                 isMine: isMine,
                 color: _CalendarPost.getStatusColor(status),
                 requestDate: requestDate,
@@ -161,11 +168,17 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3)),
+                            border: Border.all(
+                              color: const Color(0xFF3B82F6).withOpacity(0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline, color: Color(0xFF3B82F6), size: 18),
+                              const Icon(
+                                Icons.info_outline,
+                                color: Color(0xFF3B82F6),
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -267,24 +280,47 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                   ),
                 ],
               ),
-              Transform.scale(
-                scale: 0.75,
-                child: Switch(
-                  value: _isPublicCalendar,
-                  onChanged: (val) async {
-                    // Update backend FIRST so the query returns correct data
-                    try {
-                      await ApiService.updatePublicCalendar(
-                        userId: SessionStore.userId ?? 0,
-                        isPublic: val,
-                      );
-                    } catch (_) {}
+              Row(
+                children: [
+                  Text(
+                    'Public',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                      color: _isPublicCalendar
+                          ? const Color(0xFF003366)
+                          : const Color(0xFF6B7280),
+                    ),
+                  ),
+                  Transform.scale(
+                    scale: 0.75,
+                    child: Switch(
+                      value: _isPublicCalendar,
+                      onChanged: (val) async {
+                        // Update backend FIRST so the query returns correct data
+                        try {
+                          await ApiService.updatePublicCalendar(
+                            userId: SessionStore.userId ?? 0,
+                            isPublic: val,
+                          );
+                        } catch (_) {}
 
-                    // THEN load data (database is now updated)
-                    await _loadScheduledPosts(forcePublicView: val, updateToggle: true);
-                  },
-                  activeThumbColor: const Color(0xFF003366),
-                ),
+                        // THEN load data (database is now updated)
+                        await _loadScheduledPosts(
+                          forcePublicView: val,
+                          updateToggle: true,
+                        );
+                      },
+                      activeColor: const Color(0xFF003366),
+                      activeTrackColor: const Color(
+                        0xFF003366,
+                      ).withOpacity(0.5),
+                      inactiveThumbColor: const Color(0xFF9CA3AF),
+                      inactiveTrackColor: const Color(0xFFE5E7EB),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -512,28 +548,38 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                       dayNum == _today.day;
 
                   // Get posts for this specific day
-                  final cellDate = DateTime(_focusedMonth.year, _focusedMonth.month, dayNum);
+                  final cellDate = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month,
+                    dayNum,
+                  );
                   final scheduledPosts = isValidDay
-                      ? _posts.where((p) =>
-                          p.scheduledDate != null &&
-                          p.scheduledDate!.year == cellDate.year &&
-                          p.scheduledDate!.month == cellDate.month &&
-                          p.scheduledDate!.day == cellDate.day
-                        ).toList()
+                      ? _posts
+                            .where(
+                              (p) =>
+                                  p.scheduledDate != null &&
+                                  p.scheduledDate!.year == cellDate.year &&
+                                  p.scheduledDate!.month == cellDate.month &&
+                                  p.scheduledDate!.day == cellDate.day,
+                            )
+                            .toList()
                       : <_CalendarPost>[];
 
-                  final requestPosts = isValidDay && !_isPublicCalendar
-                      ? _posts.where((p) =>
-                          p.requestDate != null &&
-                          p.requestDate!.year == cellDate.year &&
-                          p.requestDate!.month == cellDate.month &&
-                          p.requestDate!.day == cellDate.day
-                        ).toList()
+                  final requestPosts = isValidDay
+                      ? _posts
+                            .where(
+                              (p) =>
+                                  p.requestDate != null &&
+                                  p.requestDate!.year == cellDate.year &&
+                                  p.requestDate!.month == cellDate.month &&
+                                  p.requestDate!.day == cellDate.day,
+                            )
+                            .toList()
                       : <_CalendarPost>[];
 
                   final showPublicCount = _isPublicCalendar && isValidDay;
-                  final publicCount = scheduledPosts.length;
-                  final dayLoadColor = _publicCountColor(publicCount);
+                  final requestCount = requestPosts.length;
+                  final dayLoadColor = _publicCountColor(requestCount);
 
                   return Positioned(
                     left: col * cellWidth,
@@ -552,7 +598,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (showPublicCount && publicCount > 0)
+                          if (showPublicCount && requestCount > 0)
                             Container(
                               height: 3,
                               decoration: BoxDecoration(
@@ -560,7 +606,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
-                          if (showPublicCount && publicCount > 0)
+                          if (showPublicCount && requestCount > 0)
                             const SizedBox(height: 2),
                           // Day number
                           if (isValidDay)
@@ -588,8 +634,8 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                 ),
                               ),
                             ),
-                          // Public count badge
-                          if (showPublicCount && publicCount > 0)
+                          // Request count badge
+                          if (showPublicCount && requestCount > 0)
                             Container(
                               height: 3,
                               decoration: BoxDecoration(
@@ -597,38 +643,24 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
+                          // Request count text
+                          if (showPublicCount && requestCount > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                '$requestCount request${requestCount > 1 ? 's' : ''}',
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 7.5,
+                                  color: Color(0xFF6B7280),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           // Show posts with proper styling
                           if (_isPublicCalendar)
-                            // Public view: blue for mine, grey for others
-                            ...scheduledPosts
-                                .take(2)
-                                .map(
-                                  (post) => Container(
-                                    margin: const EdgeInsets.only(top: 2),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: post.isMine
-                                          ? const Color(0xFF3B82F6)  // Blue for mine
-                                          : const Color(0xFF9CA3AF), // Grey for others
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      post.label,
-                                      style: const TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 6.9,
-                                        color: Colors.white,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                          // Private view: grey for request date, blue for scheduled date
-                          if (!_isPublicCalendar)
+                            // Public view: show request posts (grey) and scheduled posts
                             ...requestPosts
                                 .take(1)
                                 .map(
@@ -654,6 +686,66 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                     ),
                                   ),
                                 ),
+                          if (_isPublicCalendar)
+                            ...scheduledPosts
+                                .take(1)
+                                .map(
+                                  (post) => Container(
+                                    margin: const EdgeInsets.only(top: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: post.isMine
+                                          ? post
+                                                .priorityColor // Priority color for mine
+                                          : const Color(
+                                              0xFF9CA3AF,
+                                            ), // Grey for others
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      post.label,
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 6.9,
+                                        color: Colors.white,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                          // Private view: grey for request date, priority color for scheduled date
+                          if (!_isPublicCalendar)
+                            ...requestPosts
+                                .take(1)
+                                .map(
+                                  (post) => Container(
+                                    margin: const EdgeInsets.only(top: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFF9CA3AF,
+                                      ), // Grey for request date
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      post.label,
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 6.9,
+                                        color: Colors.white,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
                           if (!_isPublicCalendar)
                             ...scheduledPosts
                                 .take(1)
@@ -665,7 +757,8 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF3B82F6), // Blue for scheduled date
+                                      color: post
+                                          .priorityColor, // Priority-based color
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -719,8 +812,40 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                 ),
                 const SizedBox(width: 16),
                 _LegendItem(
+                  color: const Color(0xFF2B7FFF),
+                  label: 'Today',
+                  isFilled: false,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Post Priority:',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
+                fontSize: 10,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                _LegendItem(
                   color: const Color(0xFF3B82F6),
-                  label: 'Scheduled Date',
+                  label: 'Normal',
+                  isFilled: true,
+                ),
+                const SizedBox(width: 12),
+                _LegendItem(
+                  color: const Color(0xFFF59E0B),
+                  label: 'High',
+                  isFilled: true,
+                ),
+                const SizedBox(width: 12),
+                _LegendItem(
+                  color: const Color(0xFFDC2626),
+                  label: 'Urgent',
                   isFilled: true,
                 ),
               ],
@@ -769,11 +894,63 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
     );
   }
 
-  // ── Upcoming empty state ──────────────────────────────
+  // ── Upcoming posts list ────────────────────────────────
   Widget _buildUpcomingEmpty() {
+    final now = DateTime.now();
+    final sevenDaysFromNow = now.add(const Duration(days: 7));
+
+    // Get scheduled posts for next 7 days
+    final upcomingPosts = _posts
+        .where((p) =>
+            p.scheduledDate != null &&
+            p.scheduledDate!.isAfter(now) &&
+            p.scheduledDate!.isBefore(sevenDaysFromNow.add(const Duration(days: 1))))
+        .toList();
+
+    // Sort by scheduled date
+    upcomingPosts.sort((a, b) => a.scheduledDate!.compareTo(b.scheduledDate!));
+
+    if (upcomingPosts.isEmpty) {
+      return Container(
+        width: double.infinity,
+        height: 170,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.black.withOpacity(0.1)),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 6,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 48,
+              color: Color(0xFFD1D5DC),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'No upcoming posts scheduled for the next 7 days',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+                fontSize: 13,
+                color: Color(0xFF6A7282),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
-      width: double.infinity,
-      height: 170,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: Colors.black.withOpacity(0.1)),
@@ -786,26 +963,76 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(
-            Icons.calendar_today_outlined,
-            size: 48,
-            color: Color(0xFFD1D5DC),
-          ),
-          SizedBox(height: 12),
-          Text(
-            'No upcoming posts scheduled for the next 7 days',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
-              fontSize: 13,
-              color: Color(0xFF6A7282),
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: upcomingPosts.length,
+        separatorBuilder: (_, __) => Divider(
+          color: Colors.black.withOpacity(0.05),
+          height: 1,
+          indent: 16,
+          endIndent: 16,
+        ),
+        itemBuilder: (context, index) {
+          final post = upcomingPosts[index];
+          final dateStr = post.scheduledDate != null
+              ? '${post.scheduledDate!.month}/${post.scheduledDate!.day}'
+              : '';
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: post.isMine ? post.priorityColor : const Color(0xFF9CA3AF),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post.label,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                          color: Color(0xFF1F2937),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        post.isMine ? 'Your post' : 'By ${post.isMine ? 'you' : 'other'}',
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w400,
+                          fontSize: 11,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  dateStr,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    color: Color(0xFF4A5565),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -815,6 +1042,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
 class _CalendarPost {
   final String label;
   final String status;
+  final String priority;
   final Color color;
   final bool isMine;
   final DateTime? requestDate;
@@ -823,11 +1051,20 @@ class _CalendarPost {
   const _CalendarPost({
     required this.label,
     required this.status,
+    required this.priority,
     required this.color,
     required this.isMine,
     this.requestDate,
     this.scheduledDate,
   });
+
+  /// Returns color based on priority for scheduled date display
+  Color get priorityColor {
+    final p = priority.toLowerCase();
+    if (p == 'urgent') return const Color(0xFFDC2626); // Red
+    if (p == 'high') return const Color(0xFFF59E0B); // Orange
+    return const Color(0xFF3B82F6); // Blue (normal/default)
+  }
 
   static Color getStatusColor(String status) {
     final st = status.toLowerCase();
