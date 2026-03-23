@@ -203,6 +203,36 @@ class ApiService {
     }, fallbackMessage: 'Failed to update calendar');
   }
 
+  static Future<Map<String, dynamic>> fetchNotifications({
+    required int userId,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'notifications.php', {
+      'user_id': '$userId',
+    });
+    return _getJson(uri, fallbackMessage: 'Failed to load notifications');
+  }
+
+  static Future<Map<String, dynamic>> markNotificationRead({
+    required int userId,
+    required int notificationId,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'mark_notification_read.php', null);
+    return _postJson(uri, {
+      'user_id': userId,
+      'notification_id': notificationId,
+    }, fallbackMessage: 'Failed to mark notification as read');
+  }
+
+  static Future<Map<String, dynamic>> markAllNotificationsRead({
+    required int userId,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'mark_notification_read.php', null);
+    return _postJson(uri, {
+      'user_id': userId,
+      'mark_all': true,
+    }, fallbackMessage: 'Failed to mark notifications as read');
+  }
+
   static Uri _buildUri(
     String base,
     String endpoint,

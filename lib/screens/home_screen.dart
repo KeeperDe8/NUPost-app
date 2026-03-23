@@ -12,7 +12,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  final int _currentIndex = 0;
   int _pendingCount = 0;
   int _approvedCount = 0;
   int _postedCount = 0;

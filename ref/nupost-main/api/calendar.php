@@ -30,15 +30,15 @@ $user = mysqli_fetch_assoc($userQ);
 $requester = mysqli_real_escape_string($conn, $user['name']);
 
 // Fetch requests for this month
-// Public view uses preferred_date (titles only). Private view uses created_at.
+// Public view: only scheduled dates (preferred_date)
+// Private view: BOTH created_at (request date) AND preferred_date (scheduled date)
 if ($publicView) {
     $query = "
         SELECT
-            DAY(r.preferred_date) AS day,
             r.id,
             r.title,
             r.status,
-            r.preferred_date AS date_value,
+            r.preferred_date,
             r.requester
         FROM requests r
         INNER JOIN users u ON r.requester = u.name
@@ -52,15 +52,19 @@ if ($publicView) {
 } else {
     $query = "
         SELECT
-            DAY(created_at) AS day,
             id,
             title,
             status,
-            created_at AS date_value
+            created_at,
+            preferred_date
         FROM requests
         WHERE requester = '$requester'
-        AND MONTH(created_at) = $month
-        AND YEAR(created_at) = $year
+        AND (
+            (MONTH(created_at) = $month AND YEAR(created_at) = $year)
+            OR
+            (preferred_date IS NOT NULL AND preferred_date != ''
+             AND MONTH(preferred_date) = $month AND YEAR(preferred_date) = $year)
+        )
         ORDER BY created_at ASC
     ";
 }
@@ -70,18 +74,15 @@ if (!$result) {
     json_response(500, ['success' => false, 'message' => 'Database query failed']);
 }
 
-// Group posts by day
-$postsPerDay = [];
+// Build post list with both dates for private view
+$posts = [];
 while ($row = mysqli_fetch_assoc($result)) {
-    $day = (int)$row['day'];
-    if (!isset($postsPerDay[$day])) {
-        $postsPerDay[$day] = [];
-    }
-    $postsPerDay[$day][] = [
+    $posts[] = [
         'id' => (int)$row['id'],
         'title' => $row['title'] ?? '',
         'status' => $row['status'] ?? 'Pending',
-        'date' => $row['date_value'] ?? '',
+        'request_date' => $publicView ? null : ($row['created_at'] ?? ''),
+        'scheduled_date' => $row['preferred_date'] ?? '',
         'requester' => $publicView ? ($row['requester'] ?? '') : null,
     ];
 }
@@ -91,7 +92,7 @@ json_response(200, [
     'data' => [
         'month' => $month,
         'year' => $year,
-        'posts' => $postsPerDay,
+        'posts' => $posts,
         'public_view' => $publicView,
     ],
 ]);

@@ -28,7 +28,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   String? _selectedPriority;
   DateTime? _selectedDate;
   int _captionLength = 0;
-  int _currentNavIndex = 2; // Create is active
+  final int _currentNavIndex = 2; // Create is active
   bool _isSubmitting = false;
   bool _isGeneratingCaption = false;
   List<PlatformFile> _mediaFiles = [];

@@ -7,7 +7,7 @@ class AppBottomNav extends StatelessWidget {
   const AppBottomNav({super.key, required this.currentIndex});
 
   void _navigate(BuildContext context, int index) {
-    if (index == currentIndex) return;
+    if (currentIndex >= 0 && index == currentIndex) return;
     switch (index) {
       case 0:
         Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);

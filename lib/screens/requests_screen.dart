@@ -14,7 +14,7 @@ class RequestsScreen extends StatefulWidget {
 class _RequestsScreenState extends State<RequestsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _currentNavIndex = 1; // Requests is active
+  final int _currentNavIndex = 1; // Requests is active
   bool _isLoading = false;
   String? _error;
 
