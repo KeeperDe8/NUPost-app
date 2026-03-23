@@ -5,9 +5,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(405, ['success' => false, 'message' => 'Method not allowed']);
 }
 
-$userId = (int)($_POST['user_id'] ?? 0);
-$publicProfile = (int)($_POST['public_profile'] ?? -1);
-$publicCalendar = (int)($_POST['public_calendar'] ?? -1);
+$payload = read_json_body();
+$userId = (int)($_POST['user_id'] ?? ($payload['user_id'] ?? 0));
+$publicProfile = (int)($_POST['public_profile'] ?? ($payload['public_profile'] ?? -1));
+$publicCalendar = (int)($_POST['public_calendar'] ?? ($payload['public_calendar'] ?? -1));
 
 if ($userId <= 0) {
     json_response(422, ['success' => false, 'message' => 'user_id is required']);

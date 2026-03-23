@@ -70,10 +70,15 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
               _posts[day] = [];
               for (var post in postsList) {
                 final status = post['status'] ?? 'Pending';
+                final requester = (post['requester'] ?? '').toString();
+                final isMine =
+                    requester.isNotEmpty &&
+                    requester == (SessionStore.name ?? '');
                 _posts[day]!.add(
                   _CalendarPost(
                     label: post['title'] ?? 'Post',
                     status: status,
+                    isMine: isMine,
                     color: _CalendarPost.getStatusColor(status),
                   ),
                 );
@@ -246,7 +251,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                       print('Error updating public calendar: $e');
                     }
                   },
-                  activeColor: const Color(0xFF003366),
+                  activeThumbColor: const Color(0xFF003366),
                 ),
               ),
             ],
@@ -475,6 +480,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                   final posts = isValidDay ? (_posts[dayNum] ?? []) : [];
                   final showPublicCount = _isPublicCalendar && isValidDay;
                   final publicCount = posts.length;
+                  final dayLoadColor = _publicCountColor(publicCount);
 
                   return Positioned(
                     left: col * cellWidth,
@@ -493,6 +499,16 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (showPublicCount && publicCount > 0)
+                            Container(
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: dayLoadColor,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          if (showPublicCount && publicCount > 0)
+                            const SizedBox(height: 2),
                           // Day number
                           if (isValidDay)
                             Container(
@@ -529,7 +545,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: _publicCountColor(publicCount),
+                                color: dayLoadColor,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -556,6 +572,12 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: post.color,
+                                    border: _isPublicCalendar && post.isMine
+                                        ? Border.all(
+                                            color: const Color(0xFFF97316),
+                                            width: 1,
+                                          )
+                                        : null,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -667,11 +689,13 @@ class _CalendarPost {
   final String label;
   final String status;
   final Color color;
+  final bool isMine;
 
   const _CalendarPost({
     required this.label,
     required this.status,
     required this.color,
+    required this.isMine,
   });
 
   static Color getStatusColor(String status) {
