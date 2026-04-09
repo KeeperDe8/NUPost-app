@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 
 // Controllers
 use App\Http\Controllers\Auth\LoginController;
@@ -82,50 +80,3 @@ Route::middleware('auth.nupost:admin')->prefix('admin')->name('admin.')->group(f
     Route::post('/requests/comment',      [RequestManagementController::class, 'postComment'])->name('requests.comment');
     Route::get('/requests/{id}/comments', [RequestManagementController::class, 'getComments'])->name('requests.comments');
 });
-
-// API for Google Gemini AI Caption Generation
-// API for Google Gemini AI Caption Generation
-Route::post('/api/generate-caption', function (Illuminate\Http\Request $request) {
-    $apiKey = env('GEMINI_API_KEY');
-    
-    // Use v1beta and the specific 'gemini-1.5-flash' name
-$url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=" . $apiKey;    if (!$apiKey) {
-        return response()->json(['error' => 'API Key is missing in .env file.'], 500);
-    }
-
-    $promptText = "Write a short, engaging social media caption for this university post:
-                   Title: {$request->title}
-                   Description: {$request->description}
-                   Category: {$request->category}
-                   Platforms: {$request->platforms}
-                   Provide ONLY the caption text.";
-
-    try {
-        $response = Http::withHeaders(['Content-Type' => 'application/json'])
-            ->timeout(60)
-            ->withoutVerifying() // Critical for Laragon local environments
-            ->post($url, [
-                "contents" => [
-                    ["parts" => [["text" => $promptText]]]
-                ],
-                "generationConfig" => [
-                    "temperature" => 0.7,
-                    "maxOutputTokens" => 500
-                ]
-            ]);
-
-        $data = $response->json();
-
-        // If successful, return the text
-        if ($response->successful() && isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-            return response()->json(['caption' => trim($data['candidates'][0]['content']['parts'][0]['text'])]);
-        }
-
-        // Catch the specific "Model Not Found" or "Quota" error from Google
-        $msg = $data['error']['message'] ?? 'Unknown API Error';
-        return response()->json(['error' => 'Google API Error: ' . $msg], 400);
-
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Server Connection Error: ' . $e->getMessage()], 500);
-    }
-})->middleware('auth.nupost:requestor');

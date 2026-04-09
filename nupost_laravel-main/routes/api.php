@@ -1,6 +1,16 @@
 <?php
-use Illuminate\Http\Request;
+
+use App\Http\Controllers\Api\LegacyMobileApiController;
 use Illuminate\Support\Facades\Route;
 
-// Iwanan itong file na ito kung may ibang API routes ka, 
-// pero siguraduhin na wala dito yung generate-caption.
+Route::post('/login.php', [LegacyMobileApiController::class, 'login']);
+Route::post('/register.php', [LegacyMobileApiController::class, 'register']);
+Route::get('/profile.php', [LegacyMobileApiController::class, 'profile']);
+Route::get('/requests.php', [LegacyMobileApiController::class, 'requests']);
+Route::post('/create_request.php', [LegacyMobileApiController::class, 'createRequest']);
+Route::post('/generate_caption.php', [LegacyMobileApiController::class, 'generateCaption']);
+Route::get('/calendar.php', [LegacyMobileApiController::class, 'calendar']);
+Route::post('/update_profile.php', [LegacyMobileApiController::class, 'updateProfile']);
+Route::get('/notifications.php', [LegacyMobileApiController::class, 'notifications']);
+Route::post('/mark_notification_read.php', [LegacyMobileApiController::class, 'markNotificationRead']);
+Route::get('/request_details.php', [LegacyMobileApiController::class, 'requestDetails']);

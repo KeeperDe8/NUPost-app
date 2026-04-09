@@ -250,7 +250,7 @@ async function generateCaption() {
 
     try {
         // 5. Fetch request papunta sa Laravel route
-        const response = await fetch('/api/generate-caption', {
+        const response = await fetch('/api/generate_caption.php', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
