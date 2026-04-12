@@ -35,6 +35,47 @@ class LegacyMobileApiController extends Controller
         return null;
     }
 
+    private function normalizeRequestStatus(?string $status): ?string
+    {
+        $clean = trim((string) $status);
+        if ($clean === '') {
+            return null;
+        }
+
+        $lower = strtolower($clean);
+        return match ($lower) {
+            'pending', 'pending review' => 'Pending Review',
+            'under review' => 'Under Review',
+            'approved' => 'Approved',
+            'posted' => 'Posted',
+            'rejected' => 'Rejected',
+            default => $clean,
+        };
+    }
+
+    private function statusFromNotificationType(string $type): ?string
+    {
+        $lower = strtolower(trim($type));
+
+        return match ($lower) {
+            'review', 'under_review', 'received', 'status_update' => 'Under Review',
+            'approved' => 'Approved',
+            'posted' => 'Posted',
+            'rejected' => 'Rejected',
+            default => null,
+        };
+    }
+
+    private function extractQuotedRequestTitle(string $text): ?string
+    {
+        if (preg_match('/"([^"]+)"/', $text, $matches) === 1) {
+            $title = trim((string) ($matches[1] ?? ''));
+            return $title === '' ? null : $title;
+        }
+
+        return null;
+    }
+
     public function login(Request $request): JsonResponse
     {
         $email = trim((string) $request->input('email', ''));
@@ -620,21 +661,114 @@ class LegacyMobileApiController extends Controller
             ], 200);
         }
 
+        $hasNotificationRequestId = Schema::hasColumn('notifications', 'request_id');
+        $hasNotificationRequestStatus = Schema::hasColumn('notifications', 'request_status');
+
+        $selectColumns = ['id', 'title', 'message', 'type', 'is_read', 'created_at'];
+        if ($hasNotificationRequestId) {
+            $selectColumns[] = 'request_id';
+        }
+        if ($hasNotificationRequestStatus) {
+            $selectColumns[] = 'request_status';
+        }
+
         $rows = DB::table('notifications')
             ->where('user_id', $userId)
             ->orderByDesc('created_at')
-            ->get(['id', 'title', 'message', 'type', 'is_read', 'created_at']);
+            ->get($selectColumns);
 
-        $notifications = $rows->map(function ($n) {
+        $requestsByTitle = [];
+        $requestStatusById = [];
+
+        $requestTable = $this->requestsTable();
+        if (Schema::hasTable($requestTable)) {
+            $requestQuery = DB::table($requestTable)->orderByDesc('id');
+
+            $requesterName = trim((string) DB::table('users')->where('id', $userId)->value('name'));
+            if ($requesterName !== '' && Schema::hasColumn($requestTable, 'requester')) {
+                $requestQuery->where('requester', $requesterName);
+            }
+
+            foreach ($requestQuery->get(['id', 'title', 'status']) as $req) {
+                $reqId = (int) ($req->id ?? 0);
+                if ($reqId <= 0) {
+                    continue;
+                }
+
+                $normalizedStatus = $this->normalizeRequestStatus((string) ($req->status ?? ''));
+                if ($normalizedStatus !== null) {
+                    $requestStatusById[$reqId] = $normalizedStatus;
+                }
+
+                $titleKey = strtolower(trim((string) ($req->title ?? '')));
+                if ($titleKey !== '' && !array_key_exists($titleKey, $requestsByTitle)) {
+                    $requestsByTitle[$titleKey] = [
+                        'id' => $reqId,
+                        'status' => $normalizedStatus,
+                    ];
+                }
+            }
+        }
+
+        $notifications = $rows->map(function ($n) use (
+            $hasNotificationRequestId,
+            $hasNotificationRequestStatus,
+            $requestsByTitle,
+            $requestStatusById
+        ) {
+            $type = (string) ($n->type ?? 'status_update');
+
+            $requestId = null;
+            if ($hasNotificationRequestId) {
+                $rawRequestId = $n->request_id ?? null;
+                if (is_numeric($rawRequestId)) {
+                    $parsed = (int) $rawRequestId;
+                    $requestId = $parsed > 0 ? $parsed : null;
+                }
+            }
+
+            $requestStatus = null;
+            if ($hasNotificationRequestStatus) {
+                $requestStatus = $this->normalizeRequestStatus((string) ($n->request_status ?? ''));
+            }
+            if ($requestStatus === null) {
+                $requestStatus = $this->statusFromNotificationType($type);
+            }
+
+            if ($requestId === null) {
+                $message = (string) ($n->message ?? '');
+                $title = (string) ($n->title ?? '');
+                $quotedTitle = $this->extractQuotedRequestTitle($message)
+                    ?? $this->extractQuotedRequestTitle($title);
+
+                if ($quotedTitle !== null) {
+                    $titleKey = strtolower(trim($quotedTitle));
+                    if ($titleKey !== '' && isset($requestsByTitle[$titleKey])) {
+                        $requestId = (int) ($requestsByTitle[$titleKey]['id'] ?? 0);
+                        if ($requestId <= 0) {
+                            $requestId = null;
+                        }
+
+                        if ($requestStatus === null) {
+                            $requestStatus = $requestsByTitle[$titleKey]['status'] ?? null;
+                        }
+                    }
+                }
+            }
+
+            if ($requestStatus === null && $requestId !== null && isset($requestStatusById[$requestId])) {
+                $requestStatus = $requestStatusById[$requestId];
+            }
+
             return [
                 'id' => (int) $n->id,
-                'request_id' => null,
+                'request_id' => $requestId,
                 'title' => (string) ($n->title ?? ''),
                 'message' => (string) ($n->message ?? ''),
-                'type' => (string) ($n->type ?? 'status_update'),
+                'type' => $type,
                 'is_read' => (bool) ($n->is_read ?? false),
                 'created_at' => (string) ($n->created_at ?? ''),
-                'request_status' => null,
+                'request_status' => $requestStatus,
             ];
         })->values();
 
@@ -786,5 +920,266 @@ class LegacyMobileApiController extends Controller
                 'activities' => $activities,
             ],
         ], 200);
+    }
+
+    public function messageThreads(Request $request): JsonResponse
+    {
+        $userId = (int) $request->query('user_id', 0);
+        if ($userId <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'user_id is required',
+            ], 422);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        if ($err = $this->ensureRequestsTableExists()) {
+            return $err;
+        }
+
+        if (!Schema::hasTable('request_comments')) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'meta' => [
+                    'total_unread' => 0,
+                ],
+            ], 200);
+        }
+
+        $table = $this->requestsTable();
+        $requests = DB::table($table)
+            ->where('requester', (string) ($user->name ?? ''))
+            ->get(['id', 'request_id', 'title', 'status']);
+
+        $threads = [];
+        $totalUnread = 0;
+
+        foreach ($requests as $req) {
+            $latest = DB::table('request_comments')
+                ->where('request_id', (int) $req->id)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->first(['id', 'sender_role', 'sender_name', 'message', 'created_at']);
+
+            if (!$latest) {
+                continue;
+            }
+
+            $lastRequestorAt = DB::table('request_comments')
+                ->where('request_id', (int) $req->id)
+                ->where('sender_role', 'requestor')
+                ->max('created_at');
+
+            $unreadQuery = DB::table('request_comments')
+                ->where('request_id', (int) $req->id)
+                ->where('sender_role', 'admin');
+
+            if (!empty($lastRequestorAt)) {
+                $unreadQuery->where('created_at', '>', $lastRequestorAt);
+            }
+
+            $unreadCount = (int) $unreadQuery->count();
+            $totalUnread += $unreadCount;
+
+            $threads[] = [
+                'request_id' => (int) $req->id,
+                'request_code' => (string) ($req->request_id ?? ''),
+                'request_title' => (string) ($req->title ?? ''),
+                'request_status' => trim((string) ($req->status ?? '')) !== ''
+                    ? (string) $req->status
+                    : 'Pending',
+                'last_message' => (string) ($latest->message ?? ''),
+                'last_sender_role' => (string) ($latest->sender_role ?? ''),
+                'last_sender_name' => (string) ($latest->sender_name ?? ''),
+                'last_message_at' => (string) ($latest->created_at ?? ''),
+                'unread_count' => $unreadCount,
+            ];
+        }
+
+        usort($threads, function (array $a, array $b): int {
+            return strcmp((string) ($b['last_message_at'] ?? ''), (string) ($a['last_message_at'] ?? ''));
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => array_values($threads),
+            'meta' => [
+                'total_unread' => $totalUnread,
+            ],
+        ], 200);
+    }
+
+    public function messageThread(Request $request): JsonResponse
+    {
+        $userId = (int) $request->query('user_id', 0);
+        $requestId = (int) $request->query('request_id', 0);
+
+        if ($userId <= 0 || $requestId <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'user_id and request_id are required',
+            ], 422);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        if ($err = $this->ensureRequestsTableExists()) {
+            return $err;
+        }
+
+        if (!Schema::hasTable('request_comments')) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'messages' => [],
+                ],
+            ], 200);
+        }
+
+        $table = $this->requestsTable();
+        $req = DB::table($table)
+            ->where('id', $requestId)
+            ->where('requester', (string) ($user->name ?? ''))
+            ->first(['id', 'request_id', 'title', 'status']);
+
+        if (!$req) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request not found',
+            ], 404);
+        }
+
+        $messages = DB::table('request_comments')
+            ->where('request_id', $requestId)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get(['id', 'sender_role', 'sender_name', 'message', 'created_at'])
+            ->map(function ($m) {
+                return [
+                    'id' => (int) $m->id,
+                    'sender_role' => (string) ($m->sender_role ?? ''),
+                    'sender_name' => (string) ($m->sender_name ?? ''),
+                    'message' => (string) ($m->message ?? ''),
+                    'created_at' => (string) ($m->created_at ?? ''),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'request' => [
+                    'id' => (int) $req->id,
+                    'request_id' => (string) ($req->request_id ?? ''),
+                    'title' => (string) ($req->title ?? ''),
+                    'status' => trim((string) ($req->status ?? '')) !== ''
+                        ? (string) $req->status
+                        : 'Pending',
+                ],
+                'messages' => $messages,
+            ],
+        ], 200);
+    }
+
+    public function sendMessage(Request $request): JsonResponse
+    {
+        $userId = (int) $request->input('user_id', 0);
+        $requestId = (int) $request->input('request_id', 0);
+        $message = trim((string) $request->input('message', ''));
+
+        if ($userId <= 0 || $requestId <= 0 || $message === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'user_id, request_id, and message are required',
+            ], 422);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        if ($err = $this->ensureRequestsTableExists()) {
+            return $err;
+        }
+
+        if (!Schema::hasTable('request_comments')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'request_comments table is missing',
+            ], 500);
+        }
+
+        $table = $this->requestsTable();
+        $req = DB::table($table)
+            ->where('id', $requestId)
+            ->where('requester', (string) ($user->name ?? ''))
+            ->first(['id', 'title']);
+
+        if (!$req) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request not found',
+            ], 404);
+        }
+
+        $payload = [
+            'request_id' => $requestId,
+            'sender_role' => 'requestor',
+            'sender_name' => (string) ($user->name ?? ''),
+            'message' => $message,
+            'created_at' => now(),
+        ];
+
+        if (Schema::hasColumn('request_comments', 'updated_at')) {
+            $payload['updated_at'] = now();
+        }
+
+        $newId = (int) DB::table('request_comments')->insertGetId($payload);
+
+        if (Schema::hasTable('request_activity')) {
+            $activity = [
+                'request_id' => $requestId,
+                'actor' => (string) ($user->name ?? ''),
+                'action' => 'Requestor message: ' . $message,
+                'created_at' => now(),
+            ];
+
+            if (Schema::hasColumn('request_activity', 'updated_at')) {
+                $activity['updated_at'] = now();
+            }
+
+            DB::table('request_activity')->insert($activity);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Message sent',
+            'data' => [
+                'id' => $newId,
+                'request_id' => $requestId,
+                'sender_role' => 'requestor',
+                'sender_name' => (string) ($user->name ?? ''),
+                'message' => $message,
+                'created_at' => now()->toDateTimeString(),
+            ],
+        ], 201);
     }
 }

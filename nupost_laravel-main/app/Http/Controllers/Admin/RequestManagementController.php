@@ -9,7 +9,9 @@ use App\Models\RequestActivity;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 
 class RequestManagementController extends Controller
 {
@@ -113,13 +115,22 @@ class RequestManagementController extends Controller
         $user = User::where('name', $req->requester)->first();
         if ($user) {
             $notif_data = $this->getNotifData($new_status, $req->title, $note);
-            Notification::create([
+            $notificationPayload = [
                 'user_id' => $user->id,
                 'title'   => $notif_data['title'],
                 'message' => $notif_data['message'],
                 'type'    => $notif_data['type'],
                 'is_read' => false,
-            ]);
+            ];
+
+            if (Schema::hasColumn('notifications', 'request_id')) {
+                $notificationPayload['request_id'] = (int) $req->id;
+            }
+            if (Schema::hasColumn('notifications', 'request_status')) {
+                $notificationPayload['request_status'] = $new_status;
+            }
+
+            Notification::create($notificationPayload);
 
             // Email notification
             if ($user->email_notif && $user->status_updates) {
@@ -131,7 +142,7 @@ class RequestManagementController extends Controller
                             ->html($html);
                     });
                 } catch (\Exception $e) {
-                    \Log::error('[NUPost] Status email failed: ' . $e->getMessage());
+                    Log::error('[NUPost] Status email failed: ' . $e->getMessage());
                 }
             }
         }
@@ -163,13 +174,22 @@ class RequestManagementController extends Controller
         // Notify requestor
         $user = User::where('name', $req->requester)->first();
         if ($user) {
-            Notification::create([
+            $notificationPayload = [
                 'user_id' => $user->id,
                 'title'   => 'New Comment from Admin',
                 'message' => "Admin commented on your request \"{$req->title}\": $message",
                 'type'    => 'comment',
                 'is_read' => false,
-            ]);
+            ];
+
+            if (Schema::hasColumn('notifications', 'request_id')) {
+                $notificationPayload['request_id'] = (int) $req->id;
+            }
+            if (Schema::hasColumn('notifications', 'request_status')) {
+                $notificationPayload['request_status'] = (string) ($req->status ?? '');
+            }
+
+            Notification::create($notificationPayload);
         }
 
         return response()->json(['success' => true, 'message' => 'Comment posted.']);

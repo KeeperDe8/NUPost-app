@@ -3,6 +3,7 @@ import '../app_bottom_nav.dart';
 import 'request_tracking_screen.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../widgets/floating_message_button.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -79,6 +80,7 @@ class _RequestsScreenState extends State<RequestsScreen>
             bottom: 0,
             child: AppBottomNav(currentIndex: _currentNavIndex),
           ),
+          const FloatingMessageButton(),
         ],
       ),
     );

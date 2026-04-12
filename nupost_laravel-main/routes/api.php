@@ -14,3 +14,6 @@ Route::post('/update_profile.php', [LegacyMobileApiController::class, 'updatePro
 Route::get('/notifications.php', [LegacyMobileApiController::class, 'notifications']);
 Route::post('/mark_notification_read.php', [LegacyMobileApiController::class, 'markNotificationRead']);
 Route::get('/request_details.php', [LegacyMobileApiController::class, 'requestDetails']);
+Route::get('/messages.php', [LegacyMobileApiController::class, 'messageThreads']);
+Route::get('/message_thread.php', [LegacyMobileApiController::class, 'messageThread']);
+Route::post('/message_thread.php', [LegacyMobileApiController::class, 'sendMessage']);

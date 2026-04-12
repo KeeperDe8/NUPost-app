@@ -242,6 +242,37 @@ class ApiService {
     return _getJson(uri, fallbackMessage: 'Failed to load request details');
   }
 
+  static Future<Map<String, dynamic>> fetchMessageThreads({
+    required int userId,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'messages.php', {'user_id': '$userId'});
+    return _getJson(uri, fallbackMessage: 'Failed to load messages');
+  }
+
+  static Future<Map<String, dynamic>> fetchMessageThread({
+    required int userId,
+    required int requestId,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'message_thread.php', {
+      'user_id': '$userId',
+      'request_id': '$requestId',
+    });
+    return _getJson(uri, fallbackMessage: 'Failed to load chat');
+  }
+
+  static Future<Map<String, dynamic>> sendMessageToThread({
+    required int userId,
+    required int requestId,
+    required String message,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'message_thread.php', null);
+    return _postJson(uri, {
+      'user_id': userId,
+      'request_id': requestId,
+      'message': message,
+    }, fallbackMessage: 'Failed to send message');
+  }
+
   static Uri _buildUri(
     String base,
     String endpoint,

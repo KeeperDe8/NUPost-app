@@ -3,6 +3,7 @@ import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import 'login_screen.dart';
+import '../widgets/floating_message_button.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -257,6 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             bottom: 0,
             child: AppBottomNav(currentIndex: 4),
           ),
+          const FloatingMessageButton(),
         ],
       ),
     );

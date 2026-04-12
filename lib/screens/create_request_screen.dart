@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../widgets/floating_message_button.dart';
 
 class CreateRequestScreen extends StatefulWidget {
   const CreateRequestScreen({super.key});
@@ -729,6 +730,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
             bottom: 0,
             child: AppBottomNav(currentIndex: _currentNavIndex),
           ),
+          const FloatingMessageButton(),
         ],
       ),
     );
