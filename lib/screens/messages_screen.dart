@@ -375,220 +375,229 @@ class _ThreadCard extends StatelessWidget {
 
     return Hero(
       tag: 'thread-${item.requestId}',
+      flightShuttleBuilder: (_, __, ___, ____, _____) => Material(
+        color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
       child: Material(
         color: Colors.transparent,
         child: GestureDetector(
           onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(16),
+          child: _threadCard(item, hasUnread),
+        ),
+      ),
+    );
+  }
+
+  Widget _threadCard(_ThreadItem item, bool hasUnread) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: hasUnread ? const Color(0xFFF0F5FF) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: hasUnread
+              ? const Color(0xFF2B5CE6).withOpacity(0.2)
+              : const Color(0x0E000000),
+          width: hasUnread ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF001540).withOpacity(hasUnread ? 0.07 : 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Avatar with initials
+          Container(
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: hasUnread ? const Color(0xFFF0F5FF) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: hasUnread
-                    ? const Color(0xFF2B5CE6).withOpacity(0.2)
-                    : const Color(0x0E000000),
-                width: hasUnread ? 1.5 : 1,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF001540), Color(0xFF1A4FCC)],
               ),
-              boxShadow: [
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
                 BoxShadow(
-                  color: const Color(
-                    0xFF001540,
-                  ).withOpacity(hasUnread ? 0.07 : 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: Color(0x28001540),
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
                 ),
               ],
             ),
-            child: Row(
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.chat_bubble_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar with initials
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF001540), Color(0xFF1A4FCC)],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x28001540),
-                        blurRadius: 8,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.chat_bubble_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.requestTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontFamily: 'DM Sans',
-                                fontWeight: hasUnread
-                                    ? FontWeight.w800
-                                    : FontWeight.w700,
-                                fontSize: 14.5,
-                                color: const Color(0xFF080F1E),
-                                letterSpacing: -0.1,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _formatTime(item.lastMessageAt),
-                            style: const TextStyle(
-                              fontFamily: 'DM Sans',
-                              fontSize: 10.5,
-                              color: Color(0xFF9AA3B2),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          // Request code
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE9EDF6),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              item.requestCode.isEmpty
-                                  ? 'REQ-${item.requestId.toString().padLeft(5, '0')}'
-                                  : item.requestCode,
-                              style: const TextStyle(
-                                fontFamily: 'DM Sans',
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF3D4A63),
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          // Status dot
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _statusColor(item.requestStatus),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            item.requestStatus,
-                            style: TextStyle(
-                              fontFamily: 'DM Sans',
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                              color: _statusColor(item.requestStatus),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        item.lastMessage,
-                        maxLines: 2,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.requestTitle,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: 'DM Sans',
                           fontWeight: hasUnread
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          fontSize: 12.5,
-                          color: hasUnread
-                              ? const Color(0xFF3D4A63)
-                              : const Color(0xFF9AA3B2),
-                          height: 1.4,
+                              ? FontWeight.w800
+                              : FontWeight.w700,
+                          fontSize: 14.5,
+                          color: const Color(0xFF080F1E),
+                          letterSpacing: -0.1,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (hasUnread)
-                      Container(
-                        constraints: const BoxConstraints(
-                          minWidth: 22,
-                          minHeight: 22,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2B5CE6),
-                          borderRadius: BorderRadius.circular(99),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x402B5CE6),
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          item.unreadCount > 99 ? '99+' : '${item.unreadCount}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'DM Sans',
-                            fontWeight: FontWeight.w900,
-                            fontSize: 10,
-                            color: Colors.white,
-                          ),
-                        ),
-                      )
-                    else
-                      const SizedBox(height: 22),
-                    const SizedBox(height: 10),
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF002366).withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 12,
-                        color: Color(0xFF002366),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatTime(item.lastMessageAt),
+                      style: const TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 10.5,
+                        color: Color(0xFF9AA3B2),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    // Request code
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE9EDF6),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        item.requestCode.isEmpty
+                            ? 'REQ-${item.requestId.toString().padLeft(5, '0')}'
+                            : item.requestCode,
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF3D4A63),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Status dot
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _statusColor(item.requestStatus),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.requestStatus,
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: _statusColor(item.requestStatus),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  item.lastMessage,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+                    fontSize: 12.5,
+                    color: hasUnread
+                        ? const Color(0xFF3D4A63)
+                        : const Color(0xFF9AA3B2),
+                    height: 1.4,
+                  ),
+                ),
               ],
             ),
           ),
-        ),
+          const SizedBox(width: 10),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (hasUnread)
+                Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 22,
+                    minHeight: 22,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2B5CE6),
+                    borderRadius: BorderRadius.circular(99),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x402B5CE6),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    item.unreadCount > 99 ? '99+' : '${item.unreadCount}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontWeight: FontWeight.w900,
+                      fontSize: 10,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(height: 22),
+              const SizedBox(height: 10),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF002366).withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: Color(0xFF002366),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

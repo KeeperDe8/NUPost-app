@@ -13,6 +13,7 @@ Route::get('/calendar.php', [LegacyMobileApiController::class, 'calendar']);
 Route::post('/update_profile.php', [LegacyMobileApiController::class, 'updateProfile']);
 Route::get('/notifications.php', [LegacyMobileApiController::class, 'notifications']);
 Route::post('/mark_notification_read.php', [LegacyMobileApiController::class, 'markNotificationRead']);
+Route::post('/mark_messages_read.php', [LegacyMobileApiController::class, 'markMessagesRead']);
 Route::get('/request_details.php', [LegacyMobileApiController::class, 'requestDetails']);
 Route::get('/messages.php', [LegacyMobileApiController::class, 'messageThreads']);
 Route::get('/message_thread.php', [LegacyMobileApiController::class, 'messageThread']);

@@ -975,18 +975,10 @@ class LegacyMobileApiController extends Controller
                 continue;
             }
 
-            $lastRequestorAt = DB::table('request_comments')
-                ->where('request_id', (int) $req->id)
-                ->where('sender_role', 'requestor')
-                ->max('created_at');
-
             $unreadQuery = DB::table('request_comments')
                 ->where('request_id', (int) $req->id)
-                ->where('sender_role', 'admin');
-
-            if (!empty($lastRequestorAt)) {
-                $unreadQuery->where('created_at', '>', $lastRequestorAt);
-            }
+                ->where('sender_role', 'admin')
+                ->where('is_read_by_user', false);
 
             $unreadCount = (int) $unreadQuery->count();
             $totalUnread += $unreadCount;
@@ -1183,6 +1175,23 @@ class LegacyMobileApiController extends Controller
                 'created_at' => now()->toDateTimeString(),
             ],
         ], 201);
+    }
+
+    public function markMessagesRead(Request $request)
+    {
+        $userId = $request->input('user_id');
+        $requestId = $request->input('request_id');
+
+        if (!$userId || !$requestId) {
+            return response()->json(['error' => 'Missing parameters'], 400);
+        }
+
+        DB::table('request_comments')
+            ->where('request_id', $requestId)
+            ->where('sender_role', 'admin')
+            ->update(['is_read_by_user' => true]);
+
+        return response()->json(['success' => true]);
     }
 }
 

@@ -27,7 +27,6 @@ class MessageThreadScreen extends StatefulWidget {
 class _MessageThreadScreenState extends State<MessageThreadScreen> {
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
-  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
 
   bool _loading = true;
   bool _sending = false;
@@ -67,7 +66,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
       );
       final rows =
           ((result['data'] as Map<String, dynamic>?)?['messages'] as List?) ??
-          const [];
+          ((result['messages'] as List?) ?? const []);
       if (!mounted) return;
 
       final incoming = rows
@@ -75,24 +74,16 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
           .map(_ChatMessage.fromJson)
           .toList();
 
-      final prevLen = _messages.length;
-      _messages = incoming;
+      final hadNew = incoming.length > _messages.length;
+      setState(() {
+        _messages = incoming;
+        _loadError = null;
+      });
 
-      if (prevLen == 0 && incoming.isNotEmpty) {
-        setState(() => _loadError = null);
-        _scrollToBottom();
-      } else if (incoming.length > prevLen) {
-        setState(() => _loadError = null);
-        for (var i = prevLen; i < incoming.length; i++) {
-          _listKey.currentState?.insertItem(
-            i,
-            duration: const Duration(milliseconds: 300),
-          );
-        }
-        _scrollToBottom();
-      } else {
-        setState(() => _loadError = null);
-      }
+      if (hadNew) _scrollToBottom();
+
+      // Mark as read so the FAB badge clears
+      ApiService.markThreadRead(userId: userId, requestId: widget.requestId);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -186,6 +177,15 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
   Widget _buildHeader() {
     return Hero(
       tag: 'thread-${widget.requestId}',
+      flightShuttleBuilder: (_, __, ___, ____, _____) => Material(
+        color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
       child: Material(
         color: Colors.white,
         child: Container(
@@ -341,23 +341,11 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
       return _buildEmpty();
     }
 
-    return AnimatedList(
-      key: _listKey,
+    return ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      initialItemCount: _messages.length,
-      itemBuilder: (_, i, anim) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 0.2),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-          child: FadeTransition(
-            opacity: anim,
-            child: _buildBubble(_messages[i]),
-          ),
-        );
-      },
+      itemCount: _messages.length,
+      itemBuilder: (_, i) => _buildBubble(_messages[i]),
     );
   }
 

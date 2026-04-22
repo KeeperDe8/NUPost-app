@@ -280,6 +280,21 @@ class ApiService {
     }, fallbackMessage: 'Failed to send message');
   }
 
+  static Future<void> markThreadRead({
+    required int userId,
+    required int requestId,
+  }) async {
+    try {
+      final uri = _buildUri(_baseUrl, 'mark_messages_read.php', null);
+      await _postJson(uri, {
+        'user_id': userId,
+        'request_id': requestId,
+      }, fallbackMessage: 'mark read');
+    } catch (_) {
+      // Silent — endpoint may not exist yet
+    }
+  }
+
   static Uri _buildUri(
     String base,
     String endpoint,

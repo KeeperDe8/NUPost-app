@@ -635,105 +635,105 @@ class _RequestCard extends StatelessWidget {
         ),
       ],
     ),
-    child: IntrinsicHeight(
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            decoration: BoxDecoration(
-              color: _statusColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                bottomLeft: Radius.circular(20),
-              ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 4,
+          height: 64,
+          decoration: BoxDecoration(
+            color: _statusColor,
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(4),
+              bottomRight: Radius.circular(4),
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE9EDF6),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: Text(
-                          req.number,
-                          style: const TextStyle(
-                            fontFamily: 'DM Sans',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 10,
-                            color: Color(0xFF3D4A63),
-                            letterSpacing: 0.3,
-                          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE9EDF6),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Text(
+                        req.number,
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                          color: Color(0xFF3D4A63),
+                          letterSpacing: 0.3,
                         ),
                       ),
-                      const Spacer(),
-                      _Chip(status: req.status),
-                    ],
-                  ),
-                  const SizedBox(height: 9),
-                  Text(
-                    req.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                      color: Color(0xFF080F1E),
-                      letterSpacing: -0.2,
-                      height: 1.3,
                     ),
+                    const Spacer(),
+                    _Chip(status: req.status),
+                  ],
+                ),
+                const SizedBox(height: 9),
+                Text(
+                  req.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: Color(0xFF080F1E),
+                    letterSpacing: -0.2,
+                    height: 1.3,
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time_rounded,
-                        size: 13,
-                        color: Color(0xFF9AA3B2),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          req.submittedAt,
-                          style: const TextStyle(
-                            fontFamily: 'DM Sans',
-                            fontSize: 11.5,
-                            color: Color(0xFF9AA3B2),
-                          ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time_rounded,
+                      size: 13,
+                      color: Color(0xFF9AA3B2),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        req.submittedAt,
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 11.5,
+                          color: Color(0xFF9AA3B2),
                         ),
                       ),
-                      Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF001540).withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 12,
-                          color: Color(0xFF002366),
-                        ),
+                    ),
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF001540).withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                      child: const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 12,
+                        color: Color(0xFF002366),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 }
