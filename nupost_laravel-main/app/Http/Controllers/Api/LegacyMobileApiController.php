@@ -300,7 +300,7 @@ class LegacyMobileApiController extends Controller
 
         $rows = $query
             ->orderByDesc('created_at')
-            ->get(['id', 'request_id', 'title', 'status', 'created_at'])
+            ->get(['id', 'request_id', 'title', 'status', 'created_at', 'priority', 'platform'])
             ->map(function ($r) {
                 $status = trim((string) ($r->status ?? ''));
                 return [
@@ -308,6 +308,8 @@ class LegacyMobileApiController extends Controller
                     'request_id' => (string) ($r->request_id ?? ''),
                     'title' => (string) ($r->title ?? ''),
                     'status' => $status !== '' ? $status : 'Pending',
+                    'priority' => $r->priority ?? 'Low',
+                    'platform' => $r->platform ?? 'Facebook',
                     'created_at' => (string) ($r->created_at ?? ''),
                 ];
             })
@@ -1183,3 +1185,4 @@ class LegacyMobileApiController extends Controller
         ], 201);
     }
 }
+
