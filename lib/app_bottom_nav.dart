@@ -70,7 +70,7 @@ class AppBottomNav extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF003366),
+                      color: Color(0xFF002366),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -91,7 +91,7 @@ class AppBottomNav extends StatelessWidget {
                           ? FontWeight.w600
                           : FontWeight.w500,
                       fontSize: 10.9,
-                      color: const Color(0xFF003366),
+                      color: const Color(0xFF002366),
                     ),
                   ),
                 ],
@@ -131,7 +131,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? const Color(0xFF003366) : const Color(0xFF99A1AF);
+    final color = isActive ? const Color(0xFF002366) : const Color(0xFF99A1AF);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../theme/app_theme.dart';
 
 class PostCalendarScreen extends StatefulWidget {
   const PostCalendarScreen({super.key});
@@ -18,6 +19,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
   // All posts for the current month with both request and scheduled dates
   final List<_CalendarPost> _posts = [];
   bool _isPublicCalendar = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -92,6 +94,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             _posts
               ..clear()
               ..addAll(nextPosts);
+            _loadError = null;
             if (updateToggle && forcePublicView != null) {
               _isPublicCalendar = forcePublicView;
             }
@@ -99,7 +102,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
         }
       }
     } catch (e) {
-      print('Error: $e');
+      if (!mounted) return;
+      setState(() {
+        _loadError = e.toString().replaceFirst('Exception: ', '');
+      });
     }
   }
 
@@ -147,7 +153,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.pageBg,
       body: Stack(
         children: [
           Column(
@@ -166,17 +172,17 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                           padding: const EdgeInsets.all(12),
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: AppColors.goldBg,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: const Color(0xFF3B82F6).withOpacity(0.3),
+                              color: AppColors.accent.withOpacity(0.3),
                             ),
                           ),
                           child: Row(
                             children: [
                               const Icon(
                                 Icons.info_outline,
-                                color: Color(0xFF3B82F6),
+                                color: AppColors.accent,
                                 size: 18,
                               ),
                               const SizedBox(width: 8),
@@ -184,10 +190,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                 child: Text(
                                   'Public view is ON — Showing all users\' scheduled posts',
                                   style: const TextStyle(
-                                    fontFamily: 'Inter',
+                                    fontFamily: 'DM Sans',
                                     fontWeight: FontWeight.w400,
                                     fontSize: 12,
-                                    color: Color(0xFF1E40AF),
+                                    color: AppColors.primary,
                                   ),
                                 ),
                               ),
@@ -195,6 +201,57 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                           ),
                         ),
                       _buildCalendarCard(),
+
+                      if (_loadError != null) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF1F2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFFDA4AF)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: Color(0xFFBE123C),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _loadError!,
+                                      style: const TextStyle(
+                                        fontFamily: 'DM Sans',
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 11.5,
+                                        color: Color(0xFF9F1239),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextButton(
+                                      style: TextButton.styleFrom(
+                                        minimumSize: Size.zero,
+                                        padding: EdgeInsets.zero,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      onPressed: () => _loadScheduledPosts(),
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
 
                       const SizedBox(height: 16),
 
@@ -204,10 +261,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                             ? 'Upcoming Public Posts'
                             : 'Your Upcoming Posts',
                         style: const TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
-                          color: Color(0xFF4A5565),
+                          color: AppColors.inkMid,
                         ),
                       ),
 
@@ -265,17 +322,17 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                     child: const Icon(
                       Icons.arrow_back,
                       size: 24,
-                      color: Color(0xFF003366),
+                      color: AppColors.accent,
                     ),
                   ),
                   const SizedBox(width: 12),
                   const Text(
                     'Post Calendar',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'DM Sans',
                       fontWeight: FontWeight.w600,
                       fontSize: 18.3,
-                      color: Color(0xFF003366),
+                      color: AppColors.accent,
                     ),
                   ),
                 ],
@@ -285,12 +342,12 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                   Text(
                     'Public',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'DM Sans',
                       fontWeight: FontWeight.w500,
                       fontSize: 12,
                       color: _isPublicCalendar
-                          ? const Color(0xFF003366)
-                          : const Color(0xFF6B7280),
+                          ? AppColors.accent
+                          : AppColors.inkMid,
                     ),
                   ),
                   Transform.scale(
@@ -312,12 +369,12 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                           updateToggle: true,
                         );
                       },
-                      activeColor: const Color(0xFF003366),
-                      activeTrackColor: const Color(
-                        0xFF003366,
-                      ).withOpacity(0.5),
-                      inactiveThumbColor: const Color(0xFF9CA3AF),
-                      inactiveTrackColor: const Color(0xFFE5E7EB),
+                      activeThumbColor: AppColors.accent,
+                      activeTrackColor: AppColors.primary.withValues(
+                        alpha: 0.5,
+                      ),
+                      inactiveThumbColor: AppColors.inkMute,
+                      inactiveTrackColor: AppColors.border,
                     ),
                   ),
                 ],
@@ -332,10 +389,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                   ? "Showing all users' scheduled posts"
                   : 'Schedule and track your posts',
               style: const TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w400,
                 fontSize: 12.8,
-                color: Color(0xFF4A5565),
+                color: AppColors.inkMid,
               ),
             ),
           ),
@@ -397,7 +454,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             decoration: const BoxDecoration(shape: BoxShape.circle),
             child: const Icon(
               Icons.chevron_left,
-              color: Color(0xFF003366),
+              color: AppColors.accent,
               size: 20,
             ),
           ),
@@ -405,10 +462,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
         Text(
           _monthLabel(),
           style: const TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'DM Sans',
             fontWeight: FontWeight.w600,
             fontSize: 16.3,
-            color: Color(0xFF003366),
+            color: AppColors.accent,
           ),
         ),
         GestureDetector(
@@ -419,7 +476,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             decoration: const BoxDecoration(shape: BoxShape.circle),
             child: const Icon(
               Icons.chevron_right,
-              color: Color(0xFF003366),
+              color: AppColors.accent,
               size: 20,
             ),
           ),
@@ -439,7 +496,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             child: Container(
               height: 36,
               decoration: BoxDecoration(
-                color: !_isMonthView ? const Color(0xFF003366) : Colors.white,
+                color: !_isMonthView ? AppColors.accent : Colors.white,
                 border: Border.all(color: Colors.black.withOpacity(0.1)),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -447,10 +504,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
               child: Text(
                 'Today',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'DM Sans',
                   fontWeight: FontWeight.w600,
                   fontSize: 12.8,
-                  color: !_isMonthView ? Colors.white : const Color(0xFF0A0A0A),
+                  color: !_isMonthView ? Colors.white : AppColors.ink,
                 ),
               ),
             ),
@@ -464,7 +521,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             child: Container(
               height: 36,
               decoration: BoxDecoration(
-                color: _isMonthView ? const Color(0xFF003366) : Colors.white,
+                color: _isMonthView ? AppColors.accent : Colors.white,
                 border: Border.all(color: Colors.black.withOpacity(0.1)),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -472,10 +529,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
               child: Text(
                 'Month',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'DM Sans',
                   fontWeight: FontWeight.w600,
                   fontSize: 13.7,
-                  color: _isMonthView ? Colors.white : const Color(0xFF0A0A0A),
+                  color: _isMonthView ? Colors.white : AppColors.ink,
                 ),
               ),
             ),
@@ -511,10 +568,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                     child: Text(
                       d,
                       style: const TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'DM Sans',
                         fontWeight: FontWeight.w400,
                         fontSize: 11.1,
-                        color: Color(0xFF4A5565),
+                        color: AppColors.inkMid,
                       ),
                     ),
                   ),
@@ -589,10 +646,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(
-                          color: const Color(0xFFF3F4F6),
-                          width: 1,
-                        ),
+                        border: Border.all(color: AppColors.border, width: 1),
                       ),
                       padding: const EdgeInsets.all(4),
                       child: Column(
@@ -616,7 +670,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                               decoration: isToday
                                   ? BoxDecoration(
                                       border: Border.all(
-                                        color: const Color(0xFF2B7FFF),
+                                        color: AppColors.accent,
                                         width: 2,
                                       ),
                                       borderRadius: BorderRadius.circular(4),
@@ -625,12 +679,12 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                               child: Text(
                                 '$dayNum',
                                 style: TextStyle(
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'DM Sans',
                                   fontWeight: FontWeight.w400,
                                   fontSize: 12,
                                   color: isToday
-                                      ? const Color(0xFF2B7FFF)
-                                      : const Color(0xFF364153),
+                                      ? AppColors.accent
+                                      : AppColors.ink,
                                 ),
                               ),
                             ),
@@ -650,10 +704,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                               child: Text(
                                 '$requestCount request${requestCount > 1 ? 's' : ''}',
                                 style: const TextStyle(
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'DM Sans',
                                   fontWeight: FontWeight.w400,
                                   fontSize: 7.5,
-                                  color: Color(0xFF6B7280),
+                                  color: AppColors.inkMid,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -671,13 +725,14 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF9CA3AF), // Grey for request date
+                                      color: AppColors
+                                          .inkMute, // Grey for request date
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       post.label,
                                       style: const TextStyle(
-                                        fontFamily: 'Inter',
+                                        fontFamily: 'DM Sans',
                                         fontWeight: FontWeight.w400,
                                         fontSize: 6.9,
                                         color: Colors.white,
@@ -700,15 +755,14 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                       color: post.isMine
                                           ? post
                                                 .priorityColor // Priority color for mine
-                                          : const Color(
-                                              0xFF9CA3AF,
-                                            ), // Grey for others
+                                          : AppColors
+                                                .inkMute, // Grey for others
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       post.label,
                                       style: const TextStyle(
-                                        fontFamily: 'Inter',
+                                        fontFamily: 'DM Sans',
                                         fontWeight: FontWeight.w400,
                                         fontSize: 6.9,
                                         color: Colors.white,
@@ -729,15 +783,14 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF9CA3AF,
-                                      ), // Grey for request date
+                                      color: AppColors
+                                          .inkMute, // Grey for request date
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       post.label,
                                       style: const TextStyle(
-                                        fontFamily: 'Inter',
+                                        fontFamily: 'DM Sans',
                                         fontWeight: FontWeight.w400,
                                         fontSize: 6.9,
                                         color: Colors.white,
@@ -764,7 +817,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                                     child: Text(
                                       post.label,
                                       style: const TextStyle(
-                                        fontFamily: 'Inter',
+                                        fontFamily: 'DM Sans',
                                         fontWeight: FontWeight.w400,
                                         fontSize: 6.9,
                                         color: Colors.white,
@@ -787,9 +840,9 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
   }
 
   Color _publicCountColor(int count) {
-    if (count >= 5) return const Color(0xFFDC2626);
-    if (count >= 3) return const Color(0xFFF59E0B);
-    return const Color(0xFF16A34A);
+    if (count >= 5) return AppColors.rejected;
+    if (count >= 3) return AppColors.pending;
+    return AppColors.approved;
   }
 
   // ── Legend ────────────────────────────────────────────
@@ -797,7 +850,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
     return Container(
       padding: const EdgeInsets.only(top: 16),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+        border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,13 +859,13 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             Row(
               children: [
                 _LegendItem(
-                  color: const Color(0xFF9CA3AF),
+                  color: AppColors.inkMute,
                   label: 'Request Date',
                   isFilled: true,
                 ),
                 const SizedBox(width: 16),
                 _LegendItem(
-                  color: const Color(0xFF2B7FFF),
+                  color: AppColors.accent,
                   label: 'Today',
                   isFilled: false,
                 ),
@@ -822,29 +875,29 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             const Text(
               'Post Priority:',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w500,
                 fontSize: 10,
-                color: Color(0xFF6B7280),
+                color: AppColors.inkMid,
               ),
             ),
             const SizedBox(height: 4),
             Row(
               children: [
                 _LegendItem(
-                  color: const Color(0xFF3B82F6),
+                  color: AppColors.accent,
                   label: 'Normal',
                   isFilled: true,
                 ),
                 const SizedBox(width: 12),
                 _LegendItem(
-                  color: const Color(0xFFF59E0B),
+                  color: AppColors.pending,
                   label: 'High',
                   isFilled: true,
                 ),
                 const SizedBox(width: 12),
                 _LegendItem(
-                  color: const Color(0xFFDC2626),
+                  color: AppColors.rejected,
                   label: 'Urgent',
                   isFilled: true,
                 ),
@@ -854,13 +907,13 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             Row(
               children: [
                 _LegendItem(
-                  color: const Color(0xFF3B82F6),
+                  color: AppColors.accent,
                   label: 'Your request',
                   isFilled: true,
                 ),
                 const SizedBox(width: 16),
                 _LegendItem(
-                  color: const Color(0xFF9CA3AF),
+                  color: AppColors.inkMute,
                   label: "Others' request",
                   isFilled: true,
                 ),
@@ -870,19 +923,19 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             Row(
               children: [
                 _LegendItem(
-                  color: const Color(0xFF16A34A),
+                  color: AppColors.approved,
                   label: 'Open day',
                   isFilled: true,
                 ),
                 const SizedBox(width: 16),
                 _LegendItem(
-                  color: const Color(0xFFDC2626),
+                  color: AppColors.rejected,
                   label: 'Busy day',
                   isFilled: true,
                 ),
                 const SizedBox(width: 16),
                 _LegendItem(
-                  color: const Color(0xFF2B7FFF),
+                  color: AppColors.accent,
                   label: 'Today',
                   isFilled: false,
                 ),
@@ -901,10 +954,14 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
 
     // Get scheduled posts for next 7 days
     final upcomingPosts = _posts
-        .where((p) =>
-            p.scheduledDate != null &&
-            p.scheduledDate!.isAfter(now) &&
-            p.scheduledDate!.isBefore(sevenDaysFromNow.add(const Duration(days: 1))))
+        .where(
+          (p) =>
+              p.scheduledDate != null &&
+              p.scheduledDate!.isAfter(now) &&
+              p.scheduledDate!.isBefore(
+                sevenDaysFromNow.add(const Duration(days: 1)),
+              ),
+        )
         .toList();
 
     // Sort by scheduled date
@@ -932,17 +989,17 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
             Icon(
               Icons.calendar_today_outlined,
               size: 48,
-              color: Color(0xFFD1D5DC),
+              color: AppColors.inkMute,
             ),
             SizedBox(height: 12),
             Text(
               'No upcoming posts scheduled for the next 7 days',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w400,
                 fontSize: 13,
-                color: Color(0xFF6A7282),
+                color: AppColors.inkMute,
               ),
             ),
           ],
@@ -987,7 +1044,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: post.isMine ? post.priorityColor : const Color(0xFF9CA3AF),
+                    color: post.isMine ? post.priorityColor : AppColors.inkMute,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -999,22 +1056,24 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                       Text(
                         post.label,
                         style: const TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w500,
                           fontSize: 12,
-                          color: Color(0xFF1F2937),
+                          color: AppColors.ink,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        post.isMine ? 'Your post' : 'By ${post.isMine ? 'you' : 'other'}',
+                        post.isMine
+                            ? 'Your post'
+                            : 'By ${post.isMine ? 'you' : 'other'}',
                         style: const TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w400,
                           fontSize: 11,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.inkMid,
                         ),
                       ),
                     ],
@@ -1023,10 +1082,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen> {
                 Text(
                   dateStr,
                   style: const TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w500,
                     fontSize: 12,
-                    color: Color(0xFF4A5565),
+                    color: AppColors.inkMid,
                   ),
                 ),
               ],
@@ -1061,17 +1120,17 @@ class _CalendarPost {
   /// Returns color based on priority for scheduled date display
   Color get priorityColor {
     final p = priority.toLowerCase();
-    if (p == 'urgent') return const Color(0xFFDC2626); // Red
-    if (p == 'high') return const Color(0xFFF59E0B); // Orange
-    return const Color(0xFF3B82F6); // Blue (normal/default)
+    if (p == 'urgent') return AppColors.rejected; // Red
+    if (p == 'high') return AppColors.pending; // Orange
+    return AppColors.accent; // Blue (normal/default)
   }
 
   static Color getStatusColor(String status) {
     final st = status.toLowerCase();
-    if (st.contains('posted')) return const Color(0xFF7C3AED); // Purple
-    if (st.contains('approved')) return const Color(0xFF059669); // Green
-    if (st.contains('under review')) return const Color(0xFFD97706); // Orange
-    return const Color(0xFF6B7280); // Gray (Pending)
+    if (st.contains('posted')) return AppColors.posted; // Purple
+    if (st.contains('approved')) return AppColors.approved; // Green
+    if (st.contains('under review')) return AppColors.pending; // Orange
+    return AppColors.inkMid; // Gray (Pending)
   }
 }
 
@@ -1104,10 +1163,10 @@ class _LegendItem extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'DM Sans',
             fontWeight: FontWeight.w400,
             fontSize: 10.9,
-            color: Color(0xFF4A5565),
+            color: AppColors.inkMid,
           ),
         ),
       ],

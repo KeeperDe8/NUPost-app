@@ -8,6 +8,7 @@ import 'screens/notifications_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/post_calendar_screen.dart';
 import 'screens/messages_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,10 +28,7 @@ class NUPostApp extends StatelessWidget {
     return MaterialApp(
       title: 'NUPost',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF29286A)),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
       home: const SplashScreen(),
       routes: {
         '/home': (_) => const HomeScreen(),

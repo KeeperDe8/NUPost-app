@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 
@@ -12,14 +13,23 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoggingIn = false;
 
+  late final AnimationController _btnScale = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 150),
+    lowerBound: 0.0,
+    upperBound: 1.0,
+  );
+
   @override
   void dispose() {
+    _btnScale.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -71,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF29286A),
+      backgroundColor: AppColors.primaryDark,
       body: Stack(
         children: [
           Positioned.fill(
@@ -79,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
               'assets/bg.png',
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) =>
-                  Container(color: const Color(0xFF29286A)),
+                  Container(color: AppColors.primaryDark),
             ),
           ),
           SafeArea(
@@ -107,16 +117,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           TextSpan(
                             text: 'NU',
-                            style: TextStyle(
+                            style: TextStyle(fontFamily: 'DM Sans', 
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFFFFC72C),
+                              color: AppColors.gold,
                               letterSpacing: 1.5,
                             ),
                           ),
                           TextSpan(
                             text: 'POST',
-                            style: TextStyle(
+                            style: TextStyle(fontFamily: 'DM Sans', 
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
@@ -140,7 +150,14 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 24,
+                      offset: Offset(0, 12),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.fromLTRB(21, 36, 21, 32),
                 child: Column(
@@ -149,8 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const Text(
                       'EMAIL ADDRESS:',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
+                      style: TextStyle(fontFamily: 'DM Sans', 
                         fontWeight: FontWeight.w300,
                         fontSize: 12,
                         color: Colors.black,
@@ -161,8 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
+                      style: const TextStyle(fontFamily: 'DM Sans', 
                         fontWeight: FontWeight.w100,
                         fontSize: 12,
                         color: Colors.black,
@@ -174,8 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 20),
                     const Text(
                       'PASSWORD:',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
+                      style: TextStyle(fontFamily: 'DM Sans', 
                         fontWeight: FontWeight.w300,
                         fontSize: 12,
                         color: Colors.black,
@@ -186,8 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
+                      style: const TextStyle(fontFamily: 'DM Sans', 
                         fontSize: 16,
                         color: Color(0x800A0A0A),
                         letterSpacing: 4,
@@ -210,41 +223,55 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 28),
                     Center(
-                      child: SizedBox(
-                        width: 87,
-                        height: 31,
-                        child: ElevatedButton(
-                          onPressed: _isLoggingIn ? null : _onLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF002366),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5),
+                      child: GestureDetector(
+                        onTapDown: (_) => _btnScale.forward(),
+                        onTapUp: (_) => _btnScale.reverse(),
+                        onTapCancel: () => _btnScale.reverse(),
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 1.0, end: 0.95).animate(
+                            CurvedAnimation(
+                              parent: _btnScale,
+                              curve: Curves.easeOut,
                             ),
-                            padding: EdgeInsets.zero,
                           ),
-                          child: _isLoggingIn
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                              : const Text(
-                                  'LOGIN',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
+                          child: SizedBox(
+                            width: 140,
+                            height: 44,
+                            child: ElevatedButton(
+                              onPressed: _isLoggingIn ? null : _onLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
                                 ),
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: _isLoggingIn
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                  : const Text(
+                                      'LOGIN',
+                                      style: TextStyle(
+                                        fontFamily: 'DM Sans',
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -252,8 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Center(
                       child: RichText(
                         text: TextSpan(
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
+                          style: const TextStyle(fontFamily: 'DM Sans', 
                             fontWeight: FontWeight.w300,
                             fontSize: 12,
                             color: Colors.black,
@@ -271,11 +297,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                                 child: const Text(
                                   'Sign up',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
+                                  style: TextStyle(fontFamily: 'DM Sans', 
                                     fontWeight: FontWeight.w300,
                                     fontSize: 12,
-                                    color: Color(0xFF007AFF),
+                                    color: AppColors.accent,
                                   ),
                                 ),
                               ),
@@ -300,22 +325,22 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: const TextStyle(
-        fontFamily: 'Inter',
+      hintStyle: const TextStyle(fontFamily: 'DM Sans', 
         fontWeight: FontWeight.w100,
         fontSize: 12,
         color: Colors.black,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(5),
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.5), width: 1),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: const BorderSide(color: AppColors.border, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(5),
-        borderSide: const BorderSide(color: Color(0xFF002366), width: 1.5),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
       ),
       suffixIcon: suffixIcon,
     );
   }
 }
+

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
@@ -12,7 +12,9 @@ class CreateRequestScreen extends StatefulWidget {
   State<CreateRequestScreen> createState() => _CreateRequestScreenState();
 }
 
-class _CreateRequestScreenState extends State<CreateRequestScreen> {
+class _CreateRequestScreenState extends State<CreateRequestScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _submitScaleController;
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _captionController = TextEditingController();
@@ -45,7 +47,20 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   final List<String> _priorities = ['Low', 'Medium', 'High', 'Urgent'];
 
   @override
+  void initState() {
+    super.initState();
+    _submitScaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+      lowerBound: 0.0,
+      upperBound: 1.0,
+      value: 0.0,
+    );
+  }
+
+  @override
   void dispose() {
+    _submitScaleController.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
     _captionController.dispose();
@@ -681,17 +696,30 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                       const SizedBox(height: 20),
 
                       // Submit Request button
-                      SizedBox(
+                      GestureDetector(
+                        onTapDown: (_) {
+                          if (!_isSubmitting) _submitScaleController.forward();
+                        },
+                        onTapUp: (_) => _submitScaleController.reverse(),
+                        onTapCancel: () => _submitScaleController.reverse(),
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 1.0, end: 0.95).animate(
+                            CurvedAnimation(
+                              parent: _submitScaleController,
+                              curve: Curves.easeOut,
+                            ),
+                          ),
+                          child: SizedBox(
                         width: double.infinity,
-                        height: 48,
+                        height: 52,
                         child: ElevatedButton(
                           onPressed: _isSubmitting ? null : _onSubmit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF003366),
+                            backgroundColor: const Color(0xFF002366),
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
                           child: _isSubmitting
@@ -714,6 +742,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                                     color: Colors.white,
                                   ),
                                 ),
+                        ),
+                      ),
                         ),
                       ),
                     ],

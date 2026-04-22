@@ -55,7 +55,11 @@ class _FloatingMessageButtonState extends State<FloatingMessageButton> {
       right: widget.right,
       bottom: widget.bottom + MediaQuery.of(context).padding.bottom,
       child: GestureDetector(
-        onTap: () => Navigator.pushNamed(context, '/messages'),
+        onTap: () async {
+          await Navigator.pushNamed(context, '/messages');
+          if (!mounted) return;
+          _loadUnreadCount();
+        },
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -63,7 +67,7 @@ class _FloatingMessageButtonState extends State<FloatingMessageButton> {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: const Color(0xFF0B2A6F),
+                color: const Color(0xFF001A4D),
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: const [
                   BoxShadow(

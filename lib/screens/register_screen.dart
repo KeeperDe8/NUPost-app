@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../theme/app_theme.dart';
 import 'home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -10,7 +11,15 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _btnScale = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 150),
+    lowerBound: 0.0,
+    upperBound: 1.0,
+  );
+
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -22,6 +31,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _btnScale.dispose();
     _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -101,7 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return InputDecoration(
       hintText: hint,
       hintStyle: TextStyle(
-        fontFamily: isDots ? 'Arimo' : 'Inter',
+        fontFamily: isDots ? 'Arimo' : 'DM Sans',
         fontWeight: isDots ? FontWeight.w400 : FontWeight.w100,
         fontSize: isDots ? 16 : 12,
         color: isDots ? const Color(0x800A0A0A) : Colors.black,
@@ -109,12 +119,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(5),
-        borderSide: BorderSide(color: Colors.black.withOpacity(0.5), width: 1),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: const BorderSide(color: AppColors.border, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(5),
-        borderSide: const BorderSide(color: Color(0xFF002366), width: 1.5),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
       ),
     );
   }
@@ -125,8 +135,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: const TextStyle(
-          fontFamily: 'Inter',
+        style: const TextStyle(fontFamily: 'DM Sans', 
           fontWeight: FontWeight.w300,
           fontSize: 12,
           color: Colors.black,
@@ -146,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               'assets/bg.png',
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) =>
-                  Container(color: const Color(0xFF29286A)),
+                  Container(color: AppColors.primaryDark),
             ),
           ),
 
@@ -163,7 +172,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x14000000),
+                        blurRadius: 24,
+                        offset: Offset(0, 12),
+                      ),
+                    ],
                   ),
                   padding: const EdgeInsets.fromLTRB(27, 28, 27, 32),
                   child: Column(
@@ -192,8 +208,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       // Figma: font-size:20 weight:400
                       const Text(
                         'Sign up to',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
+                        style: TextStyle(fontFamily: 'DM Sans', 
                           fontWeight: FontWeight.w400,
                           fontSize: 20,
                           color: Colors.black,
@@ -206,8 +221,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _label('FULL NAME'),
                       TextField(
                         controller: _fullNameController,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
+                        style: const TextStyle(fontFamily: 'DM Sans', 
                           fontWeight: FontWeight.w100,
                           fontSize: 12,
                           color: Colors.black,
@@ -222,8 +236,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
+                        style: const TextStyle(fontFamily: 'DM Sans', 
                           fontWeight: FontWeight.w100,
                           fontSize: 12,
                           color: Colors.black,
@@ -240,8 +253,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
+                        style: const TextStyle(fontFamily: 'DM Sans', 
                           fontSize: 16,
                           color: Color(0x800A0A0A),
                           letterSpacing: 4,
@@ -273,8 +285,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirm,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
+                        style: const TextStyle(fontFamily: 'DM Sans', 
                           fontSize: 16,
                           color: Color(0x800A0A0A),
                           letterSpacing: 4,
@@ -303,17 +314,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       // ── CREATE ACCOUNT button ────────────
                       // Figma: Rectangle 2 — #002366, 304×39, radius:5
-                      SizedBox(
+                      GestureDetector(
+                        onTapDown: (_) => _btnScale.forward(),
+                        onTapUp: (_) => _btnScale.reverse(),
+                        onTapCancel: () => _btnScale.reverse(),
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 1.0, end: 0.97).animate(
+                            CurvedAnimation(
+                              parent: _btnScale,
+                              curve: Curves.easeOut,
+                            ),
+                          ),
+                          child: SizedBox(
                         width: double.infinity,
-                        height: 39,
+                        height: 48,
                         child: ElevatedButton(
                           onPressed: _isSubmitting ? null : _onCreateAccount,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF002366),
+                            backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(5),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                           ),
                           child: _isSubmitting
@@ -329,14 +351,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 )
                               : const Text(
                                   'CREATE ACCOUNT',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
+                                  style: TextStyle(fontFamily: 'DM Sans',
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 12,
+                                    fontSize: 13,
                                     color: Colors.white,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
+                        ),
+                      ),
                         ),
                       ),
 
@@ -346,8 +369,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Center(
                         child: RichText(
                           text: TextSpan(
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
+                            style: const TextStyle(fontFamily: 'DM Sans', 
                               fontWeight: FontWeight.w300,
                               fontSize: 12,
                               color: Colors.black,
@@ -361,11 +383,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   },
                                   child: const Text(
                                     'Log in',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
+                                    style: TextStyle(fontFamily: 'DM Sans', 
                                       fontWeight: FontWeight.w300,
                                       fontSize: 12,
-                                      color: Color(0xFF007AFF),
+                                      color: AppColors.accent,
                                     ),
                                   ),
                                 ),
@@ -385,3 +406,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+

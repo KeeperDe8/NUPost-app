@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/src/nupost_app checkout HEAD -- lib/screens/profile_screen.dart)",
+      "Bash(flutter analyze *)",
+      "Bash(git *)"
+    ]
+  }
+}

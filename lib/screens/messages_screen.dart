@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../theme/app_theme.dart';
 import 'message_thread_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
@@ -61,7 +62,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.pageBg,
       body: Stack(
         children: [
           Column(
@@ -109,30 +110,30 @@ class _MessagesScreenState extends State<MessagesScreen> {
         bottom: 14,
       ),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
-            child: const Icon(Icons.arrow_back, color: Color(0xFF003366)),
+            child: const Icon(Icons.arrow_back, color: AppColors.primary),
           ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
               'Messages',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w700,
                 fontSize: 22,
-                color: Color(0xFF003366),
+                color: AppColors.primary,
               ),
             ),
           ),
           IconButton(
             onPressed: _loadThreads,
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF003366)),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
           ),
         ],
       ),
@@ -149,7 +150,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             Text(
               _error ?? 'Something went wrong.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF6B7280)),
+              style: const TextStyle(color: AppColors.inkMid),
             ),
             const SizedBox(height: 12),
             OutlinedButton(onPressed: _loadThreads, child: const Text('Retry')),
@@ -166,15 +167,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.forum_outlined, size: 48, color: Color(0xFF99A1AF)),
+            Icon(Icons.forum_outlined, size: 48, color: AppColors.inkMute),
             SizedBox(height: 12),
             Text(
               'No request conversations yet',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w500,
                 fontSize: 14,
-                color: Color(0xFF4A5565),
+                color: AppColors.inkMid,
               ),
             ),
             SizedBox(height: 6),
@@ -182,10 +183,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
               'When admin replies to your requests, they will appear here.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w400,
                 fontSize: 12,
-                color: Color(0xFF99A1AF),
+                color: AppColors.inkMute,
               ),
             ),
           ],
@@ -195,121 +196,129 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Widget _buildThreadCard(_ThreadItem item) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () async {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => MessageThreadScreen(
-              requestId: item.requestId,
-              requestCode: item.requestCode,
-              requestTitle: item.requestTitle,
-              requestStatus: item.requestStatus,
-            ),
-          ),
-        );
-        _loadThreads();
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0F000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.requestTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.requestCode.isEmpty
-                        ? 'REQ-${item.requestId.toString().padLeft(5, '0')}'
-                        : item.requestCode,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                      fontSize: 11.5,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    item.lastMessage,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                      fontSize: 13,
-                      color: Color(0xFF334155),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _formatTime(item.lastMessageAt),
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  ),
-                ],
+    return Hero(
+      tag: 'thread-${item.requestId}',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          onTap: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MessageThreadScreen(
+                  requestId: item.requestId,
+                  requestCode: item.requestCode,
+                  requestTitle: item.requestTitle,
+                  requestStatus: item.requestStatus,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              children: [
-                if (item.unreadCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      item.unreadCount > 99 ? '99+' : '${item.unreadCount}',
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                        color: Colors.white,
-                      ),
-                    ),
-                  )
-                else
-                  const SizedBox(height: 20),
-                const SizedBox(height: 18),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Color(0xFF94A3B8),
+            );
+            _loadThreads();
+          },
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.border),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0F000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
                 ),
               ],
             ),
-          ],
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.requestTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.requestCode.isEmpty
+                            ? 'REQ-${item.requestId.toString().padLeft(5, '0')}'
+                            : item.requestCode,
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 11.5,
+                          color: AppColors.inkMute,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        item.lastMessage,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontWeight: FontWeight.w400,
+                          fontSize: 13,
+                          color: AppColors.inkMid,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _formatTime(item.lastMessageAt),
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 11,
+                          color: AppColors.inkMute,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  children: [
+                    if (item.unreadCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          item.unreadCount > 99
+                              ? '99+'
+                              : '${item.unreadCount}',
+                          style: const TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 20),
+                    const SizedBox(height: 18),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.inkMute,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

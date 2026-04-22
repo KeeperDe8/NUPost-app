@@ -21,3 +21,4 @@ class SessionStore {
     email = null;
   }
 }
+

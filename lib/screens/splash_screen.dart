@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -12,17 +13,20 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnim;
+  late Animation<double> _scaleAnim;
 
   @override
   void initState() {
     super.initState();
 
-    // Fade-in animation over 800ms
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
     );
-    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _scaleAnim = Tween<double>(begin: 0.92, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
     _controller.forward();
 
     // Navigate to Login after 2.5 seconds
@@ -50,10 +54,11 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Background colour from Figma: #29286A
-      backgroundColor: const Color(0xFF29286A),
+      backgroundColor: AppColors.primaryDark,
       body: FadeTransition(
         opacity: _fadeAnim,
+        child: ScaleTransition(
+        scale: _scaleAnim,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -77,16 +82,16 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     TextSpan(
                       text: 'NU',
-                      style: TextStyle(
+                      style: TextStyle(fontFamily: 'DM Sans', 
                         fontSize: 38,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFFFFC72C), // Gold
+                        color: AppColors.gold,
                         letterSpacing: 2,
                       ),
                     ),
                     TextSpan(
                       text: 'POST',
-                      style: TextStyle(
+                      style: TextStyle(fontFamily: 'DM Sans', 
                         fontSize: 38,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
@@ -98,6 +103,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -139,7 +145,7 @@ class _ShieldPainter extends CustomPainter {
 
     // Dark blue inner fill
     final inner = Paint()
-      ..color = const Color(0xFF29286A)
+      ..color = AppColors.primaryDark
       ..style = PaintingStyle.fill;
     final innerPath = Path()
       ..moveTo(w * 0.5, h * 0.92)
@@ -154,8 +160,8 @@ class _ShieldPainter extends CustomPainter {
     TextPainter(
         text: const TextSpan(
           text: 'NU',
-          style: TextStyle(
-            color: Color(0xFFFFC72C),
+          style: TextStyle(fontFamily: 'DM Sans',
+            color: AppColors.gold,
             fontSize: 30,
             fontWeight: FontWeight.w900,
           ),
@@ -169,8 +175,8 @@ class _ShieldPainter extends CustomPainter {
     TextPainter(
         text: const TextSpan(
           text: '1900',
-          style: TextStyle(
-            color: Color(0xFFFFC72C),
+          style: TextStyle(fontFamily: 'DM Sans',
+            color: AppColors.gold,
             fontSize: 10,
             fontWeight: FontWeight.w600,
             letterSpacing: 1,
@@ -185,3 +191,4 @@ class _ShieldPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter _) => false;
 }
+

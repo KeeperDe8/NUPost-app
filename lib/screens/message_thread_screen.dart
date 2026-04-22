@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../theme/app_theme.dart';
 
 class MessageThreadScreen extends StatefulWidget {
   final int requestId;
@@ -26,9 +28,11 @@ class MessageThreadScreen extends StatefulWidget {
 class _MessageThreadScreenState extends State<MessageThreadScreen> {
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
 
   bool _loading = true;
   bool _sending = false;
+  String? _loadError;
   List<_ChatMessage> _messages = const [];
   Timer? _poll;
 
@@ -70,15 +74,44 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
           const [];
 
       if (!mounted) return;
+
+      final incoming = rows
+          .whereType<Map<String, dynamic>>()
+          .map(_ChatMessage.fromJson)
+          .toList();
+
+      final prevLen = _messages.length;
+      _messages = incoming;
+
+      if (prevLen == 0 && incoming.isNotEmpty) {
+        // Initial load — populate list without animation
+        setState(() {
+          _loadError = null;
+        });
+        _scrollToBottom();
+      } else if (incoming.length > prevLen) {
+        // New messages appended — animate each in
+        setState(() {
+          _loadError = null;
+        });
+        for (var i = prevLen; i < incoming.length; i++) {
+          _listKey.currentState?.insertItem(
+            i,
+            duration: const Duration(milliseconds: 350),
+          );
+        }
+        _scrollToBottom();
+      } else {
+        setState(() {
+          _loadError = null;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
       setState(() {
-        _messages = rows
-            .whereType<Map<String, dynamic>>()
-            .map(_ChatMessage.fromJson)
-            .toList();
+        _loadError = msg;
       });
-      _scrollToBottom();
-    } catch (_) {
-      // Quiet UI fallback for polling.
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -100,7 +133,11 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
       await _loadThread(showLoader: false);
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString().replaceFirst('Exception: ', '');
+      var msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg.contains('HTTP 404') && msg.contains('message_thread.php')) {
+        msg =
+            'Message endpoint not found. Run Laravel API and use API_BASE_URL=http://10.0.2.2:8000/api';
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -112,7 +149,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
       if (!_scroll.hasClients) return;
       _scroll.animateTo(
         _scroll.position.maxScrollExtent + 120,
-        duration: const Duration(milliseconds: 250),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
     });
@@ -120,190 +157,233 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildTop(),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _messages.isEmpty
-                  ? _buildEmpty()
-                  : ListView.builder(
-                      controller: _scroll,
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-                      itemCount: _messages.length,
-                      itemBuilder: (_, i) => _bubble(_messages[i]),
+    return Theme(
+      data: AppTheme.chatLight,
+      child: Builder(
+        builder: (ctx) {
+          final g =
+              Theme.of(ctx).extension<GlassColors>() ?? GlassColors.defaults;
+          return Scaffold(
+            backgroundColor: g.bg,
+            body: SafeArea(
+              child: Stack(
+                children: [
+                  // ── Message list scrolls behind header + pill ──────────
+                  Positioned.fill(
+                    child: _loading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: ChatColors.outBubble2,
+                            ),
+                          )
+                        : _loadError != null && _messages.isEmpty
+                        ? _buildLoadError(g)
+                        : _messages.isEmpty
+                        ? _buildEmpty(g)
+                        : AnimatedList(
+                            key: _listKey,
+                            controller: _scroll,
+                            padding: const EdgeInsets.fromLTRB(
+                              16,
+                              104,
+                              16,
+                              120,
+                            ),
+                            initialItemCount: _messages.length,
+                            itemBuilder: (_, i, animation) =>
+                                _animatedBubble(_messages[i], animation, g),
+                          ),
+                  ),
+
+                  // ── Glass header ──────────────────────────────────────
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Hero(
+                      tag: 'thread-${widget.requestId}',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: _buildTop(g),
+                      ),
                     ),
+                  ),
+
+                  // ── Floating pill composer ────────────────────────────
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: _buildComposer(g),
+                  ),
+                ],
+              ),
             ),
-            _buildComposer(),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildTop() {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
-      ),
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      child: Column(
-        children: [
-          Row(
+  Widget _buildTop(GlassColors g) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: g.glassWhite,
+            border: Border(bottom: BorderSide(color: g.glassBorder)),
+          ),
+          padding: const EdgeInsets.fromLTRB(8, 12, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF003366)),
-              ),
-              const SizedBox(width: 4),
-              const Expanded(
-                child: Text(
-                  'Comments with Admin',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 18,
-                    color: Color(0xFF0F172A),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: g.inkOnDark,
+                      size: 20,
+                    ),
                   ),
+                  const SizedBox(width: 2),
+                  Expanded(
+                    child: Text(
+                      'Comments with Admin',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                        color: g.inkOnDark,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: g.surface1,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: g.glassBorder),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.requestTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: g.inkOnDark,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            widget.requestCode.isEmpty
+                                ? 'REQ-${widget.requestId.toString().padLeft(5, '0')}'
+                                : widget.requestCode,
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 11,
+                              color: g.inkMuteDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            ChatColors.outBubble1,
+                            ChatColors.outBubble2,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        widget.requestStatus,
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.requestTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Color(0xFF111827),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.requestCode.isEmpty
-                            ? 'REQ-${widget.requestId.toString().padLeft(5, '0')}'
-                            : widget.requestCode,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    widget.requestStatus,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                      color: Color(0xFF475569),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildEmpty() {
-    return const Center(
+  Widget _buildEmpty(GlassColors g) {
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.forum_outlined, size: 40, color: Color(0xFFB7C0CD)),
-          SizedBox(height: 8),
+          Icon(Icons.forum_outlined, size: 44, color: g.inkMuteDark),
+          const SizedBox(height: 12),
           Text(
-            'No messages yet. Ask admin a question here!',
-            style: TextStyle(fontFamily: 'Inter', color: Color(0xFF95A1B2)),
+            'No messages yet.\nAsk admin a question here!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 14,
+              color: g.inkMuteDark,
+              height: 1.5,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _bubble(_ChatMessage m) {
-    final isMine = m.senderRole == 'requestor';
-    final align = isMine ? Alignment.centerRight : Alignment.centerLeft;
-    final color = isMine ? const Color(0xFF0B2A6F) : Colors.white;
-    final textColor = isMine ? Colors.white : const Color(0xFF1E293B);
-
-    return Align(
-      alignment: align,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 280),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(14),
-            topRight: const Radius.circular(14),
-            bottomLeft: Radius.circular(isMine ? 14 : 4),
-            bottomRight: Radius.circular(isMine ? 4 : 14),
-          ),
-          border: isMine ? null : Border.all(color: const Color(0xFFE2E8F0)),
-        ),
+  Widget _buildLoadError(GlassColors g) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
-          crossAxisAlignment: isMine
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(Icons.error_outline_rounded, size: 44, color: g.inkMuteDark),
+            const SizedBox(height: 12),
             Text(
-              m.message,
+              _loadError ?? 'Failed to load messages.',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontSize: 13,
-                color: textColor,
-                height: 1.25,
+                color: g.inkMuteDark,
+                height: 1.5,
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              _time(m.createdAt),
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 10,
-                color: isMine
-                    ? const Color(0xFFE2E8F0)
-                    : const Color(0xFF94A3B8),
-              ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => _loadThread(),
+              child: const Text('Retry'),
             ),
           ],
         ),
@@ -311,71 +391,172 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
     );
   }
 
-  Widget _buildComposer() {
+  Widget _animatedBubble(
+    _ChatMessage m,
+    Animation<double> animation,
+    GlassColors g,
+  ) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 0.25),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+      child: FadeTransition(opacity: animation, child: _bubble(m, g)),
+    );
+  }
+
+  Widget _bubble(_ChatMessage m, GlassColors g) {
+    final isMine = m.senderRole == 'requestor';
+
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 300),
+        margin: const EdgeInsets.only(bottom: 10),
+        child: isMine ? _outBubble(m, g) : _inBubble(m, g),
+      ),
+    );
+  }
+
+  Widget _outBubble(_ChatMessage m, GlassColors g) {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _input,
-              minLines: 1,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: 'Send a message to admin...',
-                hintStyle: const TextStyle(
-                  fontFamily: 'Inter',
-                  color: Color(0xFF94A3B8),
-                ),
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF0B2A6F),
-                    width: 1.2,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [ChatColors.outBubble1, ChatColors.outBubble2],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.all(Radius.circular(28)),
+      ),
+      child: _bubbleContent(m, Colors.white, Colors.white70),
+    );
+  }
+
+  Widget _inBubble(_ChatMessage m, GlassColors g) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.all(Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          decoration: BoxDecoration(
+            color: g.glassWhite,
+            borderRadius: const BorderRadius.all(Radius.circular(28)),
+            border: Border.all(color: g.glassBorder),
+          ),
+          child: _bubbleContent(m, g.inkOnDark, g.inkMuteDark),
+        ),
+      ),
+    );
+  }
+
+  Widget _bubbleContent(_ChatMessage m, Color textColor, Color timeColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          m.message,
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 14,
+            color: textColor,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _time(m.createdAt),
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 10,
+            color: timeColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildComposer(GlassColors g) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(32),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          decoration: BoxDecoration(
+            color: g.inputFill,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: g.glassBorder),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _input,
+                  minLines: 1,
+                  maxLines: 4,
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 14,
+                    color: g.inkOnDark,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Message admin…',
+                    hintStyle: TextStyle(
+                      fontFamily: 'DM Sans',
+                      color: g.inkMuteDark,
+                    ),
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    isDense: true,
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _sending ? null : _send,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: _sending
+                        ? null
+                        : const LinearGradient(
+                            colors: [
+                              ChatColors.outBubble1,
+                              ChatColors.outBubble2,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                    color: _sending ? ChatColors.surface2 : null,
+                    shape: BoxShape.circle,
+                  ),
+                  child: _sending
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.arrow_upward_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                 ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _sending ? null : _send,
-            child: Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: _sending
-                    ? const Color(0xFF94A3B8)
-                    : const Color(0xFF7C3AED),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: _sending
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.send_rounded, color: Colors.white),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

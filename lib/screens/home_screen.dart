@@ -3,6 +3,8 @@ import 'create_request_screen.dart';
 import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../theme/app_theme.dart';
+import '../widgets/floating_message_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -47,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.pageBg,
       body: Stack(
         children: [
           // ── Scrollable content ───────────────────────────
@@ -99,10 +101,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           'Recent Requests',
                           style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16.5,
-                            color: Color(0xFF1E2939),
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 17,
+                            color: AppColors.ink,
                           ),
                         ),
                       ),
@@ -131,6 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: 0,
             child: AppBottomNav(currentIndex: _currentIndex),
           ),
+          const FloatingMessageButton(),
         ],
       ),
     );
@@ -144,11 +147,15 @@ class _HomeScreenState extends State<HomeScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF003366), Color(0xFF004D99)],
+          colors: [
+            AppColors.primaryDark,
+            AppColors.primary,
+            AppColors.primaryLight,
+          ],
         ),
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+          bottomLeft: Radius.circular(AppRadius.xl),
+          bottomRight: Radius.circular(AppRadius.xl),
         ),
       ),
       padding: EdgeInsets.only(
@@ -163,17 +170,18 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             'NUPost',
             style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w500,
-              fontSize: 22.5,
+              fontFamily: 'DM Sans',
+              fontWeight: FontWeight.w700,
+              fontSize: 24,
               color: Colors.white,
+              letterSpacing: 0.2,
             ),
           ),
           SizedBox(height: 4),
           Text(
             'NU Lipa Marketing Office',
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'DM Sans',
               fontWeight: FontWeight.w400,
               fontSize: 13.1,
               color: Color(0xFFDBEAFE),
@@ -248,10 +256,10 @@ class _HomeScreenState extends State<HomeScreen> {
       height: 82,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFFFFBEB), Color(0xFFFEFCE8)],
+          colors: [Color(0xFFFFFBEB), AppColors.goldBg],
         ),
-        border: Border.all(color: const Color(0xFFFEE685)),
-        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.goldLight),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A000000),
@@ -277,20 +285,20 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 'Average Approval Time',
                 style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w400,
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w500,
                   fontSize: 13.2,
-                  color: Color(0xFF4A5565),
+                  color: AppColors.inkMid,
                 ),
               ),
               SizedBox(height: 2),
               Text(
                 '— days',
                 style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w400,
-                  fontSize: 17.8,
-                  color: Color(0xFFBB4D00),
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  color: AppColors.goldDark,
                 ),
               ),
             ],
@@ -312,17 +320,19 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF003366),
+          backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 4,
-          shadowColor: const Color(0x1A000000),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shadowColor: const Color(0x33002366),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
         ),
         child: const Text(
           '+ Create New Request',
           style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w600,
             fontSize: 15,
             color: Colors.white,
           ),
@@ -341,16 +351,18 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.of(context).pushNamed('/calendar');
         },
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFF003366), width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          side: const BorderSide(color: AppColors.primary, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
         ),
         child: const Text(
           'View Post Calendar',
           style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w600,
             fontSize: 15,
-            color: Color(0xFF003366),
+            color: AppColors.primary,
           ),
         ),
       ),
@@ -363,13 +375,13 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 40),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black.withOpacity(0.1)),
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 6,
+            color: Color(0x14000000),
+            blurRadius: 10,
             offset: Offset(0, 4),
           ),
         ],
@@ -377,15 +389,15 @@ class _HomeScreenState extends State<HomeScreen> {
       child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox_outlined, size: 40, color: Color(0xFF99A1AF)),
+          Icon(Icons.inbox_outlined, size: 40, color: AppColors.inkMute),
           SizedBox(height: 12),
           Text(
             'No requests yet',
             style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
+              fontFamily: 'DM Sans',
+              fontWeight: FontWeight.w500,
               fontSize: 13,
-              color: Color(0xFF4A5565),
+              color: AppColors.inkMid,
             ),
           ),
         ],
@@ -413,13 +425,13 @@ class _StatCard extends StatelessWidget {
     return Container(
       height: 110,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black.withOpacity(0.1)),
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 6,
+            color: Color(0x14000000),
+            blurRadius: 10,
             offset: Offset(0, 4),
           ),
         ],
@@ -432,20 +444,20 @@ class _StatCard extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
+              fontFamily: 'DM Sans',
+              fontWeight: FontWeight.w700,
               fontSize: 24,
-              color: Color(0xFF0A0A0A),
+              color: AppColors.ink,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
             style: const TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
+              fontFamily: 'DM Sans',
+              fontWeight: FontWeight.w500,
               fontSize: 11.1,
-              color: Color(0xFF4A5565),
+              color: AppColors.inkMid,
             ),
           ),
         ],

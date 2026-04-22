@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_bottom_nav.dart';
+import '../theme/app_theme.dart';
 import 'request_tracking_screen.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
@@ -13,9 +14,10 @@ class RequestsScreen extends StatefulWidget {
 }
 
 class _RequestsScreenState extends State<RequestsScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
-  final int _currentNavIndex = 1; // Requests is active
+  late AnimationController _staggerController;
+  final int _currentNavIndex = 1;
   bool _isLoading = false;
   String? _error;
 
@@ -26,6 +28,10 @@ class _RequestsScreenState extends State<RequestsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _staggerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
     _tabController.addListener(() {
       setState(() {});
       if (!_tabController.indexIsChanging) {
@@ -38,42 +44,40 @@ class _RequestsScreenState extends State<RequestsScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _staggerController.dispose();
     super.dispose();
+  }
+
+  void _replayStagger() {
+    _staggerController.reset();
+    _staggerController.forward();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.pageBg,
       body: Stack(
         children: [
-          Column(
-            children: [
-              // ── Header ──────────────────────────────────
-              _buildHeader(),
-
-              // ── Tab bar ─────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: _buildTabBar(),
-              ),
-
-              const SizedBox(height: 16),
-
-              // ── Tab content ──────────────────────────────
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: _tabs.map((tab) => _buildRequestList(tab)).toList(),
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              _buildSliverAppBar(context),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _TabBarDelegate(
+                  child: Container(
+                    color: AppColors.pageBg,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    child: _buildTabBar(),
+                  ),
                 ),
               ),
-
-              // Space for nav bar
-              const SizedBox(height: 90),
             ],
+            body: TabBarView(
+              controller: _tabController,
+              children: _tabs.map((tab) => _buildRequestList(tab)).toList(),
+            ),
           ),
-
-          // ── Bottom Nav ───────────────────────────────────
           Positioned(
             left: 0,
             right: 0,
@@ -86,89 +90,108 @@ class _RequestsScreenState extends State<RequestsScreen>
     );
   }
 
-  // ── Header ────────────────────────────────────────────
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: MediaQuery.of(context).padding.top + 18,
-        bottom: 18,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            'My Requests',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w700,
-              fontSize: 24,
-              color: Color(0xFF003366),
+  Widget _buildSliverAppBar(BuildContext context) {
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: 180,
+      backgroundColor: AppColors.primaryDark,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      flexibleSpace: FlexibleSpaceBar(
+        titlePadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        title: const Text(
+          'My Requests',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primaryDark,
+                AppColors.primary,
+                AppColors.primaryLight,
+              ],
             ),
           ),
-          SizedBox(height: 4),
-          Text(
-            'Track your submission status',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
-              fontSize: 13.5,
-              color: Color(0xFF6B7280),
-            ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -30,
+                top: -30,
+                child: Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.06),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 20,
+                bottom: 54,
+                right: 20,
+                child: Text(
+                  'Track your submission status',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 13.5,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // ── Tab bar ───────────────────────────────────────────
   Widget _buildTabBar() {
     return Container(
-      height: 36,
+      height: 40,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A000000),
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(AppRadius.md - 2),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
+        indicatorPadding: const EdgeInsets.all(3),
         dividerColor: Colors.transparent,
-        labelColor: const Color(0xFF0A0A0A),
-        unselectedLabelColor: const Color(0xFF0A0A0A),
+        labelColor: Colors.white,
+        unselectedLabelColor: AppColors.inkMid,
         labelStyle: const TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w500,
-          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
         ),
         unselectedLabelStyle: const TextStyle(
-          fontFamily: 'Inter',
           fontWeight: FontWeight.w500,
-          fontSize: 13.5,
+          fontSize: 13,
         ),
         tabs: _tabs.map((t) => Tab(text: t)).toList(),
-        padding: const EdgeInsets.symmetric(vertical: 3.5, horizontal: 3),
       ),
     );
   }
 
-  // ── Empty state ───────────────────────────────────────
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -176,25 +199,23 @@ class _RequestsScreenState extends State<RequestsScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: const [
-            Icon(Icons.inbox_outlined, size: 48, color: Color(0xFF99A1AF)),
+            Icon(Icons.inbox_outlined, size: 48, color: AppColors.inkMute),
             SizedBox(height: 12),
             Text(
               'No requests yet',
               style: TextStyle(
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w400,
+                fontWeight: FontWeight.w500,
                 fontSize: 14,
-                color: Color(0xFF4A5565),
+                color: AppColors.inkMid,
               ),
             ),
             SizedBox(height: 6),
             Text(
               'Tap + Create to submit a new request',
               style: TextStyle(
-                fontFamily: 'Inter',
                 fontWeight: FontWeight.w400,
                 fontSize: 12,
-                color: Color(0xFF99A1AF),
+                color: AppColors.inkMute,
               ),
             ),
           ],
@@ -242,6 +263,7 @@ class _RequestsScreenState extends State<RequestsScreen>
       setState(() {
         _requests = mapped;
       });
+      _replayStagger();
     } catch (e) {
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
@@ -271,12 +293,11 @@ class _RequestsScreenState extends State<RequestsScreen>
     BuildContext context,
     _RequestPreview req,
   ) async {
-    // Show loading
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF003366)),
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
     );
 
@@ -284,17 +305,15 @@ class _RequestsScreenState extends State<RequestsScreen>
       final response = await ApiService.fetchRequestDetails(requestId: req.id);
 
       if (!context.mounted) return;
-      Navigator.of(context).pop(); // Close loading
+      Navigator.of(context).pop();
 
       if (response['success'] == true) {
         final data = response['data'] ?? {};
         final request = data['request'] ?? {};
         final activities = (data['activities'] as List?) ?? [];
 
-        // Build tracking events from activities
         final events = <TrackingEvent>[];
 
-        // Add submission event
         final createdAt = request['created_at'] ?? '';
         events.add(
           TrackingEvent(
@@ -305,7 +324,6 @@ class _RequestsScreenState extends State<RequestsScreen>
           ),
         );
 
-        // Add activity events
         for (final activity in activities) {
           final action = (activity['action'] ?? '').toString();
           final activityTime = activity['created_at'] ?? '';
@@ -367,6 +385,7 @@ class _RequestsScreenState extends State<RequestsScreen>
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => RequestTrackingScreen(
+              heroTag: 'request-${req.id}',
               requestNumber: req.number,
               requestTitle: req.title,
               currentStatus: currentStatus,
@@ -378,7 +397,7 @@ class _RequestsScreenState extends State<RequestsScreen>
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
@@ -432,7 +451,7 @@ class _RequestsScreenState extends State<RequestsScreen>
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF6B7280)),
+                style: const TextStyle(color: AppColors.inkMid),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
@@ -450,81 +469,184 @@ class _RequestsScreenState extends State<RequestsScreen>
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final req = items[index];
-        return InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _openRequestDetails(context, req),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        req.number,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        req.title,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Color(0xFF101828),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        req.submittedAt,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _StatusChip(status: req.status),
-                    const SizedBox(height: 8),
-                    const Icon(
-                      Icons.chevron_right,
-                      size: 20,
-                      color: Color(0xFF99A1AF),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        return _StaggeredItem(
+          controller: _staggerController,
+          index: index,
+          total: items.length,
+          child: _RequestCard(
+            req: req,
+            onTap: () => _openRequestDetails(context, req),
           ),
         );
       },
     );
   }
+}
 
-  // ── Bottom Nav ────────────────────────────────────────
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  _TabBarDelegate({required this.child});
+
+  @override
+  double get minExtent => 64;
+  @override
+  double get maxExtent => 64;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => child;
+
+  @override
+  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) => false;
+}
+
+class _StaggeredItem extends StatelessWidget {
+  final AnimationController controller;
+  final int index;
+  final int total;
+  final Widget child;
+
+  const _StaggeredItem({
+    required this.controller,
+    required this.index,
+    required this.total,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final slotCount = total.clamp(1, 20);
+    final slot = index.clamp(0, slotCount - 1);
+    final start = (slot / (slotCount + 4)).clamp(0.0, 0.85);
+    final end = (start + 0.55).clamp(0.0, 1.0);
+    final curve = CurvedAnimation(
+      parent: controller,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+    return AnimatedBuilder(
+      animation: curve,
+      builder: (context, inner) {
+        return Opacity(
+          opacity: curve.value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - curve.value) * 18),
+            child: inner,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+class _RequestCard extends StatelessWidget {
+  final _RequestPreview req;
+  final VoidCallback onTap;
+
+  const _RequestCard({required this.req, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Hero(
+      tag: 'request-${req.id}',
+      flightShuttleBuilder: (_, __, ___, ____, _____) => Material(
+        color: Colors.transparent,
+        child: _RequestCardBody(req: req),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          onTap: onTap,
+          child: _RequestCardBody(req: req),
+        ),
+      ),
+    );
+  }
+}
+
+class _RequestCardBody extends StatelessWidget {
+  final _RequestPreview req;
+  const _RequestCardBody({required this.req});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: const Color(0x0F000000)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  req.number,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    color: AppColors.inkMute,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  req.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14.5,
+                    color: AppColors.ink,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  req.submittedAt,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 12,
+                    color: AppColors.inkMute,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _StatusChip(status: req.status),
+              const SizedBox(height: 8),
+              const Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: AppColors.inkMute,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RequestPreview {
@@ -549,12 +671,29 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isApproved = status == 'Approved';
-    final bg = isApproved ? const Color(0xFFECFDF3) : const Color(0xFFFFF7ED);
-    final fg = isApproved ? const Color(0xFF027A48) : const Color(0xFFB54708);
+    Color bg;
+    Color fg;
+    switch (status) {
+      case 'Approved':
+        bg = const Color(0xFFD1FAE5);
+        fg = const Color(0xFF047857);
+        break;
+      case 'Posted':
+        bg = const Color(0xFFEDE9FE);
+        fg = const Color(0xFF6D28D9);
+        break;
+      case 'Rejected':
+        bg = const Color(0xFFFEE2E2);
+        fg = const Color(0xFFB91C1C);
+        break;
+      case 'Pending':
+      default:
+        bg = AppColors.goldBg;
+        fg = AppColors.goldDark;
+    }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
@@ -562,7 +701,6 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         status,
         style: TextStyle(
-          fontFamily: 'Inter',
           fontWeight: FontWeight.w600,
           fontSize: 11,
           color: fg,

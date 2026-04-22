@@ -8,6 +8,7 @@ class RequestTrackingScreen extends StatelessWidget {
   final List<TrackingEvent> events;
   final String currentStatus;
   final String currentStatusMessage;
+  final String? heroTag;
 
   const RequestTrackingScreen({
     super.key,
@@ -16,12 +17,13 @@ class RequestTrackingScreen extends StatelessWidget {
     this.events = const [],
     this.currentStatus = '',
     this.currentStatusMessage = '',
+    this.heroTag,
   });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: const Color(0xFFE8ECF4),
       body: Stack(
         children: [
           Column(
@@ -73,17 +75,16 @@ class RequestTrackingScreen extends StatelessWidget {
                   child: const Icon(
                     Icons.arrow_back,
                     size: 24,
-                    color: Color(0xFF003366),
+                    color: Color(0xFF3B6EF5),
                   ),
                 ),
                 const SizedBox(width: 16),
                 const Text(
                   'Request Tracking',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
+                  style: TextStyle(fontFamily: 'DM Sans', 
                     fontWeight: FontWeight.w500,
                     fontSize: 18.4,
-                    color: Color(0xFF003366),
+                    color: Color(0xFF3B6EF5),
                   ),
                 ),
               ],
@@ -101,8 +102,7 @@ class RequestTrackingScreen extends StatelessWidget {
                     if (requestNumber.isNotEmpty)
                       Text(
                         requestNumber,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
+                        style: const TextStyle(fontFamily: 'DM Sans', 
                           fontWeight: FontWeight.w400,
                           fontSize: 13.2,
                           color: Color(0xFF4A5565),
@@ -111,8 +111,7 @@ class RequestTrackingScreen extends StatelessWidget {
                     if (requestTitle.isNotEmpty)
                       Text(
                         requestTitle,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
+                        style: const TextStyle(fontFamily: 'DM Sans', 
                           fontWeight: FontWeight.w400,
                           fontSize: 13,
                           color: Color(0xFF101828),
@@ -139,8 +138,7 @@ class RequestTrackingScreen extends StatelessWidget {
             SizedBox(height: 12),
             Text(
               'No tracking history yet',
-              style: TextStyle(
-                fontFamily: 'Inter',
+              style: TextStyle(fontFamily: 'DM Sans', 
                 fontWeight: FontWeight.w400,
                 fontSize: 14,
                 color: Color(0xFF4A5565),
@@ -150,8 +148,7 @@ class RequestTrackingScreen extends StatelessWidget {
             Text(
               'Updates will appear here once your request\nis reviewed by the Marketing Office',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Inter',
+              style: TextStyle(fontFamily: 'DM Sans', 
                 fontWeight: FontWeight.w400,
                 fontSize: 12,
                 color: Color(0xFF99A1AF),
@@ -175,7 +172,16 @@ class RequestTrackingScreen extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Current status card
-          if (currentStatus.isNotEmpty) _buildCurrentStatusCard(),
+          if (currentStatus.isNotEmpty)
+            heroTag != null
+                ? Hero(
+                    tag: heroTag!,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: _buildCurrentStatusCard(),
+                    ),
+                  )
+                : _buildCurrentStatusCard(),
         ],
       ),
     );
@@ -189,7 +195,7 @@ class RequestTrackingScreen extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF003366), Color(0xFF004D99)],
+          colors: [Color(0xFF3B6EF5), Color(0xFF004D99)],
         ),
         borderRadius: BorderRadius.circular(10),
         boxShadow: const [
@@ -206,8 +212,7 @@ class RequestTrackingScreen extends StatelessWidget {
         children: [
           const Text(
             'Current Status',
-            style: TextStyle(
-              fontFamily: 'Inter',
+            style: TextStyle(fontFamily: 'DM Sans', 
               fontWeight: FontWeight.w500,
               fontSize: 16.6,
               color: Colors.white,
@@ -216,8 +221,7 @@ class RequestTrackingScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             currentStatus,
-            style: const TextStyle(
-              fontFamily: 'Inter',
+            style: const TextStyle(fontFamily: 'DM Sans', 
               fontWeight: FontWeight.w400,
               fontSize: 27.3,
               color: Colors.white,
@@ -226,8 +230,7 @@ class RequestTrackingScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             currentStatusMessage,
-            style: const TextStyle(
-              fontFamily: 'Inter',
+            style: const TextStyle(fontFamily: 'DM Sans', 
               fontWeight: FontWeight.w400,
               fontSize: 13,
               color: Colors.white,
@@ -286,7 +289,7 @@ class _TimelineItem extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: const BoxDecoration(
-                    color: Color(0xFF003366),
+                    color: Color(0xFF3B6EF5),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(event.icon, size: 18, color: Colors.white),
@@ -296,7 +299,7 @@ class _TimelineItem extends StatelessWidget {
                   Expanded(
                     child: Container(
                       width: 2,
-                      color: const Color(0xFFE5E7EB),
+                      color: const Color(0xFFE4E8F0),
                       margin: const EdgeInsets.symmetric(vertical: 4),
                     ),
                   ),
@@ -329,8 +332,7 @@ class _TimelineItem extends StatelessWidget {
                   children: [
                     Text(
                       event.title,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
+                      style: const TextStyle(fontFamily: 'DM Sans', 
                         fontWeight: FontWeight.w500,
                         fontSize: 15.1,
                         color: Color(0xFF101828),
@@ -339,8 +341,7 @@ class _TimelineItem extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       event.subtitle,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
+                      style: const TextStyle(fontFamily: 'DM Sans', 
                         fontWeight: FontWeight.w400,
                         fontSize: 12.7,
                         color: Color(0xFF4A5565),
@@ -349,8 +350,7 @@ class _TimelineItem extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       event.timestamp,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
+                      style: const TextStyle(fontFamily: 'DM Sans', 
                         fontWeight: FontWeight.w400,
                         fontSize: 10.7,
                         color: Color(0xFF6A7282),
@@ -381,3 +381,4 @@ class TrackingEvent {
     required this.timestamp,
   });
 }
+

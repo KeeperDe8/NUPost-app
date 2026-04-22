@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,18 +7,24 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   // Android emulator: 10.0.2.2 maps to localhost on your PC.
-  // You can force one URL via --dart-define=API_BASE_URL=http://10.0.2.2/nupost-main/api
+  // You can force one URL via --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
   static const String _configuredBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
   );
+
+  static const String _laravelBaseUrl = 'http://10.0.2.2:8000/api';
+  static const String _legacyBaseUrl = 'http://10.0.2.2/nupost-main/api';
 
   static String get _baseUrl {
     if (_configuredBaseUrl.isNotEmpty) {
       return _configuredBaseUrl;
     }
 
-    return 'http://10.0.2.2/nupost-main/api';
+    // Prefer Laravel compatibility API. Legacy is still used as fallback.
+    return _laravelBaseUrl;
   }
+
+  static const Duration _requestTimeout = Duration(seconds: 15);
 
   static Future<Map<String, dynamic>> login({
     required String email,
@@ -283,12 +290,70 @@ class ApiService {
     ).replace(queryParameters: queryParameters);
   }
 
+  static List<Uri> _candidateUris(Uri originalUri) {
+    if (_configuredBaseUrl.isNotEmpty) {
+      return [originalUri];
+    }
+
+    final endpoint = originalUri.pathSegments.isNotEmpty
+        ? originalUri.pathSegments.last
+        : '';
+    final query = originalUri.queryParameters.isEmpty
+        ? null
+        : originalUri.queryParameters;
+
+    final laravel = _buildUri(_laravelBaseUrl, endpoint, query);
+    final legacy = _buildUri(_legacyBaseUrl, endpoint, query);
+
+    final ordered = <Uri>[laravel, legacy];
+    final unique = <Uri>[];
+    for (final uri in ordered) {
+      if (!unique.contains(uri)) {
+        unique.add(uri);
+      }
+    }
+    return unique;
+  }
+
   static Future<Map<String, dynamic>> _getJson(
     Uri uri, {
     required String fallbackMessage,
   }) async {
-    final response = await http.get(uri);
-    return _parseResponse(response, uri: uri, fallbackMessage: fallbackMessage);
+    final candidates = _candidateUris(uri);
+    for (var i = 0; i < candidates.length; i++) {
+      final candidate = candidates[i];
+      final hasNext = i < candidates.length - 1;
+
+      try {
+        final response = await http.get(candidate).timeout(_requestTimeout);
+        if (response.statusCode == 404 && hasNext) {
+          continue;
+        }
+        return _parseResponse(
+          response,
+          uri: candidate,
+          fallbackMessage: fallbackMessage,
+        );
+      } on TimeoutException {
+        if (hasNext) {
+          continue;
+        }
+        throw Exception(
+          'Connection timed out. Check if the API server is running and API_BASE_URL is correct.',
+        );
+      } on SocketException {
+        if (hasNext) {
+          continue;
+        }
+        throw Exception(
+          'Cannot connect to API server. Check network and API_BASE_URL.',
+        );
+      }
+    }
+
+    throw Exception(
+      'Cannot connect to API server. Check network and API_BASE_URL.',
+    );
   }
 
   static Future<Map<String, dynamic>> _postJson(
@@ -296,12 +361,47 @@ class ApiService {
     Map<String, dynamic> payload, {
     required String fallbackMessage,
   }) async {
-    final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
+    final candidates = _candidateUris(uri);
+    for (var i = 0; i < candidates.length; i++) {
+      final candidate = candidates[i];
+      final hasNext = i < candidates.length - 1;
+
+      try {
+        final response = await http
+            .post(
+              candidate,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(payload),
+            )
+            .timeout(_requestTimeout);
+        if (response.statusCode == 404 && hasNext) {
+          continue;
+        }
+        return _parseResponse(
+          response,
+          uri: candidate,
+          fallbackMessage: fallbackMessage,
+        );
+      } on TimeoutException {
+        if (hasNext) {
+          continue;
+        }
+        throw Exception(
+          'Connection timed out. Check if the API server is running and API_BASE_URL is correct.',
+        );
+      } on SocketException {
+        if (hasNext) {
+          continue;
+        }
+        throw Exception(
+          'Cannot connect to API server. Check network and API_BASE_URL.',
+        );
+      }
+    }
+
+    throw Exception(
+      'Cannot connect to API server. Check network and API_BASE_URL.',
     );
-    return _parseResponse(response, uri: uri, fallbackMessage: fallbackMessage);
   }
 
   static Map<String, dynamic> _parseResponse(

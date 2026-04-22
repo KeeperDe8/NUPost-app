@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../theme/app_theme.dart';
 import '../widgets/floating_message_button.dart';
 import 'request_tracking_screen.dart';
 
@@ -202,7 +203,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF003366)),
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
     );
 
@@ -367,7 +368,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.pageBg,
       body: Stack(
         children: [
           Column(
@@ -377,7 +378,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: _isLoading
                     ? const Center(
                         child: CircularProgressIndicator(
-                          color: Color(0xFF003366),
+                          color: AppColors.primary,
                         ),
                       )
                     : _notifications.isEmpty
@@ -409,8 +410,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         bottom: 18,
       ),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,20 +423,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 Text(
                   'Notifications',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w700,
                     fontSize: 24,
-                    color: Color(0xFF003366),
+                    color: AppColors.primary,
                   ),
                 ),
                 SizedBox(height: 4),
                 Text(
                   'Stay updated on your requests',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w400,
                     fontSize: 13.5,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.inkMid,
                   ),
                 ),
               ],
@@ -453,13 +454,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF003366),
+                      color: AppColors.primary,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Text(
                       'Mark all read',
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'DM Sans',
                         fontWeight: FontWeight.w500,
                         fontSize: 11,
                         color: Colors.white,
@@ -485,16 +486,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Icon(
               Icons.notifications_none_outlined,
               size: 48,
-              color: Color(0xFF99A1AF),
+              color: AppColors.inkMute,
             ),
             SizedBox(height: 12),
             Text(
               'No notifications yet',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w400,
                 fontSize: 14,
-                color: Color(0xFF4A5565),
+                color: AppColors.inkMid,
               ),
             ),
             SizedBox(height: 6),
@@ -502,10 +503,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               'You\'ll be notified about your request updates here',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w400,
                 fontSize: 12,
-                color: Color(0xFF99A1AF),
+                color: AppColors.inkMute,
               ),
             ),
           ],
@@ -519,7 +520,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return RefreshIndicator(
       onRefresh: () => _loadNotifications(showLoading: false),
-      color: const Color(0xFF003366),
+      color: AppColors.primary,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         itemCount: groups.length,
@@ -548,14 +549,14 @@ class _UnreadBadge extends StatelessWidget {
       width: 24.67,
       height: 24,
       decoration: BoxDecoration(
-        color: const Color(0xFFFB2C36),
+        color: AppColors.accent,
         borderRadius: BorderRadius.circular(8),
       ),
       alignment: Alignment.center,
       child: Text(
         count > 99 ? '99+' : '$count',
         style: const TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: 'DM Sans',
           fontWeight: FontWeight.w500,
           fontSize: 12,
           color: Colors.white,
@@ -587,7 +588,7 @@ class _NotificationCard extends StatelessWidget {
               child: Container(
                 height: 10,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8EDF5),
+                  color: AppColors.border,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -600,7 +601,7 @@ class _NotificationCard extends StatelessWidget {
               child: Container(
                 height: 10,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEEF2F8),
+                  color: AppColors.pageBg,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -610,13 +611,13 @@ class _NotificationCard extends StatelessWidget {
             margin: EdgeInsets.only(bottom: group.totalCount > 1 ? 8 : 0),
             decoration: BoxDecoration(
               color: group.unreadCount == 0
-                  ? Colors.white
-                  : const Color(0xFFF0F7FF),
-              borderRadius: BorderRadius.circular(12),
+                  ? AppColors.surface
+                  : AppColors.goldBg,
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(
                 color: group.unreadCount == 0
-                    ? const Color(0xFFE5E7EB)
-                    : const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                    ? AppColors.border
+                    : AppColors.accent.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -649,12 +650,12 @@ class _NotificationCard extends StatelessWidget {
                             child: Text(
                               notification.title,
                               style: TextStyle(
-                                fontFamily: 'Inter',
+                                fontFamily: 'DM Sans',
                                 fontWeight: group.unreadCount == 0
                                     ? FontWeight.w500
                                     : FontWeight.w600,
                                 fontSize: 14,
-                                color: const Color(0xFF1F2937),
+                                color: AppColors.ink,
                               ),
                             ),
                           ),
@@ -666,16 +667,16 @@ class _NotificationCard extends StatelessWidget {
                               ),
                               margin: const EdgeInsets.only(right: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE5E7EB),
+                                color: AppColors.border,
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
                                 '${group.totalCount}',
                                 style: const TextStyle(
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'DM Sans',
                                   fontWeight: FontWeight.w600,
                                   fontSize: 10,
-                                  color: Color(0xFF4B5563),
+                                  color: AppColors.inkMid,
                                 ),
                               ),
                             ),
@@ -684,7 +685,7 @@ class _NotificationCard extends StatelessWidget {
                               width: 8,
                               height: 8,
                               decoration: const BoxDecoration(
-                                color: Color(0xFF3B82F6),
+                                color: AppColors.accent,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -694,20 +695,20 @@ class _NotificationCard extends StatelessWidget {
                       Text(
                         notification.message,
                         style: const TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w400,
                           fontSize: 13,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.inkMid,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         _formatTime(notification.createdAt),
                         style: const TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w400,
                           fontSize: 11,
-                          color: Color(0xFF99A1AF),
+                          color: AppColors.inkMute,
                         ),
                       ),
                     ],
@@ -724,18 +725,18 @@ class _NotificationCard extends StatelessWidget {
   Color _getTypeColor(String type) {
     switch (type) {
       case 'approved':
-        return const Color(0xFF059669);
+        return AppColors.approved;
       case 'rejected':
-        return const Color(0xFFDC2626);
+        return AppColors.rejected;
       case 'posted':
       case 'comment':
-        return const Color(0xFF7C3AED);
+        return AppColors.posted;
       case 'review':
       case 'under_review':
       case 'received':
-        return const Color(0xFFD97706);
+        return AppColors.pending;
       default:
-        return const Color(0xFF3B82F6);
+        return AppColors.accent;
     }
   }
 

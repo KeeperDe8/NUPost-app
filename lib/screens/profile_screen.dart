@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import '../widgets/floating_message_button.dart';
 
@@ -75,18 +76,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Text(
           'Log Out',
-          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+          style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600),
         ),
         content: const Text(
           'Are you sure you want to log out?',
-          style: TextStyle(fontFamily: 'Inter'),
+          style: TextStyle(fontFamily: 'DM Sans'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
               'Cancel',
-              style: TextStyle(fontFamily: 'Inter', color: Color(0xFF4A5565)),
+              style: TextStyle(fontFamily: 'DM Sans', color: AppColors.inkMid),
             ),
           ),
           TextButton(
@@ -101,8 +102,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text(
               'Log Out',
               style: TextStyle(
-                fontFamily: 'Inter',
-                color: Color(0xFFE7000B),
+                fontFamily: 'DM Sans',
+                color: AppColors.rejected,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -115,7 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.pageBg,
       body: Stack(
         children: [
           // ── Scrollable content ───────────────────────
@@ -156,10 +157,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(
                     'Settings',
                     style: const TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'DM Sans',
                       fontWeight: FontWeight.w500,
                       fontSize: 13,
-                      color: Color(0xFF6A7282),
+                      color: AppColors.inkMute,
                     ),
                   ),
                 ),
@@ -196,10 +197,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(
                     'Help & Support',
                     style: const TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'DM Sans',
                       fontWeight: FontWeight.w500,
                       fontSize: 13.7,
-                      color: Color(0xFF6A7282),
+                      color: AppColors.inkMute,
                     ),
                   ),
                 ),
@@ -237,10 +238,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(
                     'NUPost v1.0.0 • NU Lipa Marketing Office',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'DM Sans',
                       fontWeight: FontWeight.w400,
                       fontSize: 11.1,
-                      color: Color(0xFF99A1AF),
+                      color: AppColors.inkMute,
                     ),
                   ),
                 ),
@@ -276,7 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF003366), Color(0xFF004D99)],
+              colors: [AppColors.primary, AppColors.primaryLight],
             ),
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(24),
@@ -292,7 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Text(
               'Profile',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w500,
                 fontSize: 22.9,
                 color: Colors.white,
@@ -328,10 +329,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF003366),
+                    color: AppColors.primary,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFF003366),
+                      color: AppColors.primary,
                       width: 2,
                     ),
                   ),
@@ -339,7 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(
                     _initials,
                     style: const TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'DM Sans',
                       fontWeight: FontWeight.w400,
                       fontSize: 16.9,
                       color: Colors.white,
@@ -358,20 +359,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(
                         _name.isEmpty ? 'NUPost User' : _name,
                         style: const TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w500,
                           fontSize: 16.7,
-                          color: Color(0xFF101828),
+                          color: AppColors.ink,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         _role.isEmpty ? 'Requester' : _role,
                         style: const TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w400,
                           fontSize: 12.8,
-                          color: Color(0xFF4A5565),
+                          color: AppColors.inkMid,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -381,17 +382,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDBEAFE),
-                          border: Border.all(color: const Color(0xFF8EC5FF)),
+                          color: AppColors.goldBg,
+                          border: Border.all(color: AppColors.goldLight),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
                           'Verified Requester',
                           style: TextStyle(
-                            fontFamily: 'Inter',
+                            fontFamily: 'DM Sans',
                             fontWeight: FontWeight.w500,
                             fontSize: 11.1,
-                            color: Color(0xFF1447E6),
+                            color: AppColors.accent,
                           ),
                         ),
                       ),
@@ -411,10 +412,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'NU\nPOST',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'DM Sans',
                         fontWeight: FontWeight.w900,
                         fontSize: 10,
-                        color: Color(0xFF003366),
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
@@ -475,7 +476,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: _StatCard(
             value: '$_totalRequests',
             label: 'Total Requests',
-            valueColor: const Color(0xFF003366),
+            valueColor: AppColors.primary,
           ),
         ),
         const SizedBox(width: 8),
@@ -483,7 +484,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: _StatCard(
             value: '$_approved',
             label: 'Approved',
-            valueColor: const Color(0xFF00A63E),
+            valueColor: AppColors.approved,
           ),
         ),
         const SizedBox(width: 8),
@@ -491,7 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: _StatCard(
             value: '$_pending',
             label: 'Pending',
-            valueColor: const Color(0xFFE17100),
+            valueColor: AppColors.pending,
           ),
         ),
       ],
@@ -535,24 +536,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Icon(
                           item.icon,
                           size: 20,
-                          color: const Color(0xFF4A5565),
+                          color: AppColors.inkMid,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             item.label,
                             style: const TextStyle(
-                              fontFamily: 'Inter',
+                              fontFamily: 'DM Sans',
                               fontWeight: FontWeight.w500,
                               fontSize: 15,
-                              color: Color(0xFF0A0A0A),
+                              color: AppColors.ink,
                             ),
                           ),
                         ),
                         const Icon(
                           Icons.chevron_right,
                           size: 20,
-                          color: Color(0xFF99A1AF),
+                          color: AppColors.inkMute,
                         ),
                       ],
                     ),
@@ -580,21 +581,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         height: 48,
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: const Color(0xFFFFA2A2)),
+          border: Border.all(color: AppColors.rejected),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: const [
-            Icon(Icons.logout, size: 16, color: Color(0xFFE7000B)),
+            Icon(Icons.logout, size: 16, color: AppColors.rejected),
             SizedBox(width: 8),
             Text(
               'Log Out',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w500,
                 fontSize: 13.6,
-                color: Color(0xFFE7000B),
+                color: AppColors.rejected,
               ),
             ),
           ],
@@ -621,7 +622,7 @@ class _ContactRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: const Color(0xFF003366)),
+        Icon(icon, size: 20, color: AppColors.primary),
         const SizedBox(width: 12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -629,20 +630,20 @@ class _ContactRow extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w400,
                 fontSize: 11.3,
-                color: Color(0xFF6A7282),
+                color: AppColors.inkMute,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               value,
               style: const TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w400,
                 fontSize: 14.8,
-                color: Color(0xFF0A0A0A),
+                color: AppColors.ink,
               ),
             ),
           ],
@@ -686,7 +687,7 @@ class _StatCard extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'DM Sans',
               fontWeight: FontWeight.w400,
               fontSize: 24,
               color: valueColor,
@@ -696,10 +697,10 @@ class _StatCard extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'DM Sans',
               fontWeight: FontWeight.w400,
               fontSize: 10.7,
-              color: Color(0xFF4A5565),
+              color: AppColors.inkMid,
             ),
             textAlign: TextAlign.center,
           ),
