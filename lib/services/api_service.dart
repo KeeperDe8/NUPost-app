@@ -455,4 +455,36 @@ class ApiService {
     }
     return <String, dynamic>{};
   }
+
+  static Future<Map<String, dynamic>> updateProfile({
+    required int userId,
+    required String name,
+    required String email,
+    required String phone,
+    required String bio,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/profile.php');
+    try {
+      final response = await http
+          .post(
+            uri,
+            body: {
+              'user_id': userId.toString(),
+              'name': name,
+              'email': email,
+              'phone': phone,
+              'bio': bio,
+            },
+          )
+          .timeout(_requestTimeout);
+
+      return _parseResponse(
+        response,
+        uri: uri,
+        fallbackMessage: 'Failed to update profile',
+      );
+    } catch (e) {
+      throw Exception('Failed to reach server: $e');
+    }
+  }
 }

@@ -4,6 +4,8 @@ import '../services/api_service.dart';
 import '../services/session_store.dart';
 import 'login_screen.dart';
 import '../widgets/floating_message_button.dart';
+import 'edit_profile_screen.dart';
+import 'account_security_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -358,7 +360,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     ),
                                   ),
                                   GestureDetector(
-                                    onTap: () {},
+                                    onTap: () async {
+                                      final didUpdate =
+                                          await Navigator.push<bool>(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const EditProfileScreen(),
+                                            ),
+                                          );
+                                      if (didUpdate == true) {
+                                        _loadProfile();
+                                      }
+                                    },
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 12,
@@ -449,7 +463,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                             _MenuItem(
                               icon: Icons.shield_outlined,
                               label: 'Account Security',
-                              onTap: () {},
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const AccountSecurityScreen(),
+                                  ),
+                                );
+                              },
                             ),
                             _MenuItem(
                               icon: Icons.notifications_outlined,
@@ -459,7 +481,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                             _MenuItem(
                               icon: Icons.person_outline_rounded,
                               label: 'Edit Profile',
-                              onTap: () {},
+                              onTap: () async {
+                                final didUpdate = await Navigator.push<bool>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const EditProfileScreen(),
+                                  ),
+                                );
+                                if (didUpdate == true) {
+                                  _loadProfile();
+                                }
+                              },
                             ),
                           ],
                         ),
