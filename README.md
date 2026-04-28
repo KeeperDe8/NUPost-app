@@ -259,7 +259,7 @@ This system is evaluated against the following quality characteristics:
 | Name | Role |
 |------|------|
 | **Guce, Denmark I.** | Project Manager · Documentation Specialist |
-| **Baral, Mike Roan B.** | UI/UX Designer · Back-End Developer |
+| **Baral, Mike Roan M.** | UI/UX Designer · Back-End Developer |
 | **Cerezo, Anielle Dane B.** | Front-End Developer · Software Tester |
 | **Magat, Jamel Kim T.** | Front-End Developer · Back-End Developer |
 
