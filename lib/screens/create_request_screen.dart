@@ -19,16 +19,16 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   final _descriptionController = TextEditingController();
   final _captionController = TextEditingController();
 
-  final Map<String, bool> _platforms = {
-    'Facebook': false,
-    'LinkedIn': false,
-    'Youtube': false,
-    'Tiktok': false,
-  };
+  final Map<String, bool> _platforms = {'Facebook': false, 'LinkedIn': false};
 
   String? _selectedCategory;
   String? _selectedPriority;
   DateTime? _selectedDate;
+  
+  bool _isLoadingDateData = false;
+  int _datePostCount = 0;
+  List<Map<String, dynamic>> _dateUpcomingPosts = [];
+  
   int _captionLength = 0;
   final int _currentNavIndex = 2;
   bool _isSubmitting = false;
@@ -48,8 +48,6 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   final Map<String, IconData> _platformIcons = {
     'Facebook': Icons.facebook_rounded,
     'LinkedIn': Icons.link_rounded,
-    'Youtube': Icons.play_circle_rounded,
-    'Tiktok': Icons.music_note_rounded,
   };
 
   @override
@@ -73,10 +71,56 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     super.dispose();
   }
 
+  Future<void> _fetchDateInfo(DateTime date) async {
+    setState(() => _isLoadingDateData = true);
+    try {
+      final res = await ApiService.fetchCalendar(
+        userId: SessionStore.userId ?? 0,
+        month: date.month,
+        year: date.year,
+        publicView: true,
+      );
+      if (res['success'] == true) {
+        final data = res['data'] ?? {};
+        final List<dynamic> allPosts = [];
+        if (data['my_requests'] is List) allPosts.addAll(data['my_requests']);
+        if (data['public_calendar'] is List) allPosts.addAll(data['public_calendar']);
+        
+        int count = 0;
+        List<Map<String, dynamic>> matchingPosts = [];
+        
+        for (final item in allPosts) {
+          final sDate = item['scheduled_date']?.toString();
+          final rDate = item['request_date']?.toString();
+          final dStr = sDate ?? rDate;
+          if (dStr != null && dStr.isNotEmpty) {
+            try {
+              final d = DateTime.parse(dStr);
+              if (d.year == date.year && d.month == date.month && d.day == date.day) {
+                count++;
+                matchingPosts.add(item as Map<String, dynamic>);
+              }
+            } catch (_) {}
+          }
+        }
+        
+        if (mounted) {
+          setState(() {
+            _datePostCount = count;
+            _dateUpcomingPosts = matchingPosts;
+          });
+        }
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingDateData = false);
+    }
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().add(const Duration(days: 1)),
+      initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) => Theme(
@@ -86,7 +130,15 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         child: child!,
       ),
     );
-    if (picked != null) setState(() => _selectedDate = picked);
+    if (picked != null) {
+      if (_selectedDate == null ||
+          _selectedDate!.year != picked.year ||
+          _selectedDate!.month != picked.month ||
+          _selectedDate!.day != picked.day) {
+        setState(() => _selectedDate = picked);
+        _fetchDateInfo(picked);
+      }
+    }
   }
 
   Future<void> _onGenerateCaption() async {
@@ -313,6 +365,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
                       _fieldLabel('Preferred Posting Date *'),
                       _buildDatePicker(),
+                      _buildDateVolumePanel(),
                       const SizedBox(height: 20),
 
                       _fieldLabel('Media Upload'),
@@ -708,6 +761,215 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         ),
       ),
     );
+  }
+
+  // ── Date Volume Panel ─────────────────────────────────────────────────────
+  Widget _buildDateVolumePanel() {
+    if (_selectedDate == null) return const SizedBox();
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.only(top: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE4E8F0), width: 1.5),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000), // 8% opacity roughly
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Panel Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFAFBFD),
+              border: Border(bottom: BorderSide(color: Color(0xFFF0F2F8))),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12.5)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${_selectedDate!.month}/${_selectedDate!.day}/${_selectedDate!.year}',
+                  style: const TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                Text(
+                  _isLoadingDateData 
+                    ? 'Checking schedule…' 
+                    : (_datePostCount == 0 ? 'Free day' : '$_datePostCount request${_datePostCount == 1 ? "" : "s"} scheduled'),
+                  style: const TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 11,
+                    color: Color(0xFF9AA3B2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Body
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: _isLoadingDateData 
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 16, height: 16, 
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B6EF5))
+                        ),
+                        SizedBox(width: 8),
+                        Text('Loading schedule…', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12.5, fontFamily: 'DM Sans')),
+                      ],
+                    ),
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Capacity Label
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Schedule load',
+                          style: TextStyle(fontFamily: 'DM Sans', fontSize: 11.5, color: Color(0xFF6B7280), fontWeight: FontWeight.w500),
+                        ),
+                        Text(
+                          _getCapacityLabel(_datePostCount),
+                          style: TextStyle(fontFamily: 'DM Sans', fontSize: 13, color: _getCapacityColor(_datePostCount), fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    
+                    // Bar Track
+                    Container(
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        width: _getCapacityWidth(_datePostCount),
+                        decoration: BoxDecoration(
+                          gradient: _getCapacityGradient(_datePostCount),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+
+                    // Existing Requests List
+                    if (_dateUpcomingPosts.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ..._dateUpcomingPosts.take(5).map((post) {
+                        final status = post['status']?.toString() ?? 'Pending';
+                        final title = post['title']?.toString() ?? post['platform']?.toString() ?? 'Untitled';
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 7),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F9FB),
+                            border: Border.all(color: const Color(0xFFF0F2F8)),
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8, height: 8,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _getStatusColor(status)
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  maxLines: 1, 
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600, color: Color(0xFF374151), fontSize: 12),
+                                ),
+                              ),
+                              Text(
+                                status,
+                                style: const TextStyle(fontFamily: 'DM Sans', fontSize: 10.5, color: Color(0xFF9CA3AF)),
+                              )
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ] else ...[
+                      const SizedBox(height: 18),
+                      const Center(
+                        child: Column(
+                          children: [
+                            Text('Free Date', style: TextStyle(fontFamily: 'DM Sans', fontSize: 12.5, color: Color(0xFF9AA3B2))),
+                            SizedBox(height: 4),
+                            Text('No scheduled posts', style: TextStyle(fontFamily: 'DM Sans', fontSize: 13, color: Color(0xFF16A34A), fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+          ),
+        ],
+      )
+    );
+  }
+
+  Color _getCapacityColor(int count) {
+    if (count == 0) return const Color(0xFF16A34A); // Low (Green)
+    if (count <= 2) return const Color(0xFFD97706); // Medium (Orange)
+    return const Color(0xFFDC2626); // High (Red)
+  }
+
+  LinearGradient _getCapacityGradient(int count) {
+    if (count == 0) return const LinearGradient(colors: [Color(0xFF4ADE80), Color(0xFF16A34A)]);
+    if (count <= 2) return const LinearGradient(colors: [Color(0xFFFBBF24), Color(0xFFD97706)]);
+    return const LinearGradient(colors: [Color(0xFFF87171), Color(0xFFDC2626)]);
+  }
+
+  double _getCapacityWidth(int count) {
+    // Calculate width relative to 100% (or fixed value mapping)
+    // Up to 5 posts to fill the bar completely
+    final pct = (count * 20).clamp(0, 100);
+    // Since width is constrained by parent, we use percentage via LayoutBuilder OR a fixed large dimension 
+    // Wait, simpler: we need a percentage Width! 
+    return (MediaQuery.of(context).size.width - 64) * (pct / 100); 
+  }
+
+  String _getCapacityLabel(int count) {
+    if (count == 0) return 'Open — no requests yet';
+    if (count == 1) return 'Light — 1 request';
+    if (count <= 2) return 'Moderate — $count requests';
+    return 'Busy — $count requests';
+  }
+
+  Color _getStatusColor(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('approved')) return const Color(0xFF16A34A);
+    if (s.contains('review')) return const Color(0xFFD97706);
+    return const Color(0xFF9CA3AF);
   }
 
   // ── Media Upload ──────────────────────────────────────────────────────────

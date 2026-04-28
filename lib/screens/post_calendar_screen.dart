@@ -14,6 +14,7 @@ class PostCalendarScreen extends StatefulWidget {
 class _PostCalendarScreenState extends State<PostCalendarScreen>
     with SingleTickerProviderStateMixin {
   DateTime _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime? _selectedDate;
   bool _isMonthView = true;
   final List<_CalendarPost> _posts = [];
   bool _isPublicCalendar = false;
@@ -158,153 +159,165 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.pageBg,
-      body: FadeTransition(
-        opacity: _entryFade,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                _buildHeader(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Public view banner
-                        if (_isPublicCalendar)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 14),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 11,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFFBEB),
-                              border: Border.all(
-                                color: const Color(
-                                  0xFFF59E0B,
-                                ).withOpacity(0.25),
+      body: GestureDetector(
+        onTap: () {
+          if (_selectedDate != null) {
+            setState(() => _selectedDate = null);
+          }
+        },
+        behavior: HitTestBehavior.translucent,
+        child: FadeTransition(
+          opacity: _entryFade,
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _buildHeader(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Public view banner
+                          if (_isPublicCalendar)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 11,
                               ),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.public_rounded,
-                                  size: 16,
-                                  color: Color(0xFF92400E),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFFBEB),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFF59E0B,
+                                  ).withOpacity(0.25),
                                 ),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    'Public view — Showing all users\' scheduled posts',
-                                    style: TextStyle(
-                                      fontFamily: 'DM Sans',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF92400E),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.public_rounded,
+                                    size: 16,
+                                    color: Color(0xFF92400E),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'Public view — Showing all users\' scheduled posts',
+                                      style: TextStyle(
+                                        fontFamily: 'DM Sans',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF92400E),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        // Calendar card
-                        _buildCalendarCard(),
-
-                        // Error
-                        if (_loadError != null) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF1F2),
-                              border: Border.all(
-                                color: const Color(0xFFFDA4AF),
+                                ],
                               ),
-                              borderRadius: BorderRadius.circular(14),
                             ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(
-                                  Icons.error_outline_rounded,
-                                  color: Color(0xFFBE123C),
-                                  size: 18,
+
+                          // Calendar card
+                          _buildCalendarCard(),
+
+                          // Error
+                          if (_loadError != null) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF1F2),
+                                border: Border.all(
+                                  color: const Color(0xFFFDA4AF),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _loadError!,
-                                        style: const TextStyle(
-                                          fontFamily: 'DM Sans',
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 12,
-                                          color: Color(0xFF9F1239),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      GestureDetector(
-                                        onTap: () => _loadScheduledPosts(),
-                                        child: const Text(
-                                          'Retry',
-                                          style: TextStyle(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(
+                                    Icons.error_outline_rounded,
+                                    color: Color(0xFFBE123C),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _loadError!,
+                                          style: const TextStyle(
                                             fontFamily: 'DM Sans',
-                                            fontWeight: FontWeight.w700,
+                                            fontWeight: FontWeight.w500,
                                             fontSize: 12,
-                                            color: Color(0xFF2B5CE6),
+                                            color: Color(0xFF9F1239),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(height: 6),
+                                        GestureDetector(
+                                          onTap: () => _loadScheduledPosts(),
+                                          child: const Text(
+                                            'Retry',
+                                            style: TextStyle(
+                                              fontFamily: 'DM Sans',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 12,
+                                              color: Color(0xFF2B5CE6),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-
-                        const SizedBox(height: 18),
-
-                        // Upcoming section header
-                        Row(
-                          children: [
-                            Text(
-                              _isPublicCalendar
-                                  ? 'UPCOMING PUBLIC POSTS'
-                                  : 'YOUR UPCOMING POSTS',
-                              style: const TextStyle(
-                                fontFamily: 'DM Sans',
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
-                                color: Color(0xFF9AA3B2),
-                                letterSpacing: 0.9,
+                                ],
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 10),
 
-                        _buildUpcomingList(),
-                      ],
+                          const SizedBox(height: 18),
+
+                          // Upcoming section header
+                          Row(
+                            children: [
+                              Text(
+                                _selectedDate != null
+                                    ? (_isPublicCalendar
+                                          ? 'PUBLIC POSTS ON ${_selectedDate!.month}/${_selectedDate!.day}'
+                                          : 'YOUR POSTS ON ${_selectedDate!.month}/${_selectedDate!.day}')
+                                    : (_isPublicCalendar
+                                          ? 'UPCOMING PUBLIC POSTS'
+                                          : 'YOUR UPCOMING POSTS'),
+                                style: const TextStyle(
+                                  fontFamily: 'DM Sans',
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11,
+                                  color: Color(0xFF9AA3B2),
+                                  letterSpacing: 0.9,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+
+                          _buildUpcomingList(),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: AppBottomNav(currentIndex: -1),
-            ),
-          ],
+                ],
+              ),
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: AppBottomNav(currentIndex: -1),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -614,65 +627,100 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                     top: row * cellHeight,
                     width: cellWidth,
                     height: cellHeight,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isToday
-                            ? const Color(0xFF002366).withOpacity(0.04)
-                            : Colors.transparent,
-                        border: Border.all(color: const Color(0x08000000)),
-                        borderRadius: isToday
-                            ? BorderRadius.circular(10)
-                            : BorderRadius.zero,
-                      ),
-                      padding: const EdgeInsets.all(3),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          if (isValid)
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: isToday
-                                  ? BoxDecoration(
-                                      color: const Color(0xFF002366),
-                                      borderRadius: BorderRadius.circular(8),
-                                    )
-                                  : null,
-                              alignment: Alignment.center,
-                              child: Text(
-                                '$dayNum',
-                                style: TextStyle(
-                                  fontFamily: 'DM Sans',
-                                  fontWeight: isToday
-                                      ? FontWeight.w900
-                                      : FontWeight.w400,
-                                  fontSize: 11.5,
-                                  color: isToday
-                                      ? Colors.white
-                                      : const Color(0xFF080F1E),
+                    child: GestureDetector(
+                      onTap: () {
+                        if (isValid) {
+                          setState(() {
+                            if (_selectedDate != null &&
+                                _selectedDate!.year == cellDate.year &&
+                                _selectedDate!.month == cellDate.month &&
+                                _selectedDate!.day == cellDate.day) {
+                              _selectedDate = null; // tap again to clear
+                            } else {
+                              _selectedDate = cellDate;
+                            }
+                          });
+                        }
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isToday
+                              ? const Color(0xFF002366).withOpacity(0.04)
+                              : (_selectedDate != null &&
+                                        _selectedDate!.year == cellDate.year &&
+                                        _selectedDate!.month ==
+                                            cellDate.month &&
+                                        _selectedDate!.day == cellDate.day
+                                    ? const Color(0xFF2B5CE6).withOpacity(0.1)
+                                    : Colors.transparent),
+                          border: Border.all(
+                            color:
+                                (_selectedDate != null &&
+                                    _selectedDate!.year == cellDate.year &&
+                                    _selectedDate!.month == cellDate.month &&
+                                    _selectedDate!.day == cellDate.day)
+                                ? const Color(0xFF2B5CE6).withOpacity(0.5)
+                                : const Color(0x08000000),
+                          ),
+                          borderRadius:
+                              (isToday ||
+                                  (_selectedDate != null &&
+                                      _selectedDate!.year == cellDate.year &&
+                                      _selectedDate!.month == cellDate.month &&
+                                      _selectedDate!.day == cellDate.day))
+                              ? BorderRadius.circular(10)
+                              : BorderRadius.zero,
+                        ),
+                        padding: const EdgeInsets.all(3),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (isValid)
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: isToday
+                                    ? BoxDecoration(
+                                        color: const Color(0xFF002366),
+                                        borderRadius: BorderRadius.circular(8),
+                                      )
+                                    : null,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '$dayNum',
+                                  style: TextStyle(
+                                    fontFamily: 'DM Sans',
+                                    fontWeight: isToday
+                                        ? FontWeight.w900
+                                        : FontWeight.w400,
+                                    fontSize: 11.5,
+                                    color: isToday
+                                        ? Colors.white
+                                        : const Color(0xFF080F1E),
+                                  ),
                                 ),
                               ),
-                            ),
-                          // Show up to 2 posts
-                          ...requestPosts
-                              .take(1)
-                              .map(
-                                (post) => _PostPill(
-                                  label: post.label,
-                                  color: const Color(0xFF9AA3B2),
+                            // Show up to 2 posts
+                            ...requestPosts
+                                .take(1)
+                                .map(
+                                  (post) => _PostPill(
+                                    label: post.label,
+                                    color: const Color(0xFF9AA3B2),
+                                  ),
                                 ),
-                              ),
-                          ...scheduledPosts
-                              .take(1)
-                              .map(
-                                (post) => _PostPill(
-                                  label: post.label,
-                                  color: _isPublicCalendar && !post.isMine
-                                      ? const Color(0xFF9AA3B2)
-                                      : post.priorityColor,
+                            ...scheduledPosts
+                                .take(1)
+                                .map(
+                                  (post) => _PostPill(
+                                    label: post.label,
+                                    color: _isPublicCalendar && !post.isMine
+                                        ? const Color(0xFF9AA3B2)
+                                        : post.priorityColor,
+                                  ),
                                 ),
-                              ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -758,16 +806,35 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   Widget _buildUpcomingList() {
     final now = DateTime.now();
     final limit = now.add(const Duration(days: 7));
-    final upcoming =
-        _posts
-            .where(
-              (p) =>
-                  p.scheduledDate != null &&
-                  p.scheduledDate!.isAfter(now) &&
-                  p.scheduledDate!.isBefore(limit.add(const Duration(days: 1))),
-            )
-            .toList()
-          ..sort((a, b) => a.scheduledDate!.compareTo(b.scheduledDate!));
+
+    final List<_CalendarPost> upcoming;
+
+    if (_selectedDate != null) {
+      upcoming =
+          _posts
+              .where(
+                (p) =>
+                    p.scheduledDate != null &&
+                    p.scheduledDate!.year == _selectedDate!.year &&
+                    p.scheduledDate!.month == _selectedDate!.month &&
+                    p.scheduledDate!.day == _selectedDate!.day,
+              )
+              .toList()
+            ..sort((a, b) => a.scheduledDate!.compareTo(b.scheduledDate!));
+    } else {
+      upcoming =
+          _posts
+              .where(
+                (p) =>
+                    p.scheduledDate != null &&
+                    p.scheduledDate!.isAfter(now) &&
+                    p.scheduledDate!.isBefore(
+                      limit.add(const Duration(days: 1)),
+                    ),
+              )
+              .toList()
+            ..sort((a, b) => a.scheduledDate!.compareTo(b.scheduledDate!));
+    }
 
     if (upcoming.isEmpty) {
       return Container(
@@ -784,18 +851,20 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
           ],
         ),
         padding: const EdgeInsets.symmetric(vertical: 40),
-        child: const Column(
+        child: Column(
           children: [
-            Icon(
+            const Icon(
               Icons.event_available_rounded,
               size: 38,
               color: Color(0xFF9AA3B2),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
-              'No posts scheduled for the next 7 days',
+              _selectedDate != null
+                  ? 'No posts scheduled on ${_selectedDate!.month}/${_selectedDate!.day}'
+                  : 'No posts scheduled for the next 7 days',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 13,
                 color: Color(0xFF9AA3B2),
@@ -863,15 +932,17 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        post.isMine ? 'Your post' : 'Other user',
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 11,
-                          color: Color(0xFF9AA3B2),
+                      if (post.isMine) ...[
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Your post',
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 11,
+                            color: Color(0xFF9AA3B2),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
