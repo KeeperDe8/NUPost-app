@@ -13,19 +13,25 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final int _currentNavIndex = 3;
   List<_Notif> _notifications = [];
   int _unreadCount = 0;
   bool _isLoading = true;
   Timer? _pollTimer;
 
+  // Filter tabs: 0=All, 1=Unread, 2=Status, 3=Messages
+  int _filterIndex = 0;
+
   late final AnimationController _entryCtrl;
   late final Animation<double> _entryFade;
+
+  late final AnimationController _listCtrl;
 
   @override
   void initState() {
     super.initState();
+
     _entryCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -34,6 +40,12 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       parent: _entryCtrl,
       curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
     );
+
+    _listCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
     _loadNotifications();
     _pollTimer = Timer.periodic(
       const Duration(seconds: 10),
@@ -45,9 +57,11 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   void dispose() {
     _pollTimer?.cancel();
     _entryCtrl.dispose();
+    _listCtrl.dispose();
     super.dispose();
   }
 
+  // ── All original logic preserved ─────────────────────────────────────────
   Future<void> _loadNotifications({bool showLoading = true}) async {
     if (showLoading && mounted) setState(() => _isLoading = true);
     try {
@@ -66,6 +80,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           _unreadCount = unread;
           _isLoading = false;
         });
+        _listCtrl.reset();
+        _listCtrl.forward();
       } else if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -101,6 +117,30 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     } catch (_) {}
   }
 
+  Future<void> _markSingleRead(_Notif notif) async {
+    final userId = SessionStore.userId;
+    if (userId == null || notif.isRead) return;
+    try {
+      await ApiService.markNotificationRead(
+        userId: userId,
+        notificationId: notif.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _notifications = _notifications
+            .map((n) => n.id == notif.id ? n.copyWith(isRead: true) : n)
+            .toList();
+        _unreadCount = (_unreadCount - 1).clamp(0, _notifications.length);
+      });
+    } catch (_) {}
+  }
+
+  void _dismissNotif(int id) {
+    setState(() {
+      _notifications = _notifications.where((n) => n.id != id).toList();
+    });
+  }
+
   Future<void> _markAllAsRead() async {
     try {
       final userId = SessionStore.userId;
@@ -117,8 +157,11 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   }
 
   List<_NotifGroup> _groupNotifications() {
+    // Apply filter
+    final filtered = _filteredNotifications();
+
     final grouped = <String, List<_Notif>>{};
-    for (final n in _notifications) {
+    for (final n in filtered) {
       final key = n.requestId != null
           ? 'req:${n.requestId}'
           : 'type:${n.type}|title:${n.title}';
@@ -130,6 +173,33 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     }).toList();
     groups.sort((a, b) => b.latest.createdAt.compareTo(a.latest.createdAt));
     return groups;
+  }
+
+  List<_Notif> _filteredNotifications() {
+    switch (_filterIndex) {
+      case 1: // Unread
+        return _notifications.where((n) => !n.isRead).toList();
+      case 2: // Status updates
+        return _notifications.where((n) => _isTracking(n.type)).toList();
+      case 3: // Messages/comments
+        return _notifications.where((n) => _isMsg(n.type)).toList();
+      default:
+        return _notifications;
+    }
+  }
+
+  // Count per tab for badges
+  int _countFor(int tab) {
+    switch (tab) {
+      case 1:
+        return _notifications.where((n) => !n.isRead).length;
+      case 2:
+        return _notifications.where((n) => _isTracking(n.type)).length;
+      case 3:
+        return _notifications.where((n) => _isMsg(n.type)).length;
+      default:
+        return _notifications.length;
+    }
   }
 
   bool _isMsg(String type) {
@@ -309,6 +379,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     }
   }
 
+  // ── BUILD ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -320,17 +391,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             Column(
               children: [
                 _buildHeader(),
-                Expanded(
-                  child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF002366),
-                          ),
-                        )
-                      : _notifications.isEmpty
-                      ? _buildEmpty()
-                      : _buildList(),
-                ),
+                _buildFilterTabs(),
+                Expanded(child: _isLoading ? _buildSkeleton() : _buildList()),
                 const SizedBox(height: 90),
               ],
             ),
@@ -347,6 +409,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     );
   }
 
+  // ── Header ────────────────────────────────────────────────────────────────
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -365,7 +428,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         20,
         MediaQuery.of(context).padding.top + 18,
         20,
-        18,
+        14,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,7 +528,255 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     );
   }
 
+  // ── Filter tabs ───────────────────────────────────────────────────────────
+  Widget _buildFilterTabs() {
+    const labels = ['All', 'Unread', 'Status', 'Messages'];
+    const icons = [
+      Icons.notifications_rounded,
+      Icons.mark_email_unread_rounded,
+      Icons.track_changes_rounded,
+      Icons.chat_bubble_rounded,
+    ];
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Row(
+        children: List.generate(labels.length, (i) {
+          final isActive = _filterIndex == i;
+          final count = _countFor(i);
+
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (_filterIndex != i) {
+                  setState(() => _filterIndex = i);
+                  _listCtrl.reset();
+                  _listCtrl.forward();
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                margin: EdgeInsets.only(right: i < labels.length - 1 ? 8 : 0),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFF002366)
+                      : const Color(0xFFF1F4FB),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isActive
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x30002366),
+                            blurRadius: 8,
+                            offset: Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icons[i],
+                      size: 16,
+                      color: isActive ? Colors.white : const Color(0xFF9AA3B2),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      labels[i],
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontWeight: isActive
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                        fontSize: 10,
+                        color: isActive
+                            ? Colors.white
+                            : const Color(0xFF9AA3B2),
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    // Count badge
+                    if (count > 0) ...[
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? Colors.white.withOpacity(0.25)
+                              : const Color(0xFF002366).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          count > 99 ? '99+' : '$count',
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 8.5,
+                            color: isActive
+                                ? Colors.white
+                                : const Color(0xFF002366),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ── Skeleton loader ───────────────────────────────────────────────────────
+  Widget _buildSkeleton() {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      itemCount: 5,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (_, i) {
+        // Staggered opacity
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.3, end: 0.8),
+          duration: Duration(milliseconds: 800 + (i * 100)),
+          curve: Curves.easeInOut,
+          builder: (_, val, __) => Opacity(
+            opacity: val,
+            child: Container(
+              height: 90,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0x0E000000)),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 18),
+                  // Icon placeholder
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE9EDF6),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 12,
+                          width: 160,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE9EDF6),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 10,
+                          width: 220,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE9EDF6),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 10,
+                          width: 100,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE9EDF6),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 18),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Main list ─────────────────────────────────────────────────────────────
+  Widget _buildList() {
+    final groups = _groupNotifications();
+
+    if (groups.isEmpty) return _buildEmpty();
+
+    return RefreshIndicator(
+      onRefresh: () => _loadNotifications(showLoading: false),
+      color: const Color(0xFF002366),
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        itemCount: groups.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (_, i) {
+          final group = groups[i];
+
+          // Stagger per item
+          final start = (i * 0.10).clamp(0.0, 0.7);
+          final end = (start + 0.45).clamp(0.0, 1.0);
+          final anim = Tween<double>(begin: 0.0, end: 1.0).animate(
+            CurvedAnimation(
+              parent: _listCtrl,
+              curve: Interval(start, end, curve: Curves.easeOutCubic),
+            ),
+          );
+
+          return AnimatedBuilder(
+            animation: anim,
+            builder: (_, child) => Opacity(
+              opacity: anim.value,
+              child: Transform.translate(
+                offset: Offset(0, (1 - anim.value) * 14),
+                child: child,
+              ),
+            ),
+            child: _SwipeablNotifCard(
+              group: group,
+              onTap: () => _handleGroupTap(group),
+              onMarkRead: group.unreadCount > 0
+                  ? () => _markGroupAsRead(group)
+                  : null,
+              onDismiss: () => _dismissNotif(group.latest.id),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Empty state (per filter) ──────────────────────────────────────────────
   Widget _buildEmpty() {
+    final labels = [
+      'notifications',
+      'unread notifications',
+      'status updates',
+      'messages',
+    ];
+    final icons = [
+      Icons.notifications_none_rounded,
+      Icons.mark_email_read_rounded,
+      Icons.check_circle_outline_rounded,
+      Icons.forum_outlined,
+    ];
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.only(bottom: 80),
@@ -479,16 +790,16 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 color: const Color(0xFF9AA3B2).withOpacity(0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(
-                Icons.notifications_none_rounded,
+              child: Icon(
+                icons[_filterIndex],
                 size: 36,
-                color: Color(0xFF9AA3B2),
+                color: const Color(0xFF9AA3B2),
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'No notifications yet',
-              style: TextStyle(
+            Text(
+              'No ${labels[_filterIndex]}',
+              style: const TextStyle(
                 fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
@@ -496,35 +807,114 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              "You'll be notified about your request updates here",
+            Text(
+              _filterIndex == 0
+                  ? "You'll be notified about your request updates here"
+                  : 'Try switching to a different filter above',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 12.5,
                 color: Color(0xFF9AA3B2),
               ),
             ),
+            if (_filterIndex != 0) ...[
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () {
+                  setState(() => _filterIndex = 0);
+                  _listCtrl.reset();
+                  _listCtrl.forward();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: const Color(0xFF002366).withOpacity(0.2),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Show all',
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: Color(0xFF002366),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildList() {
-    final groups = _groupNotifications();
-    return RefreshIndicator(
-      onRefresh: () => _loadNotifications(showLoading: false),
-      color: const Color(0xFF002366),
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-        itemCount: groups.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (_, i) => _NotifCard(
-          group: groups[i],
-          onTap: () => _handleGroupTap(groups[i]),
+// ── Swipeable notification card ───────────────────────────────────────────────
+class _SwipeablNotifCard extends StatelessWidget {
+  final _NotifGroup group;
+  final VoidCallback onTap;
+  final VoidCallback? onMarkRead;
+  final VoidCallback onDismiss;
+
+  const _SwipeablNotifCard({
+    required this.group,
+    required this.onTap,
+    required this.onMarkRead,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: ValueKey('notif-${group.latest.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF3B30).withOpacity(0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFF3B30).withOpacity(0.2)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(
+              Icons.delete_outline_rounded,
+              color: Color(0xFFFF3B30),
+              size: 22,
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Dismiss',
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w700,
+                fontSize: 10,
+                color: Color(0xFFFF3B30),
+              ),
+            ),
+          ],
         ),
       ),
+      confirmDismiss: (_) async {
+        // If unread, mark read instead of dismiss first time
+        if (onMarkRead != null) {
+          onMarkRead!();
+          return false;
+        }
+        return true;
+      },
+      onDismissed: (_) => onDismiss(),
+      child: _NotifCard(group: group, onTap: onTap),
     );
   }
 }
@@ -542,7 +932,9 @@ class _NotifCard extends StatelessWidget {
       case 'rejected':
         return const Color(0xFFFF3B30);
       case 'posted':
+        return const Color(0xFF8B5CF6);
       case 'comment':
+      case 'message':
         return const Color(0xFF4B7BF5);
       case 'review':
       case 'under_review':
@@ -562,6 +954,7 @@ class _NotifCard extends StatelessWidget {
       case 'posted':
         return Icons.send_rounded;
       case 'comment':
+      case 'message':
         return Icons.chat_bubble_rounded;
       case 'review':
       case 'under_review':
@@ -630,7 +1023,7 @@ class _NotifCard extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Icon
+                      // Icon box
                       Container(
                         width: 44,
                         height: 44,
@@ -716,14 +1109,45 @@ class _NotifCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 7),
-                            Text(
-                              _timeAgo(n.createdAt),
-                              style: const TextStyle(
-                                fontFamily: 'DM Sans',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 10.5,
-                                color: Color(0xFF9AA3B2),
-                              ),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.access_time_rounded,
+                                  size: 11,
+                                  color: Color(0xFFBFC5D0),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _timeAgo(n.createdAt),
+                                  style: const TextStyle(
+                                    fontFamily: 'DM Sans',
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10.5,
+                                    color: Color(0xFF9AA3B2),
+                                  ),
+                                ),
+                                const Spacer(),
+                                // Swipe hint for unread
+                                if (hasUnread)
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.swipe_left_alt_rounded,
+                                        size: 12,
+                                        color: Color(0xFFBFC5D0),
+                                      ),
+                                      const SizedBox(width: 3),
+                                      const Text(
+                                        'swipe to mark read',
+                                        style: TextStyle(
+                                          fontFamily: 'DM Sans',
+                                          fontSize: 9.5,
+                                          color: Color(0xFFBFC5D0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
                             ),
                           ],
                         ),
@@ -740,7 +1164,7 @@ class _NotifCard extends StatelessWidget {
   }
 }
 
-// ── Data models ───────────────────────────────────────────────────────────────
+// ── Data models (unchanged) ───────────────────────────────────────────────────
 class _Notif {
   final int id;
   final int? requestId;
