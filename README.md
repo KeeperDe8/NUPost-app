@@ -163,6 +163,8 @@ nupost_app/
 │   │   ├── request_tracking_screen.dart
 │   │   ├── notifications_screen.dart
 │   │   ├── profile_screen.dart
+│   │   ├── edit_profile_screen.dart
+│   │   ├── account_security_screen.dart
 │   │   ├── post_calendar_screen.dart
 │   │   ├── messages_screen.dart
 │   │   └── message_thread_screen.dart
@@ -173,6 +175,7 @@ nupost_app/
 │   │   └── app_theme.dart             # Colors, typography, theme data
 │   └── widgets/
 │       ├── floating_message_button.dart
+│       ├── intensity_date_picker.dart
 │       └── skeleton_loader.dart
 ├── assets/
 │   ├── nu_shield.png
@@ -192,7 +195,8 @@ SplashScreen
                     ├── RequestsScreen ── RequestTrackingScreen
                     ├── CreateRequestScreen
                     ├── NotificationsScreen
-                    ├── ProfileScreen
+                    ├── ProfileScreen ── EditProfileScreen
+                    │                └── AccountSecurityScreen
                     ├── PostCalendarScreen
                     └── MessagesScreen ── MessageThreadScreen
 ```
