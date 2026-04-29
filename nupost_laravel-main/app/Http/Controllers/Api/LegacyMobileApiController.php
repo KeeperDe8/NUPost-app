@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
@@ -169,7 +170,7 @@ class LegacyMobileApiController extends Controller
         ];
 
         if (Schema::hasColumn('users', 'is_verified')) {
-            $payload['is_verified'] = 1;
+            $payload['is_verified'] = 0;
         }
 
         if (Schema::hasColumn('users', 'role')) {
@@ -186,6 +187,19 @@ class LegacyMobileApiController extends Controller
 
         $newId = (int) DB::table('users')->insertGetId($payload);
 
+        // Generate OTP
+        $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        
+        DB::table('otp_codes')->insert([
+            'user_id' => $newId,
+            'email' => $email,
+            'otp_code' => $otp,
+            'expires_at' => now()->addMinutes(10),
+            'is_used' => 0,
+        ]);
+
+        $this->sendOtpEmail($email, $name, $otp);
+
         return response()->json([
             'success' => true,
             'message' => 'Account created successfully',
@@ -195,6 +209,129 @@ class LegacyMobileApiController extends Controller
                 'email' => $email,
             ],
         ], 201);
+    }
+
+    private function sendOtpEmail(string $email, string $name, string $otp): void
+    {
+        $digits = str_split($otp);
+        $boxes  = '';
+        foreach ($digits as $d) {
+            $boxes .= "<span style='display:inline-block;width:48px;height:56px;background:#f0f4ff;border:2px solid #002366;border-radius:10px;font-size:28px;font-weight:700;color:#002366;line-height:56px;text-align:center;margin:0 4px;font-family:monospace;'>$d</span>";
+        }
+
+        $htmlBody = "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f5f6fa;font-family:Arial,sans-serif;'>
+        <table width='100%' cellpadding='0' cellspacing='0' style='background:#f5f6fa;padding:40px 0;'>
+        <tr><td align='center'>
+        <table width='520' cellpadding='0' cellspacing='0' style='background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>
+        <tr><td style='background:#002366;padding:32px 40px;text-align:center;'>
+            <div style='font-size:22px;font-weight:700;color:white;'>NUPost</div>
+            <div style='font-size:13px;color:rgba(255,255,255,0.7);margin-top:4px;'>NU Lipa Social Media Request System</div>
+        </td></tr>
+        <tr><td style='padding:36px 40px;text-align:center;'>
+            <h1 style='font-size:20px;font-weight:700;color:#111827;margin:0 0 8px;'>Verify Your Identity</h1>
+            <p style='font-size:14px;color:#6b7280;margin:0 0 28px;'>Hi <strong style='color:#111827;'>$name</strong>, use the code below.</p>
+            <div style='background:#f8faff;border:1.5px solid #e0e8ff;border-radius:12px;padding:28px 20px;display:inline-block;'>
+                <div style='font-size:11px;font-weight:600;color:#6b7280;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;'>Your Verification Code</div>
+                <div>$boxes</div>
+            </div>
+            <div style='margin-top:30px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 18px;font-size:13px;color:#92400e;font-weight:500;display:inline-block;'>
+                This code expires in <strong>10 minutes</strong>
+            </div>
+        </td></tr>
+        <tr><td style='background:#f5f6fa;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;'>
+            <p style='font-size:12px;color:#9ca3af;margin:0;'>&copy; " . date('Y') . " NUPost &mdash; NU Lipa. Automated message, do not reply.</p>
+        </td></tr>
+        </table></td></tr></table></body></html>";
+
+        try {
+            Mail::html($htmlBody, function ($message) use ($email, $name) {
+                $message->to($email, $name)
+                        ->subject('Your NUPost Verification Code');
+            });
+        } catch (\Exception $e) {
+            // Fails silently, logging error
+            \Illuminate\Support\Facades\Log::error('Failed to send OTP email: ' . $e->getMessage());
+        }
+    }
+
+    public function verifyOtp(Request $request): JsonResponse
+    {
+        $email = trim((string) $request->input('email', ''));
+        $otp = trim((string) $request->input('otp', ''));
+
+        if ($email === '' || $otp === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email and OTP are required',
+            ], 422);
+        }
+
+        $record = DB::table('otp_codes')
+            ->where('email', $email)
+            ->where('otp_code', $otp)
+            ->where('is_used', 0)
+            ->where('expires_at', '>', now())
+            ->orderByDesc('id')
+            ->first();
+
+        if ($record) {
+            DB::table('otp_codes')->where('id', $record->id)->update(['is_used' => 1]);
+            DB::table('users')->where('email', $email)->update(['is_verified' => 1]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'OTP Verified Successfully'
+            ], 200);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid or expired OTP'
+        ], 400);
+    }
+
+    public function resendOtp(Request $request): JsonResponse
+    {
+        $email = trim((string) $request->input('email', ''));
+
+        if ($email === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email is required'
+            ], 422);
+        }
+
+        $user = DB::table('users')->where('email', $email)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        if (isset($user->is_verified) && (int) $user->is_verified === 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Account is already verified'
+            ], 400);
+        }
+
+        $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        
+        DB::table('otp_codes')->insert([
+            'user_id' => $user->id,
+            'email' => $email,
+            'otp_code' => $otp,
+            'expires_at' => now()->addMinutes(10),
+            'is_used' => 0,
+        ]);
+
+        $this->sendOtpEmail($email, $user->name ?? 'User', $otp);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP resent successfully'
+        ], 200);
     }
 
     public function profile(Request $request): JsonResponse

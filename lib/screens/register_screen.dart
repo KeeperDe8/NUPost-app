@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
+import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -97,25 +98,18 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     setState(() => _isSubmitting = true);
     try {
-      final result = await ApiService.register(
+      await ApiService.register(
         name: fullName,
         email: email,
         password: password,
       );
-      final data = (result['data'] as Map<String, dynamic>?) ?? {};
-      final id = (data['id'] as num?)?.toInt();
-      if (id == null) throw Exception('Invalid registration response');
-
-      SessionStore.setUser(
-        id: id,
-        userName: (data['name'] ?? fullName).toString(),
-        userEmail: (data['email'] ?? email).toString(),
-      );
 
       if (!mounted) return;
-      _showSnack('Account created successfully.');
+      _showSnack('Account created successfully. Please verify your email.');
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(
+          builder: (_) => OtpScreen(email: email, password: password),
+        ),
         (_) => false,
       );
     } catch (e) {

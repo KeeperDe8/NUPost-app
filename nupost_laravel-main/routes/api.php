@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login.php', [LegacyMobileApiController::class, 'login']);
 Route::post('/register.php', [LegacyMobileApiController::class, 'register']);
+Route::post('/otp_verify.php', [LegacyMobileApiController::class, 'verifyOtp']);
+Route::post('/resend_otp.php', [LegacyMobileApiController::class, 'resendOtp']);
 Route::get('/profile.php', [LegacyMobileApiController::class, 'profile']);
 Route::get('/requests.php', [LegacyMobileApiController::class, 'requests']);
 Route::post('/create_request.php', [LegacyMobileApiController::class, 'createRequest']);

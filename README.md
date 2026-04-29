@@ -157,6 +157,7 @@ nupost_app/
 │   │   ├── splash_screen.dart
 │   │   ├── login_screen.dart
 │   │   ├── register_screen.dart
+│   │   ├── otp_screen.dart
 │   │   ├── home_screen.dart
 │   │   ├── requests_screen.dart
 │   │   ├── create_request_screen.dart
@@ -190,8 +191,9 @@ nupost_app/
 
 ```
 SplashScreen
-    └── LoginScreen ──── RegisterScreen
-            └── HomeScreen
+    ├── LoginScreen ──── RegisterScreen ──── OtpScreen
+    │       └── (Unverified) ─────────────── OtpScreen
+    └── HomeScreen
                     ├── RequestsScreen ── RequestTrackingScreen
                     ├── CreateRequestScreen
                     ├── NotificationsScreen
@@ -231,6 +233,7 @@ mysql -u root -p nupost_laravel < nupost_laravel.sql
 | Table | Purpose |
 |-------|---------|
 | `users` | Requestor accounts with role, org, phone |
+| `otp_codes` | OTP verification codes and expiration tracking |
 | `post_requests` | All posting requests with status, platform, caption |
 | `request_comments` | Admin ↔ requester message threads |
 | `request_activity` | Full audit log per request |

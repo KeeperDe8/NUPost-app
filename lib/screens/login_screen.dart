@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
+import 'otp_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -120,9 +121,24 @@ class _LoginScreenState extends State<LoginScreen>
       ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     } catch (e) {
       if (!mounted) return;
-      _showSnack(
-        'Login failed: ${e.toString().replaceFirst('Exception: ', '')}',
-      );
+      final errorMsg = e.toString();
+      
+      if (errorMsg.toLowerCase().contains('verify')) {
+        // Redirect to OTP Screen
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OtpScreen(
+              email: email, 
+              password: password,
+              autoSendOtp: true,
+            ),
+          ),
+        );
+      } else {
+        _showSnack(
+          'Login failed: ${errorMsg.replaceFirst('Exception: ', '')}',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoggingIn = false);
     }

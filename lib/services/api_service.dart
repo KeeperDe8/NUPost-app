@@ -20,8 +20,7 @@ class ApiService {
       return _configuredBaseUrl;
     }
 
-    // Prefer Laravel compatibility API. Legacy is still used as fallback.
-    return _laravelBaseUrl;
+    return _legacyBaseUrl;
   }
 
   static const Duration _requestTimeout = Duration(seconds: 15);
@@ -48,6 +47,24 @@ class ApiService {
       'email': email,
       'password': password,
     }, fallbackMessage: 'Registration failed');
+  }
+
+  static Future<Map<String, dynamic>> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'otp_verify.php', null);
+    return _postJson(uri, {
+      'email': email,
+      'otp': otp,
+    }, fallbackMessage: 'OTP Verification failed');
+  }
+
+  static Future<Map<String, dynamic>> resendOtp({required String email}) async {
+    final uri = _buildUri(_baseUrl, 'resend_otp.php', null);
+    return _postJson(uri, {
+      'email': email,
+    }, fallbackMessage: 'Failed to resend OTP');
   }
 
   static Future<Map<String, dynamic>> fetchProfile({
@@ -320,7 +337,7 @@ class ApiService {
     final laravel = _buildUri(_laravelBaseUrl, endpoint, query);
     final legacy = _buildUri(_legacyBaseUrl, endpoint, query);
 
-    final ordered = <Uri>[laravel, legacy];
+    final ordered = <Uri>[legacy, laravel];
     final unique = <Uri>[];
     for (final uri in ordered) {
       if (!unique.contains(uri)) {
@@ -341,7 +358,7 @@ class ApiService {
 
       try {
         final response = await http.get(candidate).timeout(_requestTimeout);
-        if (response.statusCode == 404 && hasNext) {
+        if ((response.statusCode == 404 || response.statusCode >= 500) && hasNext) {
           continue;
         }
         return _parseResponse(
@@ -389,7 +406,7 @@ class ApiService {
               body: jsonEncode(payload),
             )
             .timeout(_requestTimeout);
-        if (response.statusCode == 404 && hasNext) {
+        if ((response.statusCode == 404 || response.statusCode >= 500) && hasNext) {
           continue;
         }
         return _parseResponse(

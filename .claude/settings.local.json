@@ -3,7 +3,11 @@
     "allow": [
       "Bash(git -C /c/src/nupost_app checkout HEAD -- lib/screens/profile_screen.dart)",
       "Bash(flutter analyze *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(/c/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql.exe *)",
+      "Bash(\"/c/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql.exe\" -u root -e \"DELETE FROM nupost_laravel.users WHERE email = 'keepertyum@gmail.com';\")",
+      "Bash(\"/c/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql.exe\" -u root -e \"SELECT COUNT\\(*\\) as remaining FROM nupost_laravel.users WHERE email = 'keepertyum@gmail.com';\")",
+      "Bash(\"/c/laragon/bin/mysql/mysql-8.4.3-winx64/bin/mysql.exe\" -u root -e \"DELETE FROM nupost_laravel.users WHERE email = 'keepertyum@gmail.com'; SELECT ROW_COUNT\\(\\) as deleted;\")"
     ]
   }
 }
