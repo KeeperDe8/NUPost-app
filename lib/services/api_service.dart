@@ -49,6 +49,19 @@ class ApiService {
     }, fallbackMessage: 'Registration failed');
   }
 
+  static Future<Map<String, dynamic>> updatePassword({
+    required int userId,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'update_password.php', null);
+    return _postJson(uri, {
+      'user_id': '$userId',
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    }, fallbackMessage: 'Failed to update password');
+  }
+
   static Future<Map<String, dynamic>> verifyOtp({
     required String email,
     required String otp,
@@ -60,11 +73,15 @@ class ApiService {
     }, fallbackMessage: 'OTP Verification failed');
   }
 
-  static Future<Map<String, dynamic>> resendOtp({required String email}) async {
+  static Future<Map<String, dynamic>> resendOtp({
+    required String email,
+    String? purpose,
+  }) async {
     final uri = _buildUri(_baseUrl, 'resend_otp.php', null);
-    return _postJson(uri, {
-      'email': email,
-    }, fallbackMessage: 'Failed to resend OTP');
+    final body = <String, dynamic>{'email': email};
+    if (purpose != null) body['purpose'] = purpose;
+
+    return _postJson(uri, body, fallbackMessage: 'Failed to resend OTP');
   }
 
   static Future<Map<String, dynamic>> fetchProfile({
@@ -225,6 +242,19 @@ class ApiService {
       'user_id': '$userId',
       'public_calendar': isPublic ? '1' : '0',
     }, fallbackMessage: 'Failed to update calendar');
+  }
+
+  static Future<Map<String, dynamic>> updateNotificationSettings({
+    required int userId,
+    required bool emailNotif,
+    required bool statusUpdates,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'update_profile.php', null);
+    return _postJson(uri, {
+      'user_id': '$userId',
+      'email_notif': emailNotif ? '1' : '0',
+      'status_updates': statusUpdates ? '1' : '0',
+    }, fallbackMessage: 'Failed to update notification settings');
   }
 
   static Future<Map<String, dynamic>> fetchNotifications({
@@ -479,8 +509,10 @@ class ApiService {
     required String email,
     required String phone,
     required String bio,
+    required String organization,
+    required String department,
   }) async {
-    final uri = Uri.parse('$_baseUrl/profile.php');
+    final uri = Uri.parse('$_baseUrl/update_profile.php');
     try {
       final response = await http
           .post(
@@ -491,6 +523,8 @@ class ApiService {
               'email': email,
               'phone': phone,
               'bio': bio,
+              'organization': organization,
+              'department': department,
             },
           )
           .timeout(_requestTimeout);

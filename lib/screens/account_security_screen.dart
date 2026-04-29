@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import '../services/session_store.dart';
 
 class AccountSecurityScreen extends StatefulWidget {
   const AccountSecurityScreen({super.key});
@@ -18,6 +20,11 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
   bool _obscureNew = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
+
+  // Settings
+  bool _publicProfile = false;
+  bool _emailNotif = true;
+  bool _statusUpdates = true;
 
   // Password strength
   double _strength = 0.0;
@@ -41,6 +48,8 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
       vsync: this,
       duration: const Duration(milliseconds: 650),
     )..forward();
+
+    _loadSettings();
 
     _entryFade = CurvedAnimation(
       parent: _entryCtrl,
@@ -76,6 +85,24 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
     _newCtrl.dispose();
     _confirmCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final res = await ApiService.fetchProfile(
+        userId: SessionStore.userId ?? 0,
+      );
+      if (res['success'] == true) {
+        final data = res['data'] ?? {};
+        if (mounted) {
+          setState(() {
+            _publicProfile = (data['public_profile'] == 1 || data['public_profile'] == true);
+            _emailNotif = (data['email_notif'] == 1 || data['email_notif'] == true);
+            _statusUpdates = (data['status_updates'] == 1 || data['status_updates'] == true);
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   // ── Password strength evaluator ──────────────────────────────────────────
@@ -138,22 +165,149 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
 
     setState(() => _isLoading = true);
     try {
-      // TODO: Replace with actual ApiService.updatePassword() call
-      await Future.delayed(const Duration(milliseconds: 1200));
+      final email = SessionStore.email ?? '';
+      if (email.isEmpty) {
+        _showSnack('Email not found in session.', isError: true);
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // 1. Request OTP
+      final res = await ApiService.resendOtp(
+        email: email,
+        purpose: 'password_reset',
+      );
+      if (res['success'] != true) {
+        _showSnack(res['message'] ?? 'Failed to send OTP', isError: true);
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      setState(() => _isLoading = false);
+
+      // 2. Show floating OTP dialog
       if (!mounted) return;
-      _currentCtrl.clear();
-      _newCtrl.clear();
-      _confirmCtrl.clear();
-      _showSnack('Password updated successfully!', isError: false);
+      _showOtpDialog(email);
+
     } catch (e) {
       if (!mounted) return;
       _showSnack(
         'Failed: ${e.toString().replaceFirst('Exception: ', '')}',
         isError: true,
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
+  }
+
+  void _showOtpDialog(String email) {
+    final otpCtrl = TextEditingController();
+    bool isVerifying = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text(
+              'Security Verification',
+              style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF080F1E)),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'To update your password, please enter the 6-digit OTP sent to your email.',
+                  style: TextStyle(fontFamily: 'DM Sans', fontSize: 13.5, color: Color(0xFF3D4A63), height: 1.4),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: otpCtrl,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  style: const TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600, fontSize: 16, letterSpacing: 2.0),
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    hintText: '000000',
+                    hintStyle: const TextStyle(letterSpacing: 2.0, color: Color(0xFFBFC5D0)),
+                    filled: true,
+                    fillColor: const Color(0xFFF1F4FB),
+                    counterText: '',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isVerifying ? null : () => Navigator.of(ctx).pop(),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w700, color: Color(0xFF9AA3B2)),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF001A6E),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  elevation: 0,
+                ),
+                onPressed: isVerifying
+                    ? null
+                    : () async {
+                        final otp = otpCtrl.text.trim();
+                        if (otp.length != 6) return;
+
+                        setDialogState(() => isVerifying = true);
+
+                        try {
+                          final verifyRes = await ApiService.verifyOtp(email: email, otp: otp);
+                          if (verifyRes['success'] != true) {
+                            setDialogState(() => isVerifying = false);
+                            if (mounted) _showSnack(verifyRes['message'] ?? 'Invalid OTP', isError: true);
+                            return;
+                          }
+
+                          // OTP valid, update password
+                          final updateRes = await ApiService.updatePassword(
+                            userId: SessionStore.userId ?? 0,
+                            currentPassword: _currentCtrl.text,
+                            newPassword: _newCtrl.text,
+                          );
+
+                          if (updateRes['success'] == true) {
+                            if (mounted) {
+                              Navigator.of(ctx).pop();
+                              _currentCtrl.clear();
+                              _newCtrl.clear();
+                              _confirmCtrl.clear();
+                              _showSnack('Password updated successfully!', isError: false);
+                            }
+                          } else {
+                            setDialogState(() => isVerifying = false);
+                            if (mounted) _showSnack(updateRes['message'] ?? 'Failed to update', isError: true);
+                          }
+                        } catch (e) {
+                          setDialogState(() => isVerifying = false);
+                          if (mounted) _showSnack('Error: $e', isError: true);
+                        }
+                      },
+                child: isVerifying
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text(
+                        'Confirm',
+                        style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w700, fontSize: 14, color: Colors.white),
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _showSnack(String msg, {required bool isError}) {
@@ -222,7 +376,15 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
                       _buildFormCard(),
                       const SizedBox(height: 20),
 
-                      // Submit button
+                      // Notification Preferences
+                      _buildNotificationCard(),
+                      const SizedBox(height: 20),
+
+                      // Privacy Settings
+                      _buildPrivacyCard(),
+                      const SizedBox(height: 20),
+
+                      // Submit button (Password only)
                       _buildSubmitButton(),
 
                       const SizedBox(height: 24),
@@ -595,6 +757,215 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
           ),
         ),
       ),
+    );
+  }
+
+  // ── Notification Preferences ───────────────────────────────────────────────
+  Widget _buildNotificationCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x0E000000)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x07001540),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.notifications_active_rounded,
+                  size: 16,
+                  color: Color(0xFFD97706),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'NOTIFICATION PREFERENCES',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 10.5,
+                  color: Color(0xFF9AA3B2),
+                  letterSpacing: 0.9,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildToggleRow(
+            title: 'Email Notifications',
+            desc: 'Receive all notifications via email when enabled',
+            value: _emailNotif,
+            onChanged: (val) async {
+              setState(() => _emailNotif = val);
+              if (!val) setState(() => _statusUpdates = false);
+              await _saveNotificationSettings();
+            },
+          ),
+          const SizedBox(height: 12),
+          _Divider(),
+          const SizedBox(height: 12),
+          Opacity(
+            opacity: _emailNotif ? 1.0 : 0.5,
+            child: _buildToggleRow(
+              title: 'Request Status Updates',
+              desc: 'Get an email when your request is approved, posted, or rejected',
+              value: _statusUpdates,
+              onChanged: _emailNotif
+                  ? (val) async {
+                      setState(() => _statusUpdates = val);
+                      await _saveNotificationSettings();
+                    }
+                  : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveNotificationSettings() async {
+    try {
+      await ApiService.updateNotificationSettings(
+        userId: SessionStore.userId ?? 0,
+        emailNotif: _emailNotif,
+        statusUpdates: _statusUpdates,
+      );
+    } catch (e) {
+      _showSnack('Failed to update notifications.', isError: true);
+    }
+  }
+
+  // ── Privacy Settings ───────────────────────────────────────────────────────
+  Widget _buildPrivacyCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x0E000000)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x07001540),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.shield_rounded,
+                  size: 16,
+                  color: Color(0xFF16A34A),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'PRIVACY SETTINGS',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 10.5,
+                  color: Color(0xFF9AA3B2),
+                  letterSpacing: 0.9,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildToggleRow(
+            title: 'Public Profile',
+            desc: 'Make your profile visible to all users in NUPost',
+            value: _publicProfile,
+            onChanged: (val) async {
+              setState(() => _publicProfile = val);
+              try {
+                await ApiService.updatePublicProfile(
+                  userId: SessionStore.userId ?? 0,
+                  isPublic: val,
+                );
+              } catch (e) {
+                _showSnack('Failed to update privacy.', isError: true);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleRow({
+    required String title,
+    required String desc,
+    required bool value,
+    required ValueChanged<bool>? onChanged,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14.5,
+                  color: Color(0xFF080F1E),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                desc,
+                style: const TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 12.5,
+                  color: Color(0xFF3D4A63),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: Colors.white,
+          activeTrackColor: const Color(0xFF001A6E),
+          inactiveThumbColor: Colors.white,
+          inactiveTrackColor: const Color(0xFFD1D5DB),
+        ),
+      ],
     );
   }
 

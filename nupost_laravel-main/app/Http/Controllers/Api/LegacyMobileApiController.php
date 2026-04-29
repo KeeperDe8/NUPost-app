@@ -309,7 +309,8 @@ class LegacyMobileApiController extends Controller
             ], 404);
         }
 
-        if (isset($user->is_verified) && (int) $user->is_verified === 1) {
+        $purpose = trim((string) $request->input('purpose', ''));
+        if (isset($user->is_verified) && (int) $user->is_verified === 1 && $purpose !== 'password_reset') {
             return response()->json([
                 'success' => false,
                 'message' => 'Account is already verified'
@@ -741,6 +742,16 @@ class LegacyMobileApiController extends Controller
         $userId = (int) $request->input('user_id', 0);
         $publicProfile = $request->input('public_profile', null);
         $publicCalendar = $request->input('public_calendar', null);
+        
+        $name = $request->input('name');
+        $email = $request->input('email');
+        $phone = $request->input('phone');
+        $bio = $request->input('bio');
+        $organization = $request->input('organization');
+        $department = $request->input('department');
+
+        $emailNotif = $request->input('email_notif');
+        $statusUpdates = $request->input('status_updates');
 
         if ($userId <= 0) {
             return response()->json([
@@ -764,6 +775,25 @@ class LegacyMobileApiController extends Controller
             $responseData['public_calendar'] = $calendarVal;
         }
 
+        // Handle basic profile fields
+        $fields = [
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'bio' => $bio,
+            'organization' => $organization,
+            'department' => $department,
+            'email_notif' => $emailNotif !== null ? ((string)$emailNotif === '1' || $emailNotif === 1 || $emailNotif === true ? 1 : 0) : null,
+            'status_updates' => $statusUpdates !== null ? ((string)$statusUpdates === '1' || $statusUpdates === 1 || $statusUpdates === true ? 1 : 0) : null,
+        ];
+
+        foreach ($fields as $col => $val) {
+            if ($val !== null && Schema::hasColumn('users', $col)) {
+                $updates[$col] = $val;
+                $responseData[$col] = $val;
+            }
+        }
+
         if (empty($updates)) {
             return response()->json([
                 'success' => false,
@@ -778,6 +808,44 @@ class LegacyMobileApiController extends Controller
             'message' => 'Profile updated',
             'data' => $responseData,
         ], 200);
+    }
+
+    public function updatePassword(Request $request): JsonResponse
+    {
+        $userId = (int) $request->input('user_id', 0);
+        $currentPassword = (string) $request->input('current_password', '');
+        $newPassword = (string) $request->input('new_password', '');
+
+        if ($userId <= 0 || $currentPassword === '' || $newPassword === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Missing required fields',
+            ], 400);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        if (!Hash::check($currentPassword, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Current password is incorrect',
+            ], 400);
+        }
+
+        DB::table('users')->where('id', $userId)->update([
+            'password' => Hash::make($newPassword)
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password updated successfully',
+        ]);
     }
 
     public function notifications(Request $request): JsonResponse

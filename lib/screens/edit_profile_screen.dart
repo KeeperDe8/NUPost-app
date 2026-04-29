@@ -17,6 +17,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   late TextEditingController _nameCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _phoneCtrl;
+  late TextEditingController _orgCtrl;
+  late TextEditingController _deptCtrl;
   late TextEditingController _bioCtrl;
 
   late final AnimationController _entryCtrl;
@@ -43,6 +45,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     _nameCtrl = TextEditingController(text: SessionStore.name);
     _emailCtrl = TextEditingController(text: SessionStore.email);
     _phoneCtrl = TextEditingController();
+    _orgCtrl = TextEditingController();
+    _deptCtrl = TextEditingController();
     _bioCtrl = TextEditingController();
 
     _entryCtrl = AnimationController(
@@ -70,6 +74,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _orgCtrl.dispose();
+    _deptCtrl.dispose();
     _bioCtrl.dispose();
     super.dispose();
   }
@@ -86,6 +92,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
           _nameCtrl.text = data['name'] ?? SessionStore.name ?? '';
           _emailCtrl.text = data['email'] ?? SessionStore.email ?? '';
           _phoneCtrl.text = data['phone'] ?? '';
+          _orgCtrl.text = data['organization'] ?? '';
+          _deptCtrl.text = data['department'] ?? '';
           _bioCtrl.text = data['bio'] ?? '';
         });
       }
@@ -106,6 +114,8 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         email: _emailCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
         bio: _bioCtrl.text.trim(),
+        organization: _orgCtrl.text.trim(),
+        department: _deptCtrl.text.trim(),
       );
       if (res['success'] == true) {
         SessionStore.name = _nameCtrl.text.trim();
@@ -469,6 +479,26 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             keyboardType: TextInputType.phone,
             isFocused: _focusedField == 'phone',
             onFocus: (v) => setState(() => _focusedField = v ? 'phone' : null),
+          ),
+          const SizedBox(height: 16),
+
+          _FormField(
+            label: 'Organization',
+            controller: _orgCtrl,
+            hint: 'e.g., Student Council',
+            prefixIcon: Icons.group_outlined,
+            isFocused: _focusedField == 'org',
+            onFocus: (v) => setState(() => _focusedField = v ? 'org' : null),
+          ),
+          const SizedBox(height: 16),
+
+          _FormField(
+            label: 'Department',
+            controller: _deptCtrl,
+            hint: 'e.g., College of Computing',
+            prefixIcon: Icons.business_outlined,
+            isFocused: _focusedField == 'dept',
+            onFocus: (v) => setState(() => _focusedField = v ? 'dept' : null),
           ),
 
           const SizedBox(height: 20),
