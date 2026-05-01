@@ -6858,3 +6858,21 @@ GitHub Copilot:
 User: @agent Try Again
 
 GitHub Copilot: 
+
+---
+
+**Antigravity Log (NUPost Security Sync & Polish)**
+
+*   **OTP Flow Fixed:** Enforced redirect to the OTP screen if a user logs in while unverified, and implemented an auto-resend OTP mechanism to prevent users from getting stuck if the app crashes during verification.
+*   **Profile Parity:** Expanded `LegacyMobileApiController@updateProfile` in the Laravel backend and the app's `EditProfileScreen` to sync all user fields (bio, organization, department, etc.) to match the web Requestor profile.
+*   **Settings Parity:** Replicated the web app's Notification and Privacy toggles inside the mobile `AccountSecurityScreen`, ensuring preferences are synced and saved correctly via the API.
+*   **API Fixed:** Corrected compilation errors in the mobile app caused by missing `ApiService` and `SessionStore` imports.
+*   **Password Update & Floating OTP:** 
+    *   Wired up the "Update Password" button.
+    *   Added the `updatePassword` endpoint to the backend.
+    *   Implemented a sleek, floating OTP verification dialog inside the app instead of making the user navigate to a separate screen.
+    *   Fixed a bug where the backend refused to send OTPs to already-verified users by adding a special `purpose=password_reset` exception to `resendOtp`.
+*   **Code Review & Cleanup:** 
+    *   Answered questions regarding Git `CRLF` vs `LF` line-ending warnings, confirming they are harmless and actually prevent code conflicts between Windows and Mac/Linux users.
+    *   Confirmed that deleting the unused `ref` backup directory was completely safe and would not break the app.
+    *   Reviewed `nupost_laravel-main` and confirmed it is clean with no leftover junk files that need deleting.
