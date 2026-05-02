@@ -60,8 +60,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   int get _completedSteps {
     int s = 0;
     if (_titleController.text.trim().isNotEmpty &&
-        _descriptionController.text.trim().isNotEmpty)
+        _descriptionController.text.trim().isNotEmpty) {
       s++;
+    }
     if (_platforms.values.any((v) => v)) s++;
     if (_selectedCategory != null && _selectedPriority != null) s++;
     if (_selectedDate != null) s++;
@@ -120,8 +121,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         final data = res['data'] ?? {};
         final List<dynamic> allPosts = [];
         if (data['my_requests'] is List) allPosts.addAll(data['my_requests']);
-        if (data['public_calendar'] is List)
+        if (data['public_calendar'] is List) {
           allPosts.addAll(data['public_calendar']);
+        }
 
         int count = 0;
         List<Map<String, dynamic>> matchingPosts = [];
@@ -245,8 +247,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     setState(() {
       _mediaFiles = picked.take(4).toList();
     });
-    if (picked.length > 4 && mounted)
+    if (picked.length > 4 && mounted) {
       _showSnack('Only first 4 files were selected.');
+    }
   }
 
   Future<void> _onSubmit() async {
@@ -365,14 +368,16 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   }
 
   LinearGradient _capacityGradient(int count) {
-    if (count == 0)
+    if (count == 0) {
       return const LinearGradient(
         colors: [Color(0xFF34D399), Color(0xFF05C46B)],
       );
-    if (count <= 2)
+    }
+    if (count <= 2) {
       return const LinearGradient(
         colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
       );
+    }
     return const LinearGradient(colors: [Color(0xFFF87171), Color(0xFFFF3B30)]);
   }
 
@@ -526,19 +531,85 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                           ),
                         ],
                       ),
+                      const SizedBox(height: 14),
+
+                      // ── Auto-appended text info ─────────────────────────
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F3FF),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF7C3AED).withOpacity(0.18),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_fix_high_rounded,
+                                  size: 14,
+                                  color: const Color(0xFF7C3AED).withOpacity(0.7),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'AUTO-ADDED WHEN YOU SUBMIT',
+                                  style: TextStyle(
+                                    fontFamily: 'DM Sans',
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 9.5,
+                                    color: const Color(0xFF7C3AED).withOpacity(0.6),
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Apply now and secure your place for the upcoming academic year: https://onlineapp.nu-lipa.edu.ph/quest/register.php',
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontSize: 12.5,
+                                color: Color(0xFF3D4A63),
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Experience Education That Works.',
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontSize: 12.5,
+                                fontStyle: FontStyle.italic,
+                                color: Color(0xFF3D4A63),
+                                height: 1.5,
+                              ),
+                            ),
+                            const Text(
+                              '#NULipa #EducationThatWorks',
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF7C3AED),
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── Submit button (scrolls with content) ────────────
+                      _buildStickySubmit(),
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
               ),
             ],
-          ),
-
-          // ── Sticky submit button (sits above nav bar) ──────────────────
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 72,
-            child: _buildStickySubmit(),
           ),
 
           // ── Bottom nav bar ───────────────────────────────────────────────

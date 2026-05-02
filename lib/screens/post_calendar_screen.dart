@@ -107,10 +107,12 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                 requester.isNotEmpty && requester == (SessionStore.name ?? '');
             DateTime? requestDate;
             DateTime? scheduledDate;
-            if (post['request_date'] != null && post['request_date'] != '')
+            if (post['request_date'] != null && post['request_date'] != '') {
               requestDate = DateTime.tryParse(post['request_date']);
-            if (post['scheduled_date'] != null && post['scheduled_date'] != '')
+            }
+            if (post['scheduled_date'] != null && post['scheduled_date'] != '') {
               scheduledDate = DateTime.tryParse(post['scheduled_date']);
+            }
             nextPosts.add(
               _CalendarPost(
                 label: post['title'] ?? 'Post',
@@ -132,8 +134,9 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
               ..addAll(nextPosts);
             _loadError = null;
             _isLoading = false;
-            if (updateToggle && forcePublicView != null)
+            if (updateToggle && forcePublicView != null) {
               _isPublicCalendar = forcePublicView;
+            }
           });
           _listCtrl.reset();
           _listCtrl.forward();
@@ -427,7 +430,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                       updateToggle: true,
                     );
                   },
-                  activeColor: const Color(0xFF002366),
+                  activeThumbColor: const Color(0xFF002366),
                   activeTrackColor: const Color(0xFF002366).withOpacity(0.3),
                   inactiveThumbColor: const Color(0xFF9AA3B2),
                   inactiveTrackColor: const Color(0xFFE9EDF6),

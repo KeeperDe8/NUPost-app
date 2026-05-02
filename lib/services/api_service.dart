@@ -451,12 +451,19 @@ class ApiService {
         throw Exception(
           'Connection timed out. Check if the API server is running and API_BASE_URL is correct.',
         );
-      } on SocketException {
+      } on SocketException catch (e) {
         if (hasNext) {
           continue;
         }
         throw Exception(
-          'Cannot connect to API server. Check network and API_BASE_URL.',
+          'Cannot connect to API server. Check network and API_BASE_URL. ($e)',
+        );
+      } catch (e) {
+        if (hasNext) {
+          continue;
+        }
+        throw Exception(
+          'Connection error: $e',
         );
       }
     }

@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import '../services/session_store.dart';
-import '../theme/app_theme.dart';
-import 'home_screen.dart';
 import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {

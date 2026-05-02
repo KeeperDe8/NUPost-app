@@ -199,14 +199,18 @@ class _RequestsScreenState extends State<RequestsScreen>
         }
         final cs = request['status'] ?? 'Pending';
         String sm = 'Your request is being processed.';
-        if (cs == 'Pending')
+        if (cs == 'Pending') {
           sm = 'Your request is currently queued for review.';
-        if (cs == 'Approved')
+        }
+        if (cs == 'Approved') {
           sm = 'Your request has been approved by the Marketing Office.';
-        if (cs == 'Posted')
+        }
+        if (cs == 'Posted') {
           sm = 'Your content has been successfully published.';
-        if (cs == 'Rejected')
+        }
+        if (cs == 'Rejected') {
           sm = 'Your request was not approved. Please check feedback.';
+        }
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => RequestTrackingScreen(
@@ -259,6 +263,7 @@ class _RequestsScreenState extends State<RequestsScreen>
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFFE9EDF6),
       body: FadeTransition(
         opacity: _entryFade,
@@ -414,13 +419,14 @@ class _RequestsScreenState extends State<RequestsScreen>
                         final items = tab == 'All'
                             ? _requests
                             : _requests.where((e) => e.status == tab).toList();
-                        if (_isLoading)
+                        if (_isLoading) {
                           return const Center(
                             child: CircularProgressIndicator(
                               color: Color(0xFF002366),
                             ),
                           );
-                        if (_error != null)
+                        }
+                        if (_error != null) {
                           return Center(
                             child: Padding(
                               padding: const EdgeInsets.all(28),
@@ -473,7 +479,8 @@ class _RequestsScreenState extends State<RequestsScreen>
                               ),
                             ),
                           );
-                        if (items.isEmpty)
+                        }
+                        if (items.isEmpty) {
                           return Center(
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 80),
@@ -510,6 +517,7 @@ class _RequestsScreenState extends State<RequestsScreen>
                               ),
                             ),
                           );
+                        }
                         return ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
                           itemCount: items.length,

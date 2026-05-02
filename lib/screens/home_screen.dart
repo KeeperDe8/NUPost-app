@@ -91,6 +91,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.pageBg,
       body: Stack(
         children: [
@@ -584,8 +585,9 @@ class _HomeScreenState extends State<HomeScreen>
           List<String> platformsList = [];
           if (req['platform'] != null) {
             final platStr = req['platform'].toString();
-            if (platStr.isNotEmpty)
+            if (platStr.isNotEmpty) {
               platformsList = platStr.split(',').map((x) => x.trim()).toList();
+            }
           }
           if (platformsList.isEmpty) platformsList.add('Facebook');
 

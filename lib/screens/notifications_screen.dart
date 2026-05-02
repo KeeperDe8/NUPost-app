@@ -99,11 +99,12 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         .toList();
     if (unreadIds.isEmpty) return;
     try {
-      for (final id in unreadIds)
+      for (final id in unreadIds) {
         await ApiService.markNotificationRead(
           userId: userId,
           notificationId: id,
         );
+      }
       if (!mounted) return;
       setState(() {
         _notifications = _notifications
@@ -346,11 +347,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
   String _statusMsg(String s) {
     if (s == 'Pending') return 'Your request is currently queued for review.';
-    if (s == 'Approved')
+    if (s == 'Approved') {
       return 'Your request has been approved by the Marketing Office.';
+    }
     if (s == 'Posted') return 'Your content has been successfully published.';
-    if (s == 'Rejected')
+    if (s == 'Rejected') {
       return 'Your request was not approved. Please check feedback.';
+    }
     return 'Your request is being processed.';
   }
 
@@ -383,6 +386,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFFE9EDF6),
       body: FadeTransition(
         opacity: _entryFade,
