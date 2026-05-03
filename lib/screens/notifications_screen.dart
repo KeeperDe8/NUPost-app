@@ -388,11 +388,11 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFFE9EDF6),
-      body: FadeTransition(
-        opacity: _entryFade,
-        child: Stack(
-          children: [
-            Column(
+      body: Stack(
+        children: [
+          FadeTransition(
+            opacity: _entryFade,
+            child: Column(
               children: [
                 _buildHeader(),
                 _buildFilterTabs(),
@@ -400,15 +400,15 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 const SizedBox(height: 90),
               ],
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: AppBottomNav(currentIndex: _currentNavIndex),
-            ),
-            const FloatingMessageButton(),
-          ],
-        ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: AppBottomNav(currentIndex: _currentNavIndex),
+          ),
+          const FloatingMessageButton(),
+        ],
       ),
     );
   }

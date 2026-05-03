@@ -556,7 +556,7 @@ class LegacyMobileApiController extends Controller
             'requester' => (string) ($user->name ?? ''),
             'category' => $category,
             'priority' => $priority,
-            'status' => 'Pending',
+            'status' => 'Pending Review',
             'description' => $description,
             'media_file' => implode(',', $mediaNames),
             'platform' => is_array($platforms) ? implode(',', $platforms) : '',
@@ -582,7 +582,7 @@ class LegacyMobileApiController extends Controller
             'data' => [
                 'id' => $newId,
                 'request_id' => $reqCode,
-                'status' => 'Pending',
+                'status' => 'Pending Review',
             ],
         ], 201);
     }
@@ -1180,13 +1180,8 @@ class LegacyMobileApiController extends Controller
                 continue;
             }
 
-            $unreadQuery = DB::table('request_comments')
-                ->where('request_id', (int) $req->id)
-                ->where('sender_role', 'admin')
-                ->where('is_read_by_user', false);
-
-            $unreadCount = (int) $unreadQuery->count();
-            $totalUnread += $unreadCount;
+            $unreadCount = 0;
+            $totalUnread = 0; // App will track this locally now
 
             $threads[] = [
                 'request_id' => (int) $req->id,
@@ -1195,6 +1190,7 @@ class LegacyMobileApiController extends Controller
                 'request_status' => trim((string) ($req->status ?? '')) !== ''
                     ? (string) $req->status
                     : 'Pending',
+                'last_message_id' => (int) ($latest->id ?? 0),
                 'last_message' => (string) ($latest->message ?? ''),
                 'last_sender_role' => (string) ($latest->sender_role ?? ''),
                 'last_sender_name' => (string) ($latest->sender_name ?? ''),
@@ -1387,15 +1383,7 @@ class LegacyMobileApiController extends Controller
         $userId = $request->input('user_id');
         $requestId = $request->input('request_id');
 
-        if (!$userId || !$requestId) {
-            return response()->json(['error' => 'Missing parameters'], 400);
-        }
-
-        DB::table('request_comments')
-            ->where('request_id', $requestId)
-            ->where('sender_role', 'admin')
-            ->update(['is_read_by_user' => true]);
-
+        // Logic moved to local app storage to avoid database column dependencies
         return response()->json(['success' => true]);
     }
 }

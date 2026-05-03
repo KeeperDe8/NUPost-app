@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
 import 'message_thread_screen.dart';
+import '../services/chat_read_store.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -53,11 +54,21 @@ class _MessagesScreenState extends State<MessagesScreen>
     try {
       final result = await ApiService.fetchMessageThreads(userId: userId);
       final rows = (result['data'] as List?) ?? const [];
+      final fetchedThreads = rows
+          .whereType<Map<String, dynamic>>()
+          .map(_ThreadItem.fromJson)
+          .toList();
+
+      // Calculate unread counts locally
+      final updatedThreads = <_ThreadItem>[];
+      for (var t in fetchedThreads) {
+        final lastReadId = await ChatReadStore.getLastReadId(t.requestId);
+        final isUnread = t.lastMessageId > lastReadId && t.lastSenderRole == 'admin';
+        updatedThreads.add(t.copyWith(unreadCount: isUnread ? 1 : 0));
+      }
+
       setState(() {
-        _threads = rows
-            .whereType<Map<String, dynamic>>()
-            .map(_ThreadItem.fromJson)
-            .toList();
+        _threads = updatedThreads;
       });
       _staggerCtrl.reset();
       _staggerCtrl.forward();
@@ -648,6 +659,8 @@ class _ThreadItem {
   final String requestStatus;
   final String lastMessage;
   final String lastMessageAt;
+  final int lastMessageId;
+  final String lastSenderRole;
   final int unreadCount;
 
   const _ThreadItem({
@@ -657,8 +670,22 @@ class _ThreadItem {
     required this.requestStatus,
     required this.lastMessage,
     required this.lastMessageAt,
+    required this.lastMessageId,
+    required this.lastSenderRole,
     required this.unreadCount,
   });
+
+  _ThreadItem copyWith({int? unreadCount}) => _ThreadItem(
+    requestId: requestId,
+    requestCode: requestCode,
+    requestTitle: requestTitle,
+    requestStatus: requestStatus,
+    lastMessage: lastMessage,
+    lastMessageAt: lastMessageAt,
+    lastMessageId: lastMessageId,
+    lastSenderRole: lastSenderRole,
+    unreadCount: unreadCount ?? this.unreadCount,
+  );
 
   factory _ThreadItem.fromJson(Map<String, dynamic> json) => _ThreadItem(
     requestId: (json['request_id'] as num?)?.toInt() ?? 0,
@@ -667,6 +694,8 @@ class _ThreadItem {
     requestStatus: (json['request_status'] ?? 'Pending').toString(),
     lastMessage: (json['last_message'] ?? '').toString(),
     lastMessageAt: (json['last_message_at'] ?? '').toString(),
-    unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
+    lastMessageId: (json['last_message_id'] as num?)?.toInt() ?? 0,
+    lastSenderRole: (json['last_sender_role'] ?? '').toString(),
+    unreadCount: 0, // Calculated locally
   );
 }

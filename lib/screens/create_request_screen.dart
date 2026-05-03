@@ -280,6 +280,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           '${_selectedDate!.month.toString().padLeft(2, '0')}-'
           '${_selectedDate!.day.toString().padLeft(2, '0')}';
 
+      final originalCaption = _captionController.text.trim();
+      final footer = "\n\nApply now and secure your place for the upcoming academic year: https://onlineapp.nu-lipa.edu.ph/quest/register.php\nExperience 𝘌𝘥𝘶𝘤𝘢𝘵𝘪𝘰𝘯 𝘛𝘩𝘢𝘵 𝘞𝘰𝘳𝘬𝘴. #NULipa #EducationThatWorks";
+      final finalCaption = originalCaption.isNotEmpty 
+          ? "$originalCaption$footer" 
+          : footer.trim();
+
       await ApiService.createRequest(
         userId: userId,
         title: _titleController.text.trim(),
@@ -288,7 +294,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         priority: _selectedPriority!,
         platforms: platforms,
         preferredDate: preferredDate,
-        caption: _captionController.text.trim(),
+        caption: finalCaption,
         mediaFiles: _mediaFiles,
       );
       if (!mounted) return;
@@ -578,7 +584,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                             ),
                             const SizedBox(height: 4),
                             const Text(
-                              'Experience Education That Works.',
+                              'Experience 𝘌𝘥𝘶𝘤𝘢𝘵𝘪𝘰𝘯 𝘛𝘩𝘢𝘵 𝘞𝘰𝘳𝘬𝘴.',
                               style: TextStyle(
                                 fontFamily: 'DM Sans',
                                 fontSize: 12.5,

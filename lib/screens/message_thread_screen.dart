@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../services/chat_read_store.dart';
 import '../theme/app_theme.dart';
 
 class MessageThreadScreen extends StatefulWidget {
@@ -38,7 +39,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
   void initState() {
     super.initState();
     _loadThread();
-    _poll = Timer.periodic(const Duration(seconds: 8), (_) {
+    _poll = Timer.periodic(const Duration(seconds: 4), (_) {
       _loadThread(showLoader: false);
     });
   }
@@ -82,8 +83,10 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
 
       if (hadNew) _scrollToBottom();
 
-      // Mark as read so the FAB badge clears
-      ApiService.markThreadRead(userId: userId, requestId: widget.requestId);
+      // Mark as read locally
+      if (incoming.isNotEmpty) {
+        await ChatReadStore.markAsRead(widget.requestId, incoming.last.id);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {

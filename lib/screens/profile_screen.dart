@@ -162,13 +162,13 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFFE9EDF6),
-      body: FadeTransition(
-        opacity: _entryFade,
-        child: SlideTransition(
-          position: _entrySlide,
-          child: Stack(
-            children: [
-              SingleChildScrollView(
+      body: Stack(
+        children: [
+          FadeTransition(
+            opacity: _entryFade,
+            child: SlideTransition(
+              position: _entrySlide,
+              child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -587,16 +587,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ],
                 ),
               ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: const AppBottomNav(currentIndex: 4),
-              ),
-              const FloatingMessageButton(),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: const AppBottomNav(currentIndex: 4),
+          ),
+          const FloatingMessageButton(),
+        ],
       ),
     );
   }

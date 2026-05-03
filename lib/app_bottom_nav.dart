@@ -29,31 +29,35 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
 
-    return Container(
-      height: 68 + bottomPad,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF001540).withOpacity(0.10),
-            blurRadius: 24,
-            spreadRadius: 0,
-            offset: const Offset(0, -6),
+    return Hero(
+      tag: 'app_bottom_nav',
+      child: Material(
+        type: MaterialType.transparency,
+        child: Container(
+          height: 68 + bottomPad,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF001540).withOpacity(0.10),
+                blurRadius: 24,
+                spreadRadius: 0,
+                offset: const Offset(0, -6),
+              ),
+              BoxShadow(
+                color: const Color(0xFF001540).withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
-          BoxShadow(
-            color: const Color(0xFF001540).withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.only(bottom: bottomPad),
+          padding: EdgeInsets.only(bottom: bottomPad),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -96,8 +100,10 @@ class AppBottomNav extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 }
 
 // ── Nav Item ──────────────────────────────────────────────────────────────────

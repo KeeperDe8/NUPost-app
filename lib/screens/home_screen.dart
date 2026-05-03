@@ -707,6 +707,9 @@ class _HomeRequestCard extends StatelessWidget {
         return const Color(0xFF8B5CF6);
       case 'Rejected':
         return const Color(0xFFFF3B30);
+      case 'Pending Review':
+      case 'Under Review':
+      case 'Pending':
       default:
         return const Color(0xFFF59E0B);
     }

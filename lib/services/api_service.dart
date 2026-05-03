@@ -12,8 +12,8 @@ class ApiService {
     'API_BASE_URL',
   );
 
-  static const String _laravelBaseUrl = 'http://10.0.2.2:8000/api';
-  static const String _legacyBaseUrl = 'http://10.0.2.2/nupost-main/api';
+  static const String _laravelBaseUrl = 'https://nupost.site/api';
+  static const String _legacyBaseUrl = 'https://nupost.site/api';
 
   static String get _baseUrl {
     if (_configuredBaseUrl.isNotEmpty) {
@@ -388,7 +388,8 @@ class ApiService {
 
       try {
         final response = await http.get(candidate).timeout(_requestTimeout);
-        if ((response.statusCode == 404 || response.statusCode >= 500) && hasNext) {
+        if ((response.statusCode == 404 || response.statusCode >= 500) &&
+            hasNext) {
           continue;
         }
         return _parseResponse(
@@ -436,7 +437,8 @@ class ApiService {
               body: jsonEncode(payload),
             )
             .timeout(_requestTimeout);
-        if ((response.statusCode == 404 || response.statusCode >= 500) && hasNext) {
+        if ((response.statusCode == 404 || response.statusCode >= 500) &&
+            hasNext) {
           continue;
         }
         return _parseResponse(
@@ -462,9 +464,7 @@ class ApiService {
         if (hasNext) {
           continue;
         }
-        throw Exception(
-          'Connection error: $e',
-        );
+        throw Exception('Connection error: $e');
       }
     }
 

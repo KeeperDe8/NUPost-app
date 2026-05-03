@@ -265,13 +265,13 @@ class _RequestsScreenState extends State<RequestsScreen>
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFFE9EDF6),
-      body: FadeTransition(
-        opacity: _entryFade,
-        child: SlideTransition(
-          position: _entrySlide,
-          child: Stack(
-            children: [
-              Column(
+      body: Stack(
+        children: [
+          FadeTransition(
+            opacity: _entryFade,
+            child: SlideTransition(
+              position: _entrySlide,
+              child: Column(
                 children: [
                   // ── HERO ─────────────────────────────────────────────────
                   Container(
@@ -341,7 +341,7 @@ class _RequestsScreenState extends State<RequestsScreen>
                                   _MiniStat(
                                     label: 'Pending',
                                     value:
-                                        '${_requests.where((r) => r.status == 'Pending').length}',
+                                        '${_requests.where((r) => r.status.toLowerCase().contains('pending') || r.status.toLowerCase().contains('review')).length}',
                                     color: const Color(0xFFFBBF24),
                                   ),
                                   const SizedBox(width: 8),
@@ -418,7 +418,14 @@ class _RequestsScreenState extends State<RequestsScreen>
                       children: _tabs.map((tab) {
                         final items = tab == 'All'
                             ? _requests
-                            : _requests.where((e) => e.status == tab).toList();
+                            : _requests.where((e) {
+                                if (tab == 'Pending') {
+                                  return e.status == 'Pending' ||
+                                      e.status == 'Pending Review' ||
+                                      e.status == 'Under Review';
+                                }
+                                return e.status == tab;
+                              }).toList();
                         if (_isLoading) {
                           return const Center(
                             child: CircularProgressIndicator(
@@ -538,16 +545,16 @@ class _RequestsScreenState extends State<RequestsScreen>
                   ),
                 ],
               ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: AppBottomNav(currentIndex: _currentNavIndex),
-              ),
-              const FloatingMessageButton(),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: AppBottomNav(currentIndex: _currentNavIndex),
+          ),
+          const FloatingMessageButton(),
+        ],
       ),
     );
   }
@@ -610,6 +617,9 @@ class _RequestCard extends StatelessWidget {
         return const Color(0xFF8B5CF6);
       case 'Rejected':
         return const Color(0xFFFF3B30);
+      case 'Pending Review':
+      case 'Under Review':
+      case 'Pending':
       default:
         return const Color(0xFFF59E0B);
     }
@@ -765,6 +775,9 @@ class _Chip extends StatelessWidget {
         bg = const Color(0xFFFEE2E2);
         fg = const Color(0xFF991B1B);
         break;
+      case 'Pending Review':
+      case 'Under Review':
+      case 'Pending':
       default:
         bg = const Color(0xFFFEF3C7);
         fg = const Color(0xFF92400E);
