@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
-import '../widgets/floating_message_button.dart';
 
 class CreateRequestScreen extends StatefulWidget {
   const CreateRequestScreen({super.key});
@@ -15,6 +13,9 @@ class CreateRequestScreen extends StatefulWidget {
 class _CreateRequestScreenState extends State<CreateRequestScreen>
     with TickerProviderStateMixin {
   // ── Controllers ────────────────────────────────────────────────────────────
+  late final AnimationController _entryCtrl;
+  late final Animation<double> _entryFade;
+  late final Animation<Offset> _entrySlide;
   late final AnimationController _submitScaleController;
   late final AnimationController _successController;
   late final Animation<double> _successScale;
@@ -36,7 +37,6 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   List<Map<String, dynamic>> _dateUpcomingPosts = [];
 
   int _captionLength = 0;
-  final int _currentNavIndex = 2;
   bool _isSubmitting = false;
   bool _isGeneratingCaption = false;
   bool _submitted = false;
@@ -72,6 +72,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   @override
   void initState() {
     super.initState();
+    _entryCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 650))..forward();
+    _entryFade = CurvedAnimation(parent: _entryCtrl, curve: const Interval(0.0, 0.7, curve: Curves.easeOut));
+    _entrySlide = Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _entryCtrl, curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic)));
 
     _submitScaleController = AnimationController(
       vsync: this,
@@ -99,6 +103,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
   @override
   void dispose() {
+    _entryCtrl.dispose();
     _submitScaleController.dispose();
     _successController.dispose();
     _titleController.dispose();
@@ -408,7 +413,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       backgroundColor: const Color(0xFFE9EDF6),
       body: Stack(
         children: [
-          Column(
+          FadeTransition(
+            opacity: _entryFade,
+            child: SlideTransition(
+              position: _entrySlide,
+              child: Column(
             children: [
               _buildHeader(),
               Expanded(
@@ -617,13 +626,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               ),
             ],
           ),
-
-          // ── Bottom nav bar ───────────────────────────────────────────────
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: AppBottomNav(currentIndex: _currentNavIndex),
+            ),
           ),
 
           // ── Success overlay ──────────────────────────────────────────────
@@ -706,7 +709,6 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               ),
             ),
 
-          const FloatingMessageButton(),
         ],
       ),
     );

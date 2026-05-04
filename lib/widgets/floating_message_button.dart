@@ -9,7 +9,7 @@ class FloatingMessageButton extends StatefulWidget {
   final double bottom;
   final double right;
 
-  const FloatingMessageButton({super.key, this.bottom = 92, this.right = 16});
+  const FloatingMessageButton({super.key, this.bottom = 108, this.right = 16});
 
   @override
   State<FloatingMessageButton> createState() => _FloatingMessageButtonState();
@@ -68,7 +68,7 @@ class _FloatingMessageButtonState extends State<FloatingMessageButton>
   Widget build(BuildContext context) {
     return Positioned(
       right: widget.right,
-      bottom: widget.bottom + MediaQuery.of(context).padding.bottom,
+      bottom: widget.bottom,
       child: GestureDetector(
         onTap: () async {
           await Navigator.pushNamed(context, '/messages');

@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
-import '../widgets/floating_message_button.dart';
 import 'request_tracking_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -14,7 +12,6 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen>
     with TickerProviderStateMixin {
-  final int _currentNavIndex = 3;
   List<_Notif> _notifications = [];
   int _unreadCount = 0;
   bool _isLoading = true;
@@ -247,6 +244,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     bool loaderOpen = true;
     showDialog(
       context: context,
+      useRootNavigator: false,
       barrierDismissible: false,
       builder: (_) => const Center(
         child: CircularProgressIndicator(color: Color(0xFF002366)),
@@ -401,13 +399,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               ],
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: AppBottomNav(currentIndex: _currentNavIndex),
-          ),
-          const FloatingMessageButton(),
         ],
       ),
     );

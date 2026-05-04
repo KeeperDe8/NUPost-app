@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'create_request_screen.dart';
-import '../app_bottom_nav.dart';
+import '../main_shell.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
-import '../widgets/floating_message_button.dart';
+import 'request_tracking_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,7 +14,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  final int _currentIndex = 0;
   int _pendingCount = 0;
   int _approvedCount = 0;
   int _postedCount = 0;
@@ -70,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen>
           setState(() {
             _pendingCount = stats['pending'] ?? 0;
             _approvedCount = stats['approved'] ?? 0;
-            _postedCount = stats['total'] ?? 0;
+            _postedCount = stats['posted'] ?? 0;
           });
         }
       }
@@ -111,7 +109,8 @@ class _HomeScreenState extends State<HomeScreen>
                           _buildApprovalBanner(),
                           const SizedBox(height: 18),
                           _buildQuickActions(),
-                          _buildSectionHeader('Recent Requests', 'View all'),
+                          _buildSectionHeader('Recent Requests', 'View all',
+                              onActionTap: () => MainShell.switchTo(context, 1)),
                           _buildRecentRequests(),
                           const SizedBox(height: 100),
                         ],
@@ -122,13 +121,6 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: AppBottomNav(currentIndex: _currentIndex),
-          ),
-          const FloatingMessageButton(),
         ],
       ),
     );
@@ -406,9 +398,7 @@ class _HomeScreenState extends State<HomeScreen>
           Expanded(
             flex: 2,
             child: GestureDetector(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CreateRequestScreen()),
-              ),
+              onTap: () => MainShell.switchTo(context, 2),
               child: Container(
                 height: 48,
                 decoration: BoxDecoration(
@@ -491,7 +481,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ── Section Header ────────────────────────────────────────────────────────
-  Widget _buildSectionHeader(String title, String action) {
+  Widget _buildSectionHeader(String title, String action, {VoidCallback? onActionTap}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 10),
       child: Row(
@@ -507,18 +497,90 @@ class _HomeScreenState extends State<HomeScreen>
               letterSpacing: 1.0,
             ),
           ),
-          Text(
-            '$action →',
-            style: const TextStyle(
-              fontFamily: 'DM Sans',
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF2B5CE6),
+          GestureDetector(
+            onTap: onActionTap,
+            child: Text(
+              '$action →',
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF2B5CE6),
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _openRequestDetails(int id, String reqNo, String title, String status) async {
+    showDialog(
+      context: context,
+      useRootNavigator: false,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF002366)),
+      ),
+    );
+    try {
+      final response = await ApiService.fetchRequestDetails(requestId: id);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      if (response['success'] != true) return;
+      final data = response['data'] ?? {};
+      final request = data['request'] ?? {};
+      final activities = (data['activities'] as List?) ?? [];
+      final events = <TrackingEvent>[
+        TrackingEvent(
+          icon: Icons.send_outlined,
+          title: 'Request Submitted',
+          subtitle: 'Your request was sent successfully.',
+          timestamp: (request['created_at'] ?? '').toString(),
+        ),
+      ];
+      for (final activity in activities) {
+        final action = (activity['action'] ?? '').toString();
+        IconData icon = Icons.info_outline;
+        String label = 'Update';
+        String sub = action;
+        if (action.contains('Under Review')) {
+          icon = Icons.rate_review_outlined; label = 'Under Review'; sub = 'Marketing team is evaluating your request.';
+        } else if (action.contains('Approved')) {
+          icon = Icons.check_circle_outline; label = 'Approved'; sub = 'Your request has been approved.';
+        } else if (action.contains('Rejected')) {
+          icon = Icons.cancel_outlined; label = 'Rejected'; sub = 'Your request was not approved.';
+        } else if (action.contains('Posted')) {
+          icon = Icons.publish; label = 'Posted'; sub = 'Your content has been published.';
+        } else if (action.contains('Pending')) {
+          icon = Icons.hourglass_empty; label = 'Pending Review'; sub = 'Your request is waiting for review.';
+        } else if (action.contains('Internal note')) {
+          icon = Icons.comment_outlined; label = 'Note Added'; sub = action.replaceFirst('Internal note: ', '');
+        }
+        events.add(TrackingEvent(
+          icon: icon, title: label, subtitle: sub,
+          timestamp: (activity['created_at'] ?? '').toString(),
+        ));
+      }
+      String sm = 'Your request is being processed.';
+      if (status == 'Pending') sm = 'Your request is currently queued for review.';
+      if (status == 'Approved') sm = 'Your request has been approved by the Marketing Office.';
+      if (status == 'Posted') sm = 'Your content has been successfully published.';
+      if (status == 'Rejected') sm = 'Your request was not approved. Please check feedback.';
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => RequestTrackingScreen(
+          heroTag: 'request-$id',
+          requestNumber: reqNo,
+          requestTitle: title,
+          currentStatus: status,
+          currentStatusMessage: sm,
+          events: events,
+        ),
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    }
   }
 
   // ── Recent Requests ────────────────────────────────────────────────────────
@@ -594,12 +656,7 @@ class _HomeScreenState extends State<HomeScreen>
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: GestureDetector(
-              onTap: () {
-                // Navigate to requests/tracking or similar?
-                // Using bottom nav index jump isn't trivial here without callback,
-                // so we just push to the RequestsScreen or similar if needed.
-                // We'll leave it simple for now, or just leave it as aesthetic
-              },
+              onTap: () => _openRequestDetails(id, reqNo.isEmpty ? 'REQ-$id' : reqNo, title, status),
               child: _HomeRequestCard(
                 id: id,
                 number: reqNo.isEmpty ? 'REQ-$id' : reqNo,

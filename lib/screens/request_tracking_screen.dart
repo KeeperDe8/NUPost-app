@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../app_bottom_nav.dart';
 
 // ── Public data model (used by other screens) ─────────────────────────────────
 class TrackingEvent {
@@ -157,12 +156,6 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                     ),
                   ),
                 ],
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: const AppBottomNav(currentIndex: 1),
               ),
             ],
           ),

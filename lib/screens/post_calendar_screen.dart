@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
@@ -306,12 +305,6 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                     ),
                   ),
                 ],
-              ),
-              const Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: AppBottomNav(currentIndex: -1),
               ),
             ],
           ),

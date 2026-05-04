@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../app_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
@@ -21,10 +20,17 @@ class _MessagesScreenState extends State<MessagesScreen>
   List<_ThreadItem> _threads = const [];
 
   late final AnimationController _staggerCtrl;
+  late final AnimationController _entryCtrl;
+  late final Animation<double> _entryFade;
+  late final Animation<Offset> _entrySlide;
 
   @override
   void initState() {
     super.initState();
+    _entryCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 650))..forward();
+    _entryFade = CurvedAnimation(parent: _entryCtrl, curve: const Interval(0.0, 0.7, curve: Curves.easeOut));
+    _entrySlide = Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _entryCtrl, curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic)));
     _staggerCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -34,6 +40,7 @@ class _MessagesScreenState extends State<MessagesScreen>
 
   @override
   void dispose() {
+    _entryCtrl.dispose();
     _staggerCtrl.dispose();
     super.dispose();
   }
@@ -87,7 +94,11 @@ class _MessagesScreenState extends State<MessagesScreen>
       backgroundColor: AppColors.pageBg,
       body: Stack(
         children: [
-          Column(
+          FadeTransition(
+            opacity: _entryFade,
+            child: SlideTransition(
+              position: _entrySlide,
+              child: Column(
             children: [
               _buildHeader(),
               Expanded(
@@ -135,11 +146,7 @@ class _MessagesScreenState extends State<MessagesScreen>
               ),
             ],
           ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: AppBottomNav(currentIndex: -1),
+            ),
           ),
         ],
       ),

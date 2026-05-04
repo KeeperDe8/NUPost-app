@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../services/api_service.dart';
 import '../services/session_store.dart';
-import 'home_screen.dart';
+import '../main_shell.dart';
 
 class OtpScreen extends StatefulWidget {
   final String email;
@@ -166,7 +166,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
       if (!mounted) return;
 
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const MainShell()),
         (_) => false,
       );
     } catch (e) {

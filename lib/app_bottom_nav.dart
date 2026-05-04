@@ -4,10 +4,15 @@ import 'package:flutter/material.dart';
 /// [currentIndex]: 0=Home, 1=Requests, 2=Create, 3=Notifications, 4=Profile
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
-  const AppBottomNav({super.key, required this.currentIndex});
+  final ValueChanged<int>? onTap;
+  const AppBottomNav({super.key, required this.currentIndex, this.onTap});
 
   void _navigate(BuildContext context, int index) {
     if (currentIndex >= 0 && index == currentIndex) return;
+    if (onTap != null) {
+      onTap!(index);
+      return;
+    }
     switch (index) {
       case 0:
         Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
@@ -31,11 +36,9 @@ class AppBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).viewPadding.bottom;
 
-    return Hero(
-      tag: 'app_bottom_nav',
-      child: Material(
-        type: MaterialType.transparency,
-        child: Container(
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
           height: 68 + bottomPad,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -101,8 +104,7 @@ class AppBottomNav extends StatelessWidget {
         ],
       ),
     ),
-  ),
-);
+  );
 }
 }
 

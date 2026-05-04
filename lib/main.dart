@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/splash_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/requests_screen.dart';
-import 'screens/create_request_screen.dart';
-import 'screens/notifications_screen.dart';
-import 'screens/profile_screen.dart';
-import 'screens/post_calendar_screen.dart';
-import 'screens/messages_screen.dart';
+import 'main_shell.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -31,13 +25,11 @@ class NUPostApp extends StatelessWidget {
       theme: AppTheme.light,
       home: const SplashScreen(),
       routes: {
-        '/home': (_) => const HomeScreen(),
-        '/requests': (_) => const RequestsScreen(),
-        '/create': (_) => const CreateRequestScreen(),
-        '/notifications': (_) => const NotificationsScreen(),
-        '/profile': (_) => const ProfileScreen(),
-        '/calendar': (_) => const PostCalendarScreen(),
-        '/messages': (_) => const MessagesScreen(),
+        '/home': (_) => const MainShell(initialIndex: 0),
+        '/requests': (_) => const MainShell(initialIndex: 1),
+        '/create': (_) => const MainShell(initialIndex: 2),
+        '/notifications': (_) => const MainShell(initialIndex: 3),
+        '/profile': (_) => const MainShell(initialIndex: 4),
       },
     );
   }

@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
-import 'home_screen.dart';
+import '../main_shell.dart';
 import 'otp_screen.dart';
 import 'register_screen.dart';
 
@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen>
       if (!mounted) return;
       Navigator.of(
         context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const MainShell()));
     } catch (e) {
       if (!mounted) return;
       final errorMsg = e.toString();

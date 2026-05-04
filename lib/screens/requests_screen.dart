@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import '../app_bottom_nav.dart';
 import 'request_tracking_screen.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
-import '../widgets/floating_message_button.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -20,7 +18,6 @@ class _RequestsScreenState extends State<RequestsScreen>
   late Animation<double> _entryFade;
   late Animation<Offset> _entrySlide;
 
-  final int _currentNavIndex = 1;
   bool _isLoading = false;
   String? _error;
   final List<String> _tabs = ['All', 'Pending', 'Approved', 'Posted'];
@@ -136,6 +133,7 @@ class _RequestsScreenState extends State<RequestsScreen>
   ) async {
     showDialog(
       context: context,
+      useRootNavigator: false,
       barrierDismissible: false,
       builder: (_) => const Center(
         child: CircularProgressIndicator(color: Color(0xFF002366)),
@@ -547,13 +545,6 @@ class _RequestsScreenState extends State<RequestsScreen>
               ),
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: AppBottomNav(currentIndex: _currentNavIndex),
-          ),
-          const FloatingMessageButton(),
         ],
       ),
     );
