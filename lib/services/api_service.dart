@@ -402,20 +402,28 @@ class ApiService {
           continue;
         }
         throw Exception(
-          'Connection timed out. Check if the API server is running and API_BASE_URL is correct.',
+          'Connection timed out. Please check your internet and try again.',
         );
       } on SocketException {
         if (hasNext) {
           continue;
         }
         throw Exception(
-          'Cannot connect to API server. Check network and API_BASE_URL.',
+          'No internet connection. Please check your Wi-Fi or mobile data.',
         );
+      } catch (e) {
+        if (e is Exception && e.toString().contains('Exception: ')) {
+          rethrow;
+        }
+        if (hasNext) {
+          continue;
+        }
+        throw Exception('Network error. Please try again.');
       }
     }
 
     throw Exception(
-      'Cannot connect to API server. Check network and API_BASE_URL.',
+      'No internet connection. Please check your Wi-Fi or mobile data.',
     );
   }
 
@@ -451,25 +459,28 @@ class ApiService {
           continue;
         }
         throw Exception(
-          'Connection timed out. Check if the API server is running and API_BASE_URL is correct.',
+          'Connection timed out. Please check your internet and try again.',
         );
-      } on SocketException catch (e) {
+      } on SocketException {
         if (hasNext) {
           continue;
         }
         throw Exception(
-          'Cannot connect to API server. Check network and API_BASE_URL. ($e)',
+          'No internet connection. Please check your Wi-Fi or mobile data.',
         );
       } catch (e) {
+        if (e is Exception && e.toString().contains('Exception: ')) {
+          rethrow;
+        }
         if (hasNext) {
           continue;
         }
-        throw Exception('Connection error: $e');
+        throw Exception('Network error. Please try again.');
       }
     }
 
     throw Exception(
-      'Cannot connect to API server. Check network and API_BASE_URL.',
+      'No internet connection. Please check your Wi-Fi or mobile data.',
     );
   }
 

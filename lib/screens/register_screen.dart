@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../widgets/app_snackbar.dart';
 import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -85,11 +86,11 @@ class _RegisterScreenState extends State<RegisterScreen>
         email.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
-      _showSnack('Please fill in all fields.');
+      AppSnackbar.show(context, 'Please fill in all fields.', isError: true);
       return;
     }
     if (password != confirmPassword) {
-      _showSnack('Passwords do not match.');
+      AppSnackbar.show(context, 'Passwords do not match.', isError: true);
       return;
     }
 
@@ -102,7 +103,11 @@ class _RegisterScreenState extends State<RegisterScreen>
       );
 
       if (!mounted) return;
-      _showSnack('Account created successfully. Please verify your email.');
+      AppSnackbar.show(
+        context,
+        'Account created successfully. Please verify your email.',
+        isSuccess: true,
+      );
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => OtpScreen(email: email, password: password),
@@ -111,22 +116,14 @@ class _RegisterScreenState extends State<RegisterScreen>
       );
     } catch (e) {
       if (!mounted) return;
-      _showSnack(
-        'Registration failed: ${e.toString().replaceFirst('Exception: ', '')}',
+      AppSnackbar.show(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
   }
 
   @override

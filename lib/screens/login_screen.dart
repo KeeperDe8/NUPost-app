@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../services/api_service.dart';
 import '../services/session_store.dart';
-import '../theme/app_theme.dart';
+import '../widgets/app_snackbar.dart';
 import '../main_shell.dart';
 import 'otp_screen.dart';
 import 'register_screen.dart';
@@ -100,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen>
     final password = _passwordCtrl.text;
 
     if (email.isEmpty || password.isEmpty) {
-      _showSnack('Please enter email and password.');
+      AppSnackbar.show(context, 'Please enter email and password.', isError: true);
       return;
     }
 
@@ -135,23 +135,15 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         );
       } else {
-        _showSnack(
-          'Login failed: ${errorMsg.replaceFirst('Exception: ', '')}',
+        AppSnackbar.show(
+          context,
+          errorMsg.replaceFirst('Exception: ', ''),
+          isError: true,
         );
       }
     } finally {
       if (mounted) setState(() => _isLoggingIn = false);
     }
-  }
-
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
   }
 
   @override

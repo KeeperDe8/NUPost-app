@@ -105,6 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _onLogOut() {
     showDialog(
       context: context,
+      useRootNavigator: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
@@ -135,7 +136,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             onPressed: () {
               Navigator.pop(context);
               SessionStore.clear();
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (_) => false,
               );

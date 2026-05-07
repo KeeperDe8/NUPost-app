@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../widgets/app_snackbar.dart';
 import '../main_shell.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -172,8 +173,10 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
     } catch (e) {
       if (!mounted) return;
       _shakeCtrl.forward(from: 0);
-      _showSnack(
-        'Verification failed: ${e.toString().replaceFirst('Exception: ', '')}',
+      AppSnackbar.show(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
       );
       _otpCtrl.clear();
       _focusNode.requestFocus();
@@ -188,35 +191,21 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
       await ApiService.resendOtp(email: widget.email);
       if (!mounted) return;
       _startCooldown();
-      _showSnack(
+      AppSnackbar.show(
+        context,
         showSuccess
             ? 'Verification code resent successfully.'
             : 'A new verification code has been sent to your email.',
+        isSuccess: true,
       );
     } catch (e) {
       if (!mounted) return;
-      _showSnack(
-        'Failed to resend code: ${e.toString().replaceFirst('Exception: ', '')}',
+      AppSnackbar.show(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
       );
     }
-  }
-
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          msg,
-          style: const TextStyle(
-            fontFamily: 'DM Sans',
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
-        ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      ),
-    );
   }
 
   // ── BUILD ─────────────────────────────────────────────────────────────────

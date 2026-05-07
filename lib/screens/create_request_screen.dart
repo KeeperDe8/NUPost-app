@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../widgets/app_snackbar.dart';
 
 class CreateRequestScreen extends StatefulWidget {
   const CreateRequestScreen({super.key});
@@ -125,9 +126,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       if (res['success'] == true) {
         final data = res['data'] ?? {};
         final List<dynamic> allPosts = [];
-        if (data['my_requests'] is List) allPosts.addAll(data['my_requests']);
-        if (data['public_calendar'] is List) {
-          allPosts.addAll(data['public_calendar']);
+        if (data['posts'] is List) {
+          allPosts.addAll(data['posts']);
         }
 
         int count = 0;
@@ -196,7 +196,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         .toList();
 
     if (title.isEmpty || description.isEmpty) {
-      _showSnack('Enter title and description before generating caption.');
+      AppSnackbar.show(context, 'Enter title and description before generating caption.', isError: true);
       return;
     }
     setState(() => _isGeneratingCaption = true);
@@ -223,7 +223,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         _captionController.text = fallback;
         _captionLength = fallback.length;
       });
-      _showSnack('AI unavailable. Used smart fallback caption.');
+      AppSnackbar.show(context, 'AI unavailable. Used smart fallback caption.');
     } finally {
       if (mounted) setState(() => _isGeneratingCaption = false);
     }
@@ -253,7 +253,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       _mediaFiles = picked.take(4).toList();
     });
     if (picked.length > 4 && mounted) {
-      _showSnack('Only first 4 files were selected.');
+      AppSnackbar.show(context, 'Only first 4 files were selected.');
     }
   }
 
@@ -261,7 +261,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     if (_isSubmitting) return;
     final userId = SessionStore.userId;
     if (userId == null) {
-      _showSnack('Please login first.');
+      AppSnackbar.show(context, 'Please login first.', isError: true);
       return;
     }
     final platforms = _platforms.entries
@@ -274,8 +274,112 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         _selectedCategory == null ||
         _selectedPriority == null ||
         _selectedDate == null) {
-      _showSnack('Please fill all required fields.');
+      AppSnackbar.show(context, 'Please fill all required fields.', isError: true);
       return;
+    }
+
+    if (_datePostCount >= 3) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        useRootNavigator: false,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            'Busy date',
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This date already has $_datePostCount scheduled post${_datePostCount == 1 ? '' : 's'}. '
+                  'Posting here may overlap with others. Continue anyway?',
+                  style: const TextStyle(fontFamily: 'DM Sans', fontSize: 14),
+                ),
+                if (_dateUpcomingPosts.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  ..._dateUpcomingPosts.take(5).map((post) {
+                    final status = post['status']?.toString() ?? 'Pending';
+                    final title = post['title']?.toString() ??
+                        post['platform']?.toString() ??
+                        'Untitled';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _statusColor(status),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12.5,
+                                color: Color(0xFF3D4A63),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            status,
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _statusColor(status),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text(
+                'Pick another date',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF9AA3B2),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'Continue',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFFFF3B30),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
     }
 
     setState(() => _isSubmitting = true);
@@ -331,32 +435,17 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         }
       });
       _successController.reset();
-      _showSnack('Request submitted successfully.');
+      AppSnackbar.show(context, 'Request submitted successfully.', isSuccess: true);
     } catch (e) {
       if (!mounted) return;
-      _showSnack(
-        'Submit failed: ${e.toString().replaceFirst('Exception: ', '')}',
+      AppSnackbar.show(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+        isError: true,
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          msg,
-          style: const TextStyle(
-            fontFamily: 'DM Sans',
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      ),
-    );
   }
 
   String _buildFallbackCaption({
