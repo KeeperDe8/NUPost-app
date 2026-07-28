@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'services/session_store.dart';
 
 /// Shared bottom navigation bar used by all screens.
 /// [currentIndex]: 0=Home, 1=Requests, 2=Create, 3=Notifications, 4=Profile
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int>? onTap;
-  const AppBottomNav({super.key, required this.currentIndex, this.onTap});
+
+  const AppBottomNav({
+    super.key,
+    required this.currentIndex,
+    this.onTap,
+  });
 
   void _navigate(BuildContext context, int index) {
     if (currentIndex >= 0 && index == currentIndex) return;
@@ -34,12 +40,15 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
+    final isAdmin = SessionStore.isAdmin;
 
     return Material(
-      type: MaterialType.transparency,
-      child: Container(
-          height: 68 + bottomPad,
+      color: Colors.white,
+      elevation: 12,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          height: 62,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: const BorderRadius.only(
@@ -48,69 +57,57 @@ class AppBottomNav extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF001540).withOpacity(0.10),
-                blurRadius: 24,
-                spreadRadius: 0,
-                offset: const Offset(0, -6),
-              ),
-              BoxShadow(
-                color: const Color(0xFF001540).withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, -2),
+                color: const Color(0xFF001540).withOpacity(0.08),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
               ),
             ],
           ),
-          padding: EdgeInsets.only(bottom: bottomPad),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _NavItem(
-            label: 'Home',
-            icon: Icons.home_rounded,
-            iconOff: Icons.home_outlined,
-            isActive: currentIndex == 0,
-            onTap: () => _navigate(context, 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _NavItem(
+                label: 'Home',
+                icon: Icons.home_rounded,
+                iconOff: Icons.home_outlined,
+                isActive: currentIndex == 0,
+                onTap: () => _navigate(context, 0),
+              ),
+              _NavItem(
+                label: 'Requests',
+                icon: Icons.description_rounded,
+                iconOff: Icons.description_outlined,
+                isActive: currentIndex == 1,
+                onTap: () => _navigate(context, 1),
+              ),
+              if (!isAdmin)
+                _CreateButton(
+                  isActive: currentIndex == 2,
+                  onTap: () => _navigate(context, 2),
+                ),
+              _NavItem(
+                label: 'Alerts',
+                icon: Icons.notifications_rounded,
+                iconOff: Icons.notifications_outlined,
+                isActive: currentIndex == 3,
+                onTap: () => _navigate(context, 3),
+              ),
+              _NavItem(
+                label: 'Profile',
+                icon: Icons.person_rounded,
+                iconOff: Icons.person_outline_rounded,
+                isActive: currentIndex == 4,
+                onTap: () => _navigate(context, 4),
+              ),
+            ],
           ),
-          _NavItem(
-            label: 'Requests',
-            icon: Icons.description_rounded,
-            iconOff: Icons.description_outlined,
-            isActive: currentIndex == 1,
-            onTap: () => _navigate(context, 1),
-          ),
-
-          // ── Floating Create Button ──────────────────────────────────────
-          Expanded(
-            child: _CreateButton(
-              isActive: currentIndex == 2,
-              onTap: () => _navigate(context, 2),
-            ),
-          ),
-
-          _NavItem(
-            label: 'Alerts',
-            icon: Icons.notifications_rounded,
-            iconOff: Icons.notifications_outlined,
-            isActive: currentIndex == 3,
-            onTap: () => _navigate(context, 3),
-          ),
-          _NavItem(
-            label: 'Profile',
-            icon: Icons.person_rounded,
-            iconOff: Icons.person_outline_rounded,
-            isActive: currentIndex == 4,
-            onTap: () => _navigate(context, 4),
-          ),
-        ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 // ── Nav Item ──────────────────────────────────────────────────────────────────
-// Must be StatefulWidget so press scale animation and
-// AnimatedContainer actually re-render when isActive changes.
 class _NavItem extends StatefulWidget {
   final String label;
   final IconData icon;
@@ -149,7 +146,7 @@ class _NavItemState extends State<_NavItem>
     );
     _scaleAnim = Tween<double>(
       begin: 1.0,
-      end: 0.86,
+      end: 0.88,
     ).animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut));
   }
 
@@ -164,62 +161,52 @@ class _NavItemState extends State<_NavItem>
     final color = widget.isActive ? _activeColor : _inactiveColor;
 
     return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _pressCtrl.forward(),
-        onTapUp: (_) {
-          _pressCtrl.reverse();
-          widget.onTap();
-        },
-        onTapCancel: () => _pressCtrl.reverse(),
+      child: InkWell(
+        onTap: widget.onTap,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
         child: ScaleTransition(
           scale: _scaleAnim,
-          child: SizedBox(
-            height: double.infinity,
+          child: Align(
+            alignment: Alignment.center,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Pill highlight container behind the icon
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutCubic,
-                  width: widget.isActive ? 46 : 32,
-                  height: 30,
+                  duration: const Duration(milliseconds: 200),
+                  width: widget.isActive ? 42 : 28,
+                  height: 24,
                   decoration: BoxDecoration(
                     color: widget.isActive
                         ? const Color(0xFF002366).withOpacity(0.09)
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: Icon(
                       widget.isActive ? widget.icon : widget.iconOff,
-                      size: 22,
+                      size: 19,
                       color: color,
                     ),
                   ),
                 ),
-                const SizedBox(height: 3),
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
+                const SizedBox(height: 2),
+                Text(
+                  widget.label,
                   style: TextStyle(
                     fontFamily: 'DM Sans',
-                    fontWeight: widget.isActive
-                        ? FontWeight.w800
-                        : FontWeight.w500,
-                    fontSize: 9.5,
+                    fontWeight:
+                        widget.isActive ? FontWeight.w800 : FontWeight.w500,
+                    fontSize: 9.0,
                     color: color,
-                    letterSpacing: 0.2,
                   ),
-                  child: Text(widget.label),
                 ),
-                const SizedBox(height: 3),
-                // Active indicator dot
+                const SizedBox(height: 2),
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOutBack,
-                  width: widget.isActive ? 5 : 0,
-                  height: widget.isActive ? 5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  width: widget.isActive ? 4 : 0,
+                  height: widget.isActive ? 4 : 0,
                   decoration: const BoxDecoration(
                     color: _activeColor,
                     shape: BoxShape.circle,
@@ -273,72 +260,45 @@ class _CreateButtonState extends State<_CreateButton>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _pressCtrl.forward(),
-      onTapUp: (_) {
-        _pressCtrl.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _pressCtrl.reverse(),
-      child: ScaleTransition(
-        scale: _scaleAnim,
-        child: SizedBox(
-          height: double.infinity,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Lifts above the nav bar surface
-              Transform.translate(
-                offset: const Offset(0, -10),
-                child: Container(
-                  width: 54,
-                  height: 54,
+    return Expanded(
+      child: InkWell(
+        onTap: widget.onTap,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: Align(
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [Color(0xFF001540), Color(0xFF0032A0)],
                     ),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF001540).withOpacity(0.45),
-                        blurRadius: 20,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 8),
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFF001540).withOpacity(0.18),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        color: const Color(0xFF001540).withOpacity(0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: const Icon(
                     Icons.add_rounded,
                     color: Colors.white,
-                    size: 28,
+                    size: 24,
                   ),
                 ),
-              ),
-              // Label aligns just below the button
-              Transform.translate(
-                offset: const Offset(0, -8),
-                child: Text(
-                  'Create',
-                  style: TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontWeight: widget.isActive
-                        ? FontWeight.w800
-                        : FontWeight.w700,
-                    fontSize: 9.5,
-                    color: const Color(0xFF002366),
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

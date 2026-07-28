@@ -107,14 +107,37 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoggingIn = true);
     try {
       final result = await ApiService.login(email: email, password: password);
-      final data = (result['data'] as Map<String, dynamic>?) ?? {};
-      final userId = (data['id'] as num?)?.toInt();
-      final name = (data['name'] ?? '').toString();
-      final userEmail = (data['email'] ?? email).toString();
+      Map<String, dynamic> data = {};
+      if (result['data'] is Map<String, dynamic>) {
+        data = result['data'] as Map<String, dynamic>;
+      } else if (result['user'] is Map<String, dynamic>) {
+        data = result['user'] as Map<String, dynamic>;
+      } else {
+        data = result;
+      }
 
-      if (userId == null) throw Exception('Invalid login response');
+      final rawId = data['id'] ?? data['user_id'] ?? result['id'] ?? result['user_id'];
+      int? userId;
+      if (rawId is num) {
+        userId = rawId.toInt();
+      } else if (rawId != null) {
+        userId = int.tryParse(rawId.toString());
+      }
 
-      SessionStore.setUser(id: userId, userName: name, userEmail: userEmail);
+      if (userId == null || userId <= 0) {
+        throw Exception('Invalid login response');
+      }
+
+      final name = (data['name'] ?? result['name'] ?? 'User').toString();
+      final userEmail = (data['email'] ?? result['email'] ?? email).toString();
+      final userRole = (data['role'] ?? result['role'] ?? '').toString();
+
+      SessionStore.setUser(
+        id: userId,
+        userName: name,
+        userEmail: userEmail,
+        userRole: userRole,
+      );
       if (!mounted) return;
       Navigator.of(
         context,

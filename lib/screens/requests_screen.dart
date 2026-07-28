@@ -68,7 +68,7 @@ class _RequestsScreenState extends State<RequestsScreen>
 
   Future<void> _loadRequests() async {
     final userId = SessionStore.userId;
-    if (userId == null) {
+    if (userId == null && !SessionStore.isAdmin) {
       setState(() {
         _error = 'Login first.';
         _requests = const [];
@@ -81,10 +81,15 @@ class _RequestsScreenState extends State<RequestsScreen>
     });
     try {
       final status = _statusForTab(_tabs[_tabController.index]);
-      final rows = await ApiService.fetchRequests(
-        userId: userId,
-        status: status,
-      );
+      final List<Map<String, dynamic>> rows;
+      if (SessionStore.isAdmin) {
+        rows = await ApiService.fetchAdminRequests(status: status ?? 'all');
+      } else {
+        rows = await ApiService.fetchRequests(
+          userId: userId!,
+          status: status,
+        );
+      }
       final mapped = rows.map((row) {
         final id = (row['id'] as num?)?.toInt() ?? 0;
         final reqNo = (row['request_id'] ?? '').toString();

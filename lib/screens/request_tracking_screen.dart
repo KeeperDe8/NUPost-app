@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import '../services/session_store.dart';
+import '../theme/app_theme.dart';
+import '../widgets/media_preview_gallery.dart';
 
 // ── Public data model (used by other screens) ─────────────────────────────────
 class TrackingEvent {
@@ -17,6 +21,7 @@ class TrackingEvent {
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 class RequestTrackingScreen extends StatefulWidget {
+  final int? requestId;
   final String requestNumber;
   final String requestTitle;
   final List<TrackingEvent> events;
@@ -26,6 +31,7 @@ class RequestTrackingScreen extends StatefulWidget {
 
   const RequestTrackingScreen({
     super.key,
+    this.requestId,
     this.requestNumber = '',
     this.requestTitle = '',
     this.events = const [],
@@ -44,9 +50,25 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   late final Animation<double> _entryFade;
   late final Animation<Offset> _entrySlide;
 
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  String _dynamicTitle = '';
+  String _dynamicNumber = '';
+  String _dynamicStatus = '';
+  String _dynamicDescription = '';
+  List<TrackingEvent> _dynamicEvents = [];
+  List<String> _mediaUrls = [];
+  List<String> _mediaFiles = [];
+
   @override
   void initState() {
     super.initState();
+    _dynamicTitle = widget.requestTitle;
+    _dynamicNumber = widget.requestNumber;
+    _dynamicStatus = widget.currentStatus;
+    _dynamicEvents = List.from(widget.events);
+
     _entryCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 650),
@@ -62,6 +84,70 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
             curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic),
           ),
         );
+
+    if (widget.requestId != null && widget.requestId! > 0) {
+      _fetchDetails();
+    }
+  }
+
+  Future<void> _fetchDetails() async {
+    if (widget.requestId == null) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final res = await ApiService.fetchRequestDetails(requestId: widget.requestId!);
+      final data = (res['data'] as Map<String, dynamic>?) ?? {};
+      final req = (data['request'] as Map<String, dynamic>?) ?? {};
+      final rawActs = (data['activities'] as List?) ?? [];
+
+      final urls = (req['media_urls'] as List?)?.cast<String>() ?? [];
+      final files = (req['media_files'] as List?)?.cast<String>() ?? [];
+
+      final eventsList = <TrackingEvent>[];
+      for (final a in rawActs) {
+        final actMap = a as Map<String, dynamic>;
+        eventsList.add(TrackingEvent(
+          icon: _iconForAction((actMap['action'] ?? '').toString()),
+          title: (actMap['actor'] ?? 'System').toString(),
+          subtitle: (actMap['action'] ?? '').toString(),
+          timestamp: (actMap['created_at'] ?? '').toString(),
+        ));
+      }
+
+      if (mounted) {
+        setState(() {
+          _dynamicTitle = (req['title'] ?? _dynamicTitle).toString();
+          _dynamicNumber = (req['request_id'] ?? _dynamicNumber).toString();
+          _dynamicStatus = (req['status'] ?? _dynamicStatus).toString();
+          _dynamicDescription = (req['description'] ?? '').toString();
+          _mediaUrls = urls;
+          _mediaFiles = files;
+          if (eventsList.isNotEmpty) {
+            _dynamicEvents = eventsList.reversed.toList();
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  IconData _iconForAction(String action) {
+    final lower = action.toLowerCase();
+    if (lower.contains('approved')) return Icons.check_circle_outline;
+    if (lower.contains('posted')) return Icons.rocket_launch;
+    if (lower.contains('rejected')) return Icons.cancel_outlined;
+    if (lower.contains('note') || lower.contains('message')) return Icons.comment_outlined;
+    return Icons.rate_review_outlined;
   }
 
   @override
@@ -70,9 +156,9 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     super.dispose();
   }
 
-  // ── Status helpers ────────────────────────────────────────────────────────
   Color get _statusColor {
-    switch (widget.currentStatus.toLowerCase()) {
+    final s = _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus;
+    switch (s.toLowerCase()) {
       case 'approved':
         return const Color(0xFF05C46B);
       case 'posted':
@@ -80,6 +166,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
       case 'rejected':
         return const Color(0xFFFF3B30);
       case 'pending':
+      case 'pending review':
         return const Color(0xFFF59E0B);
       default:
         return const Color(0xFF2B5CE6);
@@ -87,7 +174,8 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   }
 
   IconData get _statusIcon {
-    switch (widget.currentStatus.toLowerCase()) {
+    final s = _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus;
+    switch (s.toLowerCase()) {
       case 'approved':
         return Icons.check_circle_rounded;
       case 'posted':
@@ -95,6 +183,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
       case 'rejected':
         return Icons.cancel_rounded;
       case 'pending':
+      case 'pending review':
         return Icons.hourglass_empty_rounded;
       default:
         return Icons.info_rounded;
@@ -102,20 +191,26 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   }
 
   int get _progressStep {
-    switch (widget.currentStatus.toLowerCase()) {
+    final s = _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus;
+    switch (s.toLowerCase()) {
       case 'approved':
         return 2;
       case 'posted':
         return 3;
       case 'rejected':
-        return -1; // special
+        return -1;
       default:
-        return 1; // pending / under review
+        return 1;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final activeStatus = _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus;
+    final activeTitle = _dynamicTitle.isNotEmpty ? _dynamicTitle : widget.requestTitle;
+    final activeNumber = _dynamicNumber.isNotEmpty ? _dynamicNumber : widget.requestNumber;
+    final activeEvents = _dynamicEvents.isNotEmpty ? _dynamicEvents : widget.events;
+
     return Scaffold(
       backgroundColor: const Color(0xFFE9EDF6),
       body: FadeTransition(
@@ -126,29 +221,35 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
             children: [
               Column(
                 children: [
-                  _buildHeader(),
+                  _buildHeader(activeNumber, activeTitle, activeStatus),
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(16, 20, 16, 110),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Status card
-                          _buildStatusCard(),
+                          _buildStatusCard(activeStatus),
                           const SizedBox(height: 20),
 
-                          // Progress stepper (only when not rejected)
-                          if (widget.currentStatus.toLowerCase() !=
-                              'rejected') ...[
-                            _buildProgressStepper(),
+                          _buildAdminActionBar(),
+
+                          if (_mediaUrls.isNotEmpty || _mediaFiles.isNotEmpty) ...[
+                            MediaPreviewGallery(
+                              mediaUrls: _mediaUrls,
+                              mediaFiles: _mediaFiles,
+                            ),
                             const SizedBox(height: 20),
                           ],
 
-                          // Timeline header
-                          if (widget.events.isNotEmpty) ...[
+                          if (activeStatus.toLowerCase() != 'rejected') ...[
+                            _buildProgressStepper(activeStatus),
+                            const SizedBox(height: 20),
+                          ],
+
+                          if (activeEvents.isNotEmpty) ...[
                             const _SectionLabel(text: 'Activity Timeline'),
                             const SizedBox(height: 12),
-                            _buildTimeline(),
+                            _buildTimeline(activeEvents),
                           ] else
                             _buildEmptyState(),
                         ],
@@ -164,9 +265,154 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     );
   }
 
+  Widget _buildAdminActionBar() {
+    if (widget.requestId == null || widget.requestId! <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF002366).withOpacity(0.2), width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A001540),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.admin_panel_settings, color: Color(0xFF002366), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Admin Status Actions',
+                style: TextStyle(
+                  color: Color(0xFF002366),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildAdminStatusBtn('Under Review', Colors.orange, Icons.rate_review_outlined),
+              _buildAdminStatusBtn('Approved', Colors.green, Icons.check_circle_outline),
+              _buildAdminStatusBtn('Posted', Colors.purple, Icons.rocket_launch),
+              _buildAdminStatusBtn('Rejected', Colors.redAccent, Icons.cancel_outlined),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminStatusBtn(String targetStatus, Color color, IconData icon) {
+    final isCurrent = _dynamicStatus.toLowerCase() == targetStatus.toLowerCase();
+
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isCurrent ? color : color.withOpacity(0.12),
+        foregroundColor: isCurrent ? Colors.white : color,
+        elevation: isCurrent ? 2 : 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: color.withOpacity(0.3)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      icon: Icon(icon, size: 16),
+      label: Text(
+        targetStatus,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+      ),
+      onPressed: isCurrent ? null : () => _promptStatusChange(targetStatus),
+    );
+  }
+
+  Future<void> _promptStatusChange(String newStatus) async {
+    final noteCtrl = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Change Status to "$newStatus"?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This will update the status and notify the requester.',
+              style: TextStyle(color: AppColors.inkMute, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Internal Admin Note (Optional)',
+                hintText: 'e.g., Graphics approved, ready for queue',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Update Status'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await ApiService.updateRequestStatus(
+          requestId: widget.requestId!,
+          status: newStatus,
+          note: noteCtrl.text.trim(),
+          adminName: (SessionStore.name ?? '').isNotEmpty ? SessionStore.name! : 'Admin',
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Status updated to $newStatus')),
+          );
+          _fetchDetails();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
+          );
+        }
+      }
+    }
+  }
+
   // ── Header ────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(String number, String title, String status) {
     final topPad = MediaQuery.of(context).padding.top;
+    final displayStatus = status.isNotEmpty ? status : widget.currentStatus;
+    final displayNumber = number.isNotEmpty ? number : widget.requestNumber;
+    final displayTitle = title.isNotEmpty ? title : widget.requestTitle;
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -208,7 +454,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                 ),
               ),
               // Status chip in header
-              if (widget.currentStatus.isNotEmpty)
+              if (displayStatus.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -235,7 +481,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        widget.currentStatus,
+                        displayStatus,
                         style: TextStyle(
                           fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w800,
@@ -250,13 +496,13 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
           ),
 
           // Request info
-          if (widget.requestNumber.isNotEmpty || widget.requestTitle.isNotEmpty)
+          if (displayNumber.isNotEmpty || displayTitle.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 6, 0, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (widget.requestNumber.isNotEmpty)
+                  if (displayNumber.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -267,7 +513,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                         borderRadius: BorderRadius.circular(7),
                       ),
                       child: Text(
-                        widget.requestNumber,
+                        displayNumber,
                         style: const TextStyle(
                           fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w700,
@@ -277,10 +523,10 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                         ),
                       ),
                     ),
-                  if (widget.requestTitle.isNotEmpty) ...[
+                  if (displayTitle.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      widget.requestTitle,
+                      displayTitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -301,8 +547,9 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   }
 
   // ── Status card ───────────────────────────────────────────────────────────
-  Widget _buildStatusCard() {
-    final isRejected = widget.currentStatus.toLowerCase() == 'rejected';
+  Widget _buildStatusCard(String status) {
+    final displayStatus = status.isNotEmpty ? status : widget.currentStatus;
+    final isRejected = displayStatus.toLowerCase() == 'rejected';
 
     Widget card = Container(
       width: double.infinity,
@@ -400,9 +647,9 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  widget.currentStatus.isEmpty
+                  displayStatus.isEmpty
                       ? 'Processing'
-                      : widget.currentStatus,
+                      : displayStatus,
                   style: const TextStyle(
                     fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w900,
@@ -416,9 +663,11 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                 Container(height: 1, color: Colors.white.withOpacity(0.15)),
                 const SizedBox(height: 10),
                 Text(
-                  widget.currentStatusMessage.isEmpty
-                      ? 'Your request is being processed.'
-                      : widget.currentStatusMessage,
+                  _dynamicDescription.isNotEmpty
+                      ? _dynamicDescription
+                      : (widget.currentStatusMessage.isEmpty
+                          ? 'Your request is being processed.'
+                          : widget.currentStatusMessage),
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w400,
@@ -445,7 +694,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   }
 
   // ── Progress Stepper ──────────────────────────────────────────────────────
-  Widget _buildProgressStepper() {
+  Widget _buildProgressStepper(String status) {
     const steps = ['Submitted', 'In Review', 'Approved', 'Posted'];
     final current = _progressStep;
 
@@ -591,12 +840,13 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   }
 
   // ── Timeline ──────────────────────────────────────────────────────────────
-  Widget _buildTimeline() {
+  Widget _buildTimeline(List<TrackingEvent> events) {
+    final list = events.isNotEmpty ? events : widget.events;
     return Column(
-      children: widget.events.asMap().entries.map((entry) {
+      children: list.asMap().entries.map((entry) {
         final i = entry.key;
         final event = entry.value;
-        final isLast = i == widget.events.length - 1;
+        final isLast = i == list.length - 1;
         final isFirst = i == 0;
 
         return _TimelineItem(

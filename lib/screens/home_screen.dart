@@ -91,7 +91,8 @@ class _HomeScreenState extends State<HomeScreen>
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.pageBg,
-      body: Stack(
+      body: ClipRect(
+        child: Stack(
         children: [
           FadeTransition(
             opacity: _fadeAnim,
@@ -123,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ],
       ),
+    ),
     );
   }
 

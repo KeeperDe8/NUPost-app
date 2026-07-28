@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_bottom_nav.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/requests_screen.dart';
 import 'screens/create_request_screen.dart';
@@ -7,6 +8,7 @@ import 'screens/notifications_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/messages_screen.dart';
 import 'screens/post_calendar_screen.dart';
+import 'services/session_store.dart';
 import 'widgets/floating_message_button.dart';
 
 class MainShell extends StatefulWidget {
@@ -50,7 +52,7 @@ class _MainShellState extends State<MainShell> {
   Widget _screenFor(int i) {
     switch (i) {
       case 0:
-        return const HomeScreen();
+        return SessionStore.isAdmin ? const AdminDashboardScreen() : const HomeScreen();
       case 1:
         return const RequestsScreen();
       case 2:
@@ -60,7 +62,7 @@ class _MainShellState extends State<MainShell> {
       case 4:
         return const ProfileScreen();
       default:
-        return const HomeScreen();
+        return SessionStore.isAdmin ? const AdminDashboardScreen() : const HomeScreen();
     }
   }
 
@@ -73,14 +75,16 @@ class _MainShellState extends State<MainShell> {
             duration: const Duration(milliseconds: 280),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.02),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
+            transitionBuilder: (child, animation) => ClipRect(
+              child: FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.02),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
               ),
             ),
             child: KeyedSubtree(
@@ -89,7 +93,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ),
         ),
-        const FloatingMessageButton(bottom: 16),
+        const FloatingMessageButton(bottom: 84),
       ],
     );
   }

@@ -25,6 +25,17 @@ class ApiService {
 
   static const Duration _requestTimeout = Duration(seconds: 15);
 
+  static String resolveMediaUrl(String rawPath) {
+    final path = rawPath.trim();
+    if (path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    String domain = _baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+    String cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    return '$domain/$cleanPath';
+  }
+
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -516,7 +527,11 @@ class ApiService {
         return decoded;
       }
     } catch (_) {
-      return <String, dynamic>{};
+      final snippet = body.trim().replaceAll(RegExp(r'\s+'), ' ');
+      final shortSnippet = snippet.length > 100
+          ? '${snippet.substring(0, 100)}...'
+          : snippet;
+      throw Exception('Server returned non-JSON response: $shortSnippet');
     }
     return <String, dynamic>{};
   }
@@ -555,5 +570,52 @@ class ApiService {
     } catch (e) {
       throw Exception('Failed to reach server: $e');
     }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchAdminRequests({
+    String? status,
+    String? search,
+  }) async {
+    final params = <String, String>{};
+    if (status != null && status.isNotEmpty) params['status'] = status;
+    if (search != null && search.isNotEmpty) params['search'] = search;
+
+    final uri = _buildUri(_baseUrl, 'admin_requests.php', params);
+    final json = await _getJson(
+      uri,
+      fallbackMessage: 'Failed to load admin requests',
+    );
+
+    final list = (json['data'] as List?) ?? const [];
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  static Future<Map<String, dynamic>> updateRequestStatus({
+    required int requestId,
+    required String status,
+    String? note,
+    String? adminName,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'update_request_status.php', null);
+    final body = <String, dynamic>{
+      'request_id': requestId,
+      'status': status,
+    };
+    if (note != null && note.isNotEmpty) body['note'] = note;
+    if (adminName != null && adminName.isNotEmpty) body['admin_name'] = adminName;
+
+    return _postJson(
+      uri,
+      body,
+      fallbackMessage: 'Failed to update request status',
+    );
+  }
+
+  static Future<Map<String, dynamic>> fetchAdminStats() async {
+    final uri = _buildUri(_baseUrl, 'admin_stats.php', null);
+    return _getJson(
+      uri,
+      fallbackMessage: 'Failed to load admin analytics',
+    );
   }
 }

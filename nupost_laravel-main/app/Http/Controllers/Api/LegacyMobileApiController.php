@@ -89,8 +89,29 @@ class LegacyMobileApiController extends Controller
             ], 422);
         }
 
+        // Dedicated Admin Login fallback matching web LoginController
+        if ($email === 'admin@nupost.com' && $password === 'admin123') {
+            $adminUser = DB::table('users')->where('email', 'admin@nupost.com')->first();
+            $adminId = $adminUser ? (int) $adminUser->id : 1;
+            return response()->json([
+                'success' => true,
+                'id' => $adminId,
+                'user_id' => $adminId,
+                'name' => 'System Admin',
+                'email' => 'admin@nupost.com',
+                'role' => 'admin',
+                'data' => [
+                    'id' => $adminId,
+                    'user_id' => $adminId,
+                    'name' => 'System Admin',
+                    'email' => 'admin@nupost.com',
+                    'role' => 'admin',
+                ],
+            ], 200);
+        }
+
         $user = DB::table('users')
-            ->select('id', 'name', 'email', 'password', 'is_verified')
+            ->select('id', 'name', 'email', 'password', 'is_verified', 'role')
             ->where('email', $email)
             ->first();
 
@@ -118,12 +139,22 @@ class LegacyMobileApiController extends Controller
             ], 403);
         }
 
+        $userRole = (string) ($user->role ?? (str_contains(strtolower($user->email), 'admin') ? 'admin' : 'staff'));
+        $uId = (int) $user->id;
+
         return response()->json([
             'success' => true,
+            'id' => $uId,
+            'user_id' => $uId,
+            'name' => (string) ($user->name ?? ''),
+            'email' => (string) ($user->email ?? ''),
+            'role' => $userRole,
             'data' => [
-                'id' => (int) $user->id,
+                'id' => $uId,
+                'user_id' => $uId,
                 'name' => (string) ($user->name ?? ''),
                 'email' => (string) ($user->email ?? ''),
+                'role' => $userRole,
             ],
         ], 200);
     }
@@ -1108,6 +1139,13 @@ class LegacyMobileApiController extends Controller
             ->sortBy('created_at')
             ->values();
 
+        $mediaFiles = array_values(array_filter(array_map('trim', explode(',', (string)($requestRow->media_file ?? '')))));
+        $baseUrl = url('/');
+        $mediaUrls = array_map(function($file) use ($baseUrl) {
+            if (str_starts_with($file, 'http')) return $file;
+            return rtrim($baseUrl, '/') . '/uploads/' . $file;
+        }, $mediaFiles);
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -1115,14 +1153,20 @@ class LegacyMobileApiController extends Controller
                     'id' => (int) $requestRow->id,
                     'request_id' => (string) ($requestRow->request_id ?? ''),
                     'title' => (string) ($requestRow->title ?? ''),
+                    'requester' => (string) ($requestRow->requester ?? ''),
                     'status' => trim((string) ($requestRow->status ?? '')) !== ''
                         ? (string) $requestRow->status
-                        : 'Pending',
+                        : 'Pending Review',
                     'description' => (string) ($requestRow->description ?? ''),
                     'created_at' => (string) ($requestRow->created_at ?? ''),
                     'preferred_date' => (string) ($requestRow->preferred_date ?? ''),
-                    'priority' => (string) ($requestRow->priority ?? ''),
-                    'category' => (string) ($requestRow->category ?? ''),
+                    'priority' => (string) ($requestRow->priority ?? 'Low'),
+                    'category' => (string) ($requestRow->category ?? 'General'),
+                    'platform' => (string) ($requestRow->platform ?? 'Facebook'),
+                    'caption' => (string) ($requestRow->caption ?? ''),
+                    'media_file' => (string) ($requestRow->media_file ?? ''),
+                    'media_files' => $mediaFiles,
+                    'media_urls' => $mediaUrls,
                 ],
                 'activities' => $activities,
             ],
@@ -1385,6 +1429,240 @@ class LegacyMobileApiController extends Controller
 
         // Logic moved to local app storage to avoid database column dependencies
         return response()->json(['success' => true]);
+    }
+
+    public function adminRequests(Request $request): JsonResponse
+    {
+        $status = trim((string) $request->query('status', ''));
+        $search = trim((string) $request->query('search', ''));
+
+        if ($err = $this->ensureRequestsTableExists()) {
+            return $err;
+        }
+
+        $table = $this->requestsTable();
+        $query = DB::table($table);
+
+        if ($status !== '' && strtolower($status) !== 'all') {
+            if (strtolower($status) === 'pending') {
+                $query->where(function ($q) {
+                    $q->where('status', 'Pending')
+                        ->orWhere('status', 'Pending Review')
+                        ->orWhere('status', 'Under Review')
+                        ->orWhereNull('status')
+                        ->orWhere('status', '');
+                });
+            } else {
+                $query->where('status', $status);
+            }
+        }
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('requester', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $rows = $query
+            ->orderByDesc('created_at')
+            ->get(['id', 'request_id', 'title', 'requester', 'status', 'created_at', 'priority', 'platform', 'category', 'description', 'media_file', 'preferred_date', 'caption'])
+            ->map(function ($r) {
+                $status = trim((string) ($r->status ?? ''));
+                $mediaFiles = array_values(array_filter(array_map('trim', explode(',', (string)($r->media_file ?? '')))));
+                $baseUrl = url('/');
+                $mediaUrls = array_map(function($file) use ($baseUrl) {
+                    if (str_starts_with($file, 'http')) return $file;
+                    return rtrim($baseUrl, '/') . '/uploads/' . $file;
+                }, $mediaFiles);
+
+                return [
+                    'id' => (int) $r->id,
+                    'request_id' => (string) ($r->request_id ?? ''),
+                    'title' => (string) ($r->title ?? ''),
+                    'requester' => (string) ($r->requester ?? ''),
+                    'status' => $status !== '' ? $status : 'Pending Review',
+                    'priority' => (string) ($r->priority ?? 'Low'),
+                    'platform' => (string) ($r->platform ?? 'Facebook'),
+                    'category' => (string) ($r->category ?? 'General'),
+                    'description' => (string) ($r->description ?? ''),
+                    'preferred_date' => (string) ($r->preferred_date ?? ''),
+                    'caption' => (string) ($r->caption ?? ''),
+                    'created_at' => (string) ($r->created_at ?? ''),
+                    'media_files' => $mediaFiles,
+                    'media_urls' => $mediaUrls,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $rows,
+        ], 200);
+    }
+
+    public function updateRequestStatus(Request $request): JsonResponse
+    {
+        $id = (int) $request->input('request_id', 0);
+        $newStatus = trim((string) $request->input('status', ''));
+        $note = trim((string) $request->input('note', ''));
+        $adminActor = trim((string) $request->input('admin_name', 'admin@nupost.com'));
+
+        $allowed = ['Pending Review', 'Under Review', 'Approved', 'Posted', 'Rejected'];
+        if ($id <= 0 || !in_array($newStatus, $allowed, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid request ID or status',
+            ], 422);
+        }
+
+        if ($err = $this->ensureRequestsTableExists()) {
+            return $err;
+        }
+
+        $table = $this->requestsTable();
+        $req = DB::table($table)->where('id', $id)->first();
+        if (!$req) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request not found',
+            ], 404);
+        }
+
+        $oldStatus = (string) ($req->status ?? 'Pending Review');
+        DB::table($table)->where('id', $id)->update(['status' => $newStatus, 'updated_at' => now()]);
+
+        if (Schema::hasTable('request_activity')) {
+            DB::table('request_activity')->insert([
+                'request_id' => $id,
+                'actor' => $adminActor,
+                'action' => "Status changed from \"$oldStatus\" to \"$newStatus\"",
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            if ($note !== '') {
+                DB::table('request_activity')->insert([
+                    'request_id' => $id,
+                    'actor' => $adminActor,
+                    'action' => "Internal note: $note",
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        // Notify user
+        $user = DB::table('users')->where('name', $req->requester)->first();
+        if ($user) {
+            $notifData = $this->getNotifDataForStatus($newStatus, (string)$req->title, $note);
+            if (Schema::hasTable('notifications')) {
+                $payload = [
+                    'user_id' => $user->id,
+                    'title' => $notifData['title'],
+                    'message' => $notifData['message'],
+                    'type' => $notifData['type'],
+                    'is_read' => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                if (Schema::hasColumn('notifications', 'request_id')) {
+                    $payload['request_id'] = $id;
+                }
+                if (Schema::hasColumn('notifications', 'request_status')) {
+                    $payload['request_status'] = $newStatus;
+                }
+                DB::table('notifications')->insert($payload);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Status updated to $newStatus",
+            'data' => [
+                'id' => $id,
+                'status' => $newStatus,
+            ],
+        ], 200);
+    }
+
+    private function getNotifDataForStatus(string $status, string $title, string $note = ''): array
+    {
+        $noteSuffix = $note ? " Admin note: $note" : '';
+        return match($status) {
+            'Under Review' => [
+                'title' => 'Request Under Review',
+                'message' => "Your request \"$title\" is now being reviewed by our team.$noteSuffix",
+                'type' => 'review',
+            ],
+            'Approved' => [
+                'title' => 'Request Approved! 🎉',
+                'message' => "Great news! Your request \"$title\" has been approved and is ready for posting.$noteSuffix",
+                'type' => 'approved',
+            ],
+            'Posted' => [
+                'title' => 'Request Posted! 🚀',
+                'message' => "Your request \"$title\" has been successfully published on the platform.$noteSuffix",
+                'type' => 'posted',
+            ],
+            'Rejected' => [
+                'title' => 'Request Rejected',
+                'message' => "Unfortunately, your request \"$title\" was not approved.$noteSuffix",
+                'type' => 'rejected',
+            ],
+            default => [
+                'title' => 'Request Status Updated',
+                'message' => "Your request \"$title\" status has been updated to $status.$noteSuffix",
+                'type' => 'review',
+            ],
+        };
+    }
+
+    public function adminStats(Request $request): JsonResponse
+    {
+        if ($err = $this->ensureRequestsTableExists()) {
+            return $err;
+        }
+
+        $table = $this->requestsTable();
+        $total = DB::table($table)->count();
+        $pending = DB::table($table)->whereIn('status', ['Pending', 'Pending Review'])->count();
+        $review = DB::table($table)->where('status', 'Under Review')->count();
+        $approved = DB::table($table)->where('status', 'Approved')->count();
+        $posted = DB::table($table)->where('status', 'Posted')->count();
+        $rejected = DB::table($table)->where('status', 'Rejected')->count();
+        $usersCount = DB::table('users')->count();
+
+        $monthly = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $m = $date->month;
+            $y = $date->year;
+            $count = DB::table($table)
+                ->whereMonth('created_at', $m)
+                ->whereYear('created_at', $y)
+                ->count();
+            $monthly[] = [
+                'label' => $date->format('M'),
+                'count' => $count,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total' => $total,
+                'pending' => $pending,
+                'review' => $review,
+                'approved' => $approved,
+                'posted' => $posted,
+                'rejected' => $rejected,
+                'users' => $usersCount,
+                'monthly' => $monthly,
+            ],
+        ], 200);
     }
 }
 

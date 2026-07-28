@@ -8,7 +8,7 @@ class SkeletonLoader extends StatelessWidget {
 
   const SkeletonLoader({
     super.key,
-    required this.width,
+    this.width = double.infinity,
     required this.height,
     this.borderRadius = 8.0,
   });

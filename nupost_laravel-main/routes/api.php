@@ -21,3 +21,8 @@ Route::get('/request_details.php', [LegacyMobileApiController::class, 'requestDe
 Route::get('/messages.php', [LegacyMobileApiController::class, 'messageThreads']);
 Route::get('/message_thread.php', [LegacyMobileApiController::class, 'messageThread']);
 Route::post('/message_thread.php', [LegacyMobileApiController::class, 'sendMessage']);
+
+// Admin Endpoints
+Route::get('/admin_requests.php', [LegacyMobileApiController::class, 'adminRequests']);
+Route::post('/update_request_status.php', [LegacyMobileApiController::class, 'updateRequestStatus']);
+Route::get('/admin_stats.php', [LegacyMobileApiController::class, 'adminStats']);

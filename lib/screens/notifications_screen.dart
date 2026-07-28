@@ -395,7 +395,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 _buildHeader(),
                 _buildFilterTabs(),
                 Expanded(child: _isLoading ? _buildSkeleton() : _buildList()),
-                const SizedBox(height: 90),
               ],
             ),
           ),
