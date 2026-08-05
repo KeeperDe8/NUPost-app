@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/media_preview_gallery.dart';
+import 'create_request_screen.dart';
 
 // ── Public data model (used by other screens) ─────────────────────────────────
 class TrackingEvent {
@@ -57,9 +58,23 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   String _dynamicNumber = '';
   String _dynamicStatus = '';
   String _dynamicDescription = '';
+  String _dynamicCategory = '';
+  String _dynamicPriority = '';
+  String _dynamicPreferredDate = '';
+  String _dynamicCaption = '';
+  String _dynamicPlatform = '';
+  String _adminRejectionNote = '';
+
   List<TrackingEvent> _dynamicEvents = [];
   List<String> _mediaUrls = [];
   List<String> _mediaFiles = [];
+
+  bool get _isEditable {
+    if (SessionStore.isAdmin) return false;
+    final s = _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus;
+    final lower = s.toLowerCase().trim();
+    return lower == 'rejected';
+  }
 
   @override
   void initState() {
@@ -107,22 +122,40 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
       final files = (req['media_files'] as List?)?.cast<String>() ?? [];
 
       final eventsList = <TrackingEvent>[];
+      String foundNote = '';
       for (final a in rawActs) {
         final actMap = a as Map<String, dynamic>;
+        final actStr = (actMap['action'] ?? '').toString();
+        if (actStr.startsWith('Internal note:')) {
+          foundNote = actStr.substring('Internal note:'.length).trim();
+        } else if (foundNote.isEmpty && actStr.toLowerCase().contains('rejected')) {
+          final parts = actStr.split(':');
+          if (parts.length > 1) {
+            foundNote = parts.sublist(1).join(':').trim();
+          }
+        }
+
         eventsList.add(TrackingEvent(
-          icon: _iconForAction((actMap['action'] ?? '').toString()),
+          icon: _iconForAction(actStr),
           title: (actMap['actor'] ?? 'System').toString(),
-          subtitle: (actMap['action'] ?? '').toString(),
+          subtitle: actStr,
           timestamp: (actMap['created_at'] ?? '').toString(),
         ));
       }
 
       if (mounted) {
+        final currentStat = (req['status'] ?? _dynamicStatus).toString();
         setState(() {
           _dynamicTitle = (req['title'] ?? _dynamicTitle).toString();
           _dynamicNumber = (req['request_id'] ?? _dynamicNumber).toString();
-          _dynamicStatus = (req['status'] ?? _dynamicStatus).toString();
+          _dynamicStatus = currentStat;
           _dynamicDescription = (req['description'] ?? '').toString();
+          _dynamicCategory = (req['category'] ?? '').toString();
+          _dynamicPriority = (req['priority'] ?? '').toString();
+          _dynamicPreferredDate = (req['preferred_date'] ?? '').toString();
+          _dynamicCaption = (req['caption'] ?? '').toString();
+          _dynamicPlatform = (req['platform'] ?? '').toString();
+          _adminRejectionNote = currentStat.toLowerCase() == 'rejected' ? foundNote : '';
           _mediaUrls = urls;
           _mediaFiles = files;
           if (eventsList.isNotEmpty) {
@@ -138,6 +171,45 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
           _isLoading = false;
         });
       }
+    }
+  }
+
+  void _openEditRequest() async {
+    if (widget.requestId == null || widget.requestId! <= 0) return;
+    final reqData = {
+      'id': widget.requestId,
+      'title': _dynamicTitle.isNotEmpty ? _dynamicTitle : widget.requestTitle,
+      'description': _dynamicDescription,
+      'status': _dynamicStatus,
+      'category': _dynamicCategory,
+      'priority': _dynamicPriority,
+      'preferred_date': _dynamicPreferredDate,
+      'caption': _dynamicCaption,
+      'platform': _dynamicPlatform,
+      'media_urls': _mediaUrls,
+      'media_files': _mediaFiles,
+    };
+
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          body: CreateRequestScreen(
+            initialData: reqData,
+            isEditing: true,
+          ),
+        ),
+      ),
+    );
+
+    if (result == true) {
+      if (mounted) {
+        setState(() {
+          _dynamicStatus = 'Pending Review';
+          _adminRejectionNote = '';
+        });
+      }
+      _fetchDetails();
     }
   }
 
@@ -229,6 +301,141 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildStatusCard(activeStatus),
+
+                          // Admin Rejection Message (ONLY when status is Rejected)
+                          if (activeStatus.toLowerCase() == 'rejected' && _adminRejectionNote.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: const Color(0xFFFCA5A5), width: 1.5),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0A001540),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: const [
+                                      Icon(Icons.report_problem_rounded, color: Color(0xFFDC2626), size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Admin Rejection Reason',
+                                        style: TextStyle(
+                                          fontFamily: 'DM Sans',
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                          color: Color(0xFF991B1B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _adminRejectionNote.isNotEmpty
+                                        ? _adminRejectionNote
+                                        : 'This request was rejected by an admin. Please make necessary changes and re-submit for review.',
+                                    style: const TextStyle(
+                                      fontFamily: 'DM Sans',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF7F1D1D),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          // Re-submit Request button card (Requestor only)
+                          if (_isEditable) ...[
+                            const SizedBox(height: 14),
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFF001540), Color(0xFF003080)],
+                                ),
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x30001540),
+                                    blurRadius: 14,
+                                    offset: Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: _openEditRequest,
+                                  borderRadius: BorderRadius.circular(18),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: const Icon(
+                                            Icons.replay_rounded,
+                                            color: Colors.white,
+                                            size: 22,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Re-submit Request',
+                                                style: TextStyle(
+                                                  fontFamily: 'DM Sans',
+                                                  fontWeight: FontWeight.w900,
+                                                  fontSize: 15,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              SizedBox(height: 2),
+                                              Text(
+                                                'Tap to edit details or pictures and send back to admin',
+                                                style: TextStyle(
+                                                  fontFamily: 'DM Sans',
+                                                  fontSize: 12,
+                                                  color: Color(0xFFD0D9F0),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Icon(
+                                          Icons.arrow_forward_ios_rounded,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 20),
 
                           _buildAdminActionBar(),
@@ -492,6 +699,37 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                     ],
                   ),
                 ),
+              if (_isEditable) ...[
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: _openEditRequest,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF002366).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF002366).withOpacity(0.2)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFF002366)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Edit',
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                            color: Color(0xFF002366),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
 

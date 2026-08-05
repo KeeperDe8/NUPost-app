@@ -217,6 +217,7 @@ class _RequestsScreenState extends State<RequestsScreen>
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => RequestTrackingScreen(
+              requestId: req.id,
               heroTag: 'request-${req.id}',
               requestNumber: req.number,
               requestTitle: req.title,

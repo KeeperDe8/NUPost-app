@@ -14,12 +14,12 @@ class MessagesScreen extends StatefulWidget {
 }
 
 class _MessagesScreenState extends State<MessagesScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _isLoading = true;
   String? _error;
   List<_ThreadItem> _threads = const [];
 
-  late final AnimationController _staggerCtrl;
+  AnimationController? _staggerCtrl;
   late final AnimationController _entryCtrl;
   late final Animation<double> _entryFade;
   late final Animation<Offset> _entrySlide;
@@ -41,7 +41,7 @@ class _MessagesScreenState extends State<MessagesScreen>
   @override
   void dispose() {
     _entryCtrl.dispose();
-    _staggerCtrl.dispose();
+    _staggerCtrl?.dispose();
     super.dispose();
   }
 
@@ -77,8 +77,8 @@ class _MessagesScreenState extends State<MessagesScreen>
       setState(() {
         _threads = updatedThreads;
       });
-      _staggerCtrl.reset();
-      _staggerCtrl.forward();
+      _staggerCtrl?.reset();
+      _staggerCtrl?.forward();
     } catch (e) {
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
@@ -623,9 +623,8 @@ class _ThreadCard extends StatelessWidget {
 
 // ── Stagger animation ─────────────────────────────────────────────────────────
 class _StaggerItem extends StatelessWidget {
-  final AnimationController controller;
-  final int index;
-  final int total;
+  final AnimationController? controller;
+  final int index, total;
   final Widget child;
   const _StaggerItem({
     required this.controller,
@@ -636,12 +635,15 @@ class _StaggerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ctrl = controller;
+    if (ctrl == null) return child;
+
     final count = total.clamp(1, 20);
     final slot = index.clamp(0, count - 1);
     final start = (slot / (count + 4)).clamp(0.0, 0.85);
     final end = (start + 0.55).clamp(0.0, 1.0);
     final curve = CurvedAnimation(
-      parent: controller,
+      parent: ctrl,
       curve: Interval(start, end, curve: Curves.easeOutCubic),
     );
     return AnimatedBuilder(

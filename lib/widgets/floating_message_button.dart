@@ -9,7 +9,7 @@ class FloatingMessageButton extends StatefulWidget {
   final double bottom;
   final double right;
 
-  const FloatingMessageButton({super.key, this.bottom = 108, this.right = 16});
+  const FloatingMessageButton({super.key, this.bottom = 18, this.right = 16});
 
   @override
   State<FloatingMessageButton> createState() => _FloatingMessageButtonState();

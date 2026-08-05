@@ -571,6 +571,7 @@ class _HomeScreenState extends State<HomeScreen>
       if (status == 'Rejected') sm = 'Your request was not approved. Please check feedback.';
       Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => RequestTrackingScreen(
+          requestId: id,
           heroTag: 'request-$id',
           requestNumber: reqNo,
           requestTitle: title,

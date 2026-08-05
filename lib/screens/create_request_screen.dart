@@ -5,7 +5,14 @@ import '../services/session_store.dart';
 import '../widgets/app_snackbar.dart';
 
 class CreateRequestScreen extends StatefulWidget {
-  const CreateRequestScreen({super.key});
+  final Map<String, dynamic>? initialData;
+  final bool isEditing;
+
+  const CreateRequestScreen({
+    super.key,
+    this.initialData,
+    this.isEditing = false,
+  });
 
   @override
   State<CreateRequestScreen> createState() => _CreateRequestScreenState();
@@ -100,6 +107,49 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
     _titleController.addListener(() => setState(() {}));
     _descriptionController.addListener(() => setState(() {}));
+
+    if (widget.isEditing && widget.initialData != null) {
+      final init = widget.initialData!;
+      _titleController.text = (init['title'] ?? '').toString();
+      _descriptionController.text = (init['description'] ?? '').toString();
+
+      String cap = (init['caption'] ?? '').toString();
+      final footerIdx = cap.indexOf('Apply now and secure your place');
+      if (footerIdx != -1) {
+        cap = cap.substring(0, footerIdx).trim();
+      }
+      _captionController.text = cap;
+      _captionLength = cap.length;
+
+      final cat = (init['category'] ?? '').toString();
+      if (_categories.contains(cat)) {
+        _selectedCategory = cat;
+      } else if (cat.isNotEmpty) {
+        _selectedCategory = _categories.first;
+      }
+
+      final prio = (init['priority'] ?? '').toString();
+      if (_priorities.contains(prio)) {
+        _selectedPriority = prio;
+      } else if (prio.isNotEmpty) {
+        _selectedPriority = _priorities.first;
+      }
+
+      final pDateStr = (init['preferred_date'] ?? '').toString();
+      if (pDateStr.isNotEmpty) {
+        _selectedDate = DateTime.tryParse(pDateStr);
+        if (_selectedDate != null) {
+          _fetchDateInfo(_selectedDate!);
+        }
+      }
+
+      final pStr = (init['platform'] ?? '').toString();
+      for (final key in _platforms.keys) {
+        if (pStr.toLowerCase().contains(key.toLowerCase())) {
+          _platforms[key] = true;
+        }
+      }
+    }
   }
 
   @override
@@ -394,6 +444,40 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       final finalCaption = originalCaption.isNotEmpty 
           ? "$originalCaption$footer" 
           : footer.trim();
+
+      if (widget.isEditing && widget.initialData != null) {
+        final reqId = (widget.initialData!['id'] is int)
+            ? widget.initialData!['id'] as int
+            : int.parse(widget.initialData!['id'].toString());
+
+        await ApiService.updateRequest(
+          requestId: reqId,
+          userId: userId,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          category: _selectedCategory!,
+          priority: _selectedPriority!,
+          platforms: platforms,
+          preferredDate: preferredDate,
+          caption: finalCaption,
+          mediaFiles: _mediaFiles,
+          keepExistingMedia: _mediaFiles.isEmpty,
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          _submitted = true;
+        });
+        _successController.forward();
+
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
+
+        AppSnackbar.show(context, 'Request updated & resubmitted successfully.', isSuccess: true);
+        Navigator.pop(context, true);
+        return;
+      }
 
       await ApiService.createRequest(
         userId: userId,
@@ -1781,9 +1865,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                           size: 16,
                         ),
                         const SizedBox(width: 9),
-                        const Text(
-                          'Submit Request',
-                          style: TextStyle(
+                        Text(
+                          widget.isEditing ? 'Update & Resubmit' : 'Submit Request',
+                          style: const TextStyle(
                             fontFamily: 'DM Sans',
                             fontWeight: FontWeight.w900,
                             fontSize: 15.5,

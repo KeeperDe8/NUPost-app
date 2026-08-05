@@ -93,7 +93,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ),
         ),
-        const FloatingMessageButton(bottom: 84),
+        const FloatingMessageButton(bottom: 18),
       ],
     );
   }

@@ -175,6 +175,64 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> updateRequest({
+    required int requestId,
+    required int userId,
+    required String title,
+    required String description,
+    required String category,
+    required String priority,
+    required List<String> platforms,
+    required String preferredDate,
+    required String caption,
+    List<PlatformFile> mediaFiles = const [],
+    bool keepExistingMedia = true,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'update_request.php', null);
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['request_id'] = '$requestId'
+      ..fields['user_id'] = '$userId'
+      ..fields['title'] = title
+      ..fields['description'] = description
+      ..fields['category'] = category
+      ..fields['priority'] = priority
+      ..fields['preferred_date'] = preferredDate
+      ..fields['caption'] = caption
+      ..fields['keep_existing_media'] = keepExistingMedia ? '1' : '0'
+      ..fields['platforms_json'] = jsonEncode(platforms);
+
+    final limitedMedia = mediaFiles.take(4);
+    for (final media in limitedMedia) {
+      if (media.path != null) {
+        final file = File(media.path!);
+        if (await file.exists()) {
+          request.files.add(
+            await http.MultipartFile.fromPath('media[]', media.path!),
+          );
+          continue;
+        }
+      }
+
+      if (media.bytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'media[]',
+            media.bytes!,
+            filename: media.name,
+          ),
+        );
+      }
+    }
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    return _parseResponse(
+      response,
+      uri: uri,
+      fallbackMessage: 'Failed to update request',
+    );
+  }
+
   static Future<String> generateCaption({
     required String title,
     required String description,

@@ -33,6 +33,12 @@ class LegacyMobileApiController extends Controller
             ], 500);
         }
 
+        try {
+            DB::statement("ALTER TABLE `{$table}` MODIFY COLUMN `status` VARCHAR(50) NULL DEFAULT 'Pending'");
+        } catch (\Throwable $e) {
+            // Ignore if alter fails
+        }
+
         return null;
     }
 
@@ -492,130 +498,298 @@ class LegacyMobileApiController extends Controller
 
     public function createRequest(Request $request): JsonResponse
     {
-        $userId = (int) $request->input('user_id', 0);
-        $title = trim((string) $request->input('title', ''));
-        $description = trim((string) $request->input('description', ''));
-        $category = trim((string) $request->input('category', ''));
-        $priority = trim((string) $request->input('priority', ''));
-        $preferredDate = trim((string) $request->input('preferred_date', ''));
-        $caption = trim((string) $request->input('caption', ''));
+        try {
+            $userId = (int) $request->input('user_id', 0);
+            $title = trim((string) $request->input('title', ''));
+            $description = trim((string) $request->input('description', ''));
+            $category = trim((string) $request->input('category', ''));
+            $priority = trim((string) $request->input('priority', ''));
+            $preferredDate = trim((string) $request->input('preferred_date', ''));
+            $caption = trim((string) $request->input('caption', ''));
 
-        if ($request->has('platforms') && is_array($request->input('platforms'))) {
-            $platforms = $request->input('platforms');
-        } elseif ($request->has('platforms_json')) {
-            $decoded = json_decode((string) $request->input('platforms_json'), true);
-            $platforms = is_array($decoded) ? $decoded : [];
-        } else {
-            $platforms = [];
-        }
-
-        if ($userId <= 0 || $title === '' || $description === '' || $category === '' || $priority === '') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Missing required fields',
-            ], 422);
-        }
-
-        $user = DB::table('users')->where('id', $userId)->first();
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found',
-            ], 404);
-        }
-
-        if ($err = $this->ensureRequestsTableExists()) {
-            return $err;
-        }
-
-        $mediaNames = [];
-        $files = $request->file('media', []);
-        if ($files instanceof UploadedFile) {
-            $files = [$files];
-        }
-        if (!is_array($files)) {
-            $files = [];
-        }
-
-        if (!empty($files)) {
-            $uploadDir = public_path('uploads');
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
+            if ($request->has('platforms') && is_array($request->input('platforms'))) {
+                $platforms = $request->input('platforms');
+            } elseif ($request->has('platforms_json')) {
+                $decoded = json_decode((string) $request->input('platforms_json'), true);
+                $platforms = is_array($decoded) ? $decoded : [];
+            } else {
+                $platforms = [];
             }
 
-            $allowedTypes = [
-                'image/jpeg',
-                'image/png',
-                'image/gif',
-                'image/webp',
-                'video/mp4',
-                'video/quicktime',
+            if ($userId <= 0 || $title === '' || $description === '' || $category === '' || $priority === '') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing required fields',
+                ], 422);
+            }
+
+            $user = DB::table('users')->where('id', $userId)->first();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found',
+                ], 404);
+            }
+
+            if ($err = $this->ensureRequestsTableExists()) {
+                return $err;
+            }
+
+            $mediaNames = [];
+            $files = $request->file('media', []);
+            if ($files instanceof UploadedFile) {
+                $files = [$files];
+            }
+            if (!is_array($files)) {
+                $files = [];
+            }
+
+            if (!empty($files)) {
+                $uploadDir = public_path('uploads');
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                $allowedTypes = [
+                    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                    'video/mp4', 'video/quicktime',
+                ];
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'];
+                $maxSize = 10 * 1024 * 1024;
+
+                foreach (array_slice($files, 0, 4) as $file) {
+                    if (!$file instanceof UploadedFile || !$file->isValid() || $file->getSize() > $maxSize) {
+                        continue;
+                    }
+
+                    $ext = strtolower((string) $file->getClientOriginalExtension());
+                    $type = (string) $file->getMimeType();
+                    $validType = in_array($type, $allowedTypes, true);
+                    $validExt = in_array($ext, $allowedExtensions, true);
+                    if (!$validType && !$validExt) {
+                        continue;
+                    }
+
+                    $newName = uniqid('media_', true) . ($ext !== '' ? ".{$ext}" : '');
+                    $file->move($uploadDir, $newName);
+                    $mediaNames[] = $newName;
+                }
+            }
+
+            $table = $this->requestsTable();
+            $payload = [
+                'title' => $title,
+                'requester' => (string) ($user->name ?? ''),
+                'category' => $category,
+                'priority' => $priority,
+                'status' => 'Pending',
+                'description' => $description,
+                'media_file' => implode(',', $mediaNames),
+                'platform' => is_array($platforms) ? implode(',', $platforms) : '',
+                'caption' => $caption,
+                'preferred_date' => $preferredDate !== '' ? $preferredDate : null,
             ];
-            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'];
-            $maxSize = 10 * 1024 * 1024;
 
-            foreach (array_slice($files, 0, 4) as $file) {
-                if (!$file instanceof UploadedFile) {
-                    continue;
-                }
-
-                if (!$file->isValid()) {
-                    continue;
-                }
-
-                if ($file->getSize() > $maxSize) {
-                    continue;
-                }
-
-                $ext = strtolower((string) $file->getClientOriginalExtension());
-                $type = (string) $file->getMimeType();
-                $validType = in_array($type, $allowedTypes, true);
-                $validExt = in_array($ext, $allowedExtensions, true);
-                if (!$validType && !$validExt) {
-                    continue;
-                }
-
-                $newName = uniqid('media_', true) . ($ext !== '' ? ".{$ext}" : '');
-                $file->move($uploadDir, $newName);
-                $mediaNames[] = $newName;
+            if (Schema::hasColumn($table, 'created_at')) {
+                $payload['created_at'] = now();
             }
-        }
+            if (Schema::hasColumn($table, 'updated_at')) {
+                $payload['updated_at'] = now();
+            }
 
-        $table = $this->requestsTable();
-        $payload = [
-            'title' => $title,
-            'requester' => (string) ($user->name ?? ''),
-            'category' => $category,
-            'priority' => $priority,
-            'status' => 'Pending Review',
-            'description' => $description,
-            'media_file' => implode(',', $mediaNames),
-            'platform' => is_array($platforms) ? implode(',', $platforms) : '',
-            'caption' => $caption,
-            'preferred_date' => $preferredDate !== '' ? $preferredDate : null,
-        ];
+            $newId = (int) DB::table($table)->insertGetId($payload);
+            $reqCode = 'REQ-' . str_pad((string) $newId, 5, '0', STR_PAD_LEFT);
+            if (Schema::hasColumn($table, 'request_id')) {
+                DB::table($table)->where('id', $newId)->update(['request_id' => $reqCode]);
+            }
 
-        if (Schema::hasColumn($table, 'created_at')) {
-            $payload['created_at'] = now();
-        }
-        if (Schema::hasColumn($table, 'updated_at')) {
-            $payload['updated_at'] = now();
-        }
+            if (Schema::hasTable('request_activity')) {
+                $act = [
+                    'request_id' => $newId,
+                    'actor' => (string) ($user->name ?? 'Requester'),
+                    'action' => 'Submitted request for review',
+                    'created_at' => now(),
+                ];
+                if (Schema::hasColumn('request_activity', 'updated_at')) {
+                    $act['updated_at'] = now();
+                }
+                DB::table('request_activity')->insert($act);
+            }
 
-        $newId = (int) DB::table($table)->insertGetId($payload);
-        $reqCode = 'REQ-' . str_pad((string) $newId, 5, '0', STR_PAD_LEFT);
-        if (Schema::hasColumn($table, 'request_id')) {
-            DB::table($table)->where('id', $newId)->update(['request_id' => $reqCode]);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $newId,
+                    'request_id' => $reqCode,
+                    'status' => 'Pending Review',
+                ],
+            ], 201);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request creation failed: ' . $e->getMessage(),
+            ], 500);
         }
+    }
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'id' => $newId,
-                'request_id' => $reqCode,
-                'status' => 'Pending Review',
-            ],
-        ], 201);
+    public function updateRequest(Request $request): JsonResponse
+    {
+        try {
+            $requestId = (int) $request->input('request_id', $request->input('id', 0));
+            $userId = (int) $request->input('user_id', 0);
+            $title = trim((string) $request->input('title', ''));
+            $description = trim((string) $request->input('description', ''));
+            $category = trim((string) $request->input('category', ''));
+            $priority = trim((string) $request->input('priority', ''));
+            $preferredDate = trim((string) $request->input('preferred_date', ''));
+            $caption = trim((string) $request->input('caption', ''));
+            $keepExistingMedia = $request->input('keep_existing_media', '1');
+
+            if ($requestId <= 0 || $userId <= 0 || $title === '' || $description === '' || $category === '' || $priority === '') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing required fields',
+                ], 422);
+            }
+
+            $user = DB::table('users')->where('id', $userId)->first();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found',
+                ], 404);
+            }
+
+            if ($err = $this->ensureRequestsTableExists()) {
+                return $err;
+            }
+
+            $table = $this->requestsTable();
+            $existingReq = DB::table($table)->where('id', $requestId)->first();
+
+            if (!$existingReq) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Request not found',
+                ], 404);
+            }
+
+            $currentStatus = trim((string) ($existingReq->status ?? ''));
+            if (strtolower($currentStatus) !== 'rejected') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Requests can only be edited if they have been rejected by an admin.',
+                ], 422);
+            }
+
+            if ($request->has('platforms') && is_array($request->input('platforms'))) {
+                $platforms = $request->input('platforms');
+            } elseif ($request->has('platforms_json')) {
+                $decoded = json_decode((string) $request->input('platforms_json'), true);
+                $platforms = is_array($decoded) ? $decoded : [];
+            } else {
+                $platforms = [];
+            }
+
+            $mediaNames = [];
+            $keep = ($keepExistingMedia === '1' || $keepExistingMedia === 1 || $keepExistingMedia === true || $keepExistingMedia === 'true');
+            if ($keep) {
+                $oldMediaStr = (string) ($existingReq->media_file ?? '');
+                if ($oldMediaStr !== '') {
+                    $mediaNames = array_values(array_filter(array_map('trim', explode(',', $oldMediaStr))));
+                }
+            }
+
+            $files = $request->file('media', []);
+            if ($files instanceof UploadedFile) {
+                $files = [$files];
+            }
+            if (!is_array($files)) {
+                $files = [];
+            }
+
+            if (!empty($files)) {
+                $uploadDir = public_path('uploads');
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                $allowedTypes = [
+                    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                    'video/mp4', 'video/quicktime',
+                ];
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'];
+                $maxSize = 10 * 1024 * 1024;
+
+                foreach (array_slice($files, 0, 4) as $file) {
+                    if (!$file instanceof UploadedFile || !$file->isValid() || $file->getSize() > $maxSize) {
+                        continue;
+                    }
+
+                    $ext = strtolower((string) $file->getClientOriginalExtension());
+                    $type = (string) $file->getMimeType();
+                    $validType = in_array($type, $allowedTypes, true);
+                    $validExt = in_array($ext, $allowedExtensions, true);
+                    if (!$validType && !$validExt) {
+                        continue;
+                    }
+
+                    $newName = uniqid('media_', true) . ($ext !== '' ? ".{$ext}" : '');
+                    $file->move($uploadDir, $newName);
+                    $mediaNames[] = $newName;
+                }
+            }
+
+            $mediaNames = array_slice($mediaNames, 0, 4);
+
+            $payload = [
+                'title' => $title,
+                'category' => $category,
+                'priority' => $priority,
+                'status' => 'Pending',
+                'description' => $description,
+                'media_file' => implode(',', $mediaNames),
+                'platform' => is_array($platforms) ? implode(',', $platforms) : '',
+                'caption' => $caption,
+                'preferred_date' => $preferredDate !== '' ? $preferredDate : null,
+            ];
+
+            if (Schema::hasColumn($table, 'updated_at')) {
+                $payload['updated_at'] = now();
+            }
+
+            DB::table($table)->where('id', $requestId)->update($payload);
+
+            if (Schema::hasTable('request_activity')) {
+                $act = [
+                    'request_id' => $requestId,
+                    'actor' => (string) ($user->name ?? 'Requester'),
+                    'action' => 'Updated request details and resubmitted for review',
+                    'created_at' => now(),
+                ];
+                if (Schema::hasColumn('request_activity', 'updated_at')) {
+                    $act['updated_at'] = now();
+                }
+                DB::table('request_activity')->insert($act);
+            }
+
+            $reqCode = (string) ($existingReq->request_id ?? ('REQ-' . str_pad((string) $requestId, 5, '0', STR_PAD_LEFT)));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Request updated successfully',
+                'data' => [
+                    'id' => $requestId,
+                    'request_id' => $reqCode,
+                    'status' => 'Pending Review',
+                ],
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request update failed: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function generateCaption(Request $request): JsonResponse
@@ -1505,87 +1679,106 @@ class LegacyMobileApiController extends Controller
 
     public function updateRequestStatus(Request $request): JsonResponse
     {
-        $id = (int) $request->input('request_id', 0);
-        $newStatus = trim((string) $request->input('status', ''));
-        $note = trim((string) $request->input('note', ''));
-        $adminActor = trim((string) $request->input('admin_name', 'admin@nupost.com'));
+        try {
+            $id = (int) $request->input('request_id', 0);
+            $newStatus = trim((string) $request->input('status', ''));
+            $note = trim((string) $request->input('note', ''));
+            $adminActor = trim((string) $request->input('admin_name', 'admin@nupost.com'));
 
-        $allowed = ['Pending Review', 'Under Review', 'Approved', 'Posted', 'Rejected'];
-        if ($id <= 0 || !in_array($newStatus, $allowed, true)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid request ID or status',
-            ], 422);
-        }
+            $allowed = ['Pending Review', 'Under Review', 'Approved', 'Posted', 'Rejected'];
+            if ($id <= 0 || !in_array($newStatus, $allowed, true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid request ID or status',
+                ], 422);
+            }
 
-        if ($err = $this->ensureRequestsTableExists()) {
-            return $err;
-        }
+            if ($err = $this->ensureRequestsTableExists()) {
+                return $err;
+            }
 
-        $table = $this->requestsTable();
-        $req = DB::table($table)->where('id', $id)->first();
-        if (!$req) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Request not found',
-            ], 404);
-        }
+            $table = $this->requestsTable();
+            $req = DB::table($table)->where('id', $id)->first();
+            if (!$req) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Request not found',
+                ], 404);
+            }
 
-        $oldStatus = (string) ($req->status ?? 'Pending Review');
-        DB::table($table)->where('id', $id)->update(['status' => $newStatus, 'updated_at' => now()]);
+            $oldStatus = (string) ($req->status ?? 'Pending Review');
+            $reqUpdate = ['status' => $newStatus];
+            if (Schema::hasColumn($table, 'updated_at')) {
+                $reqUpdate['updated_at'] = now();
+            }
+            DB::table($table)->where('id', $id)->update($reqUpdate);
 
-        if (Schema::hasTable('request_activity')) {
-            DB::table('request_activity')->insert([
-                'request_id' => $id,
-                'actor' => $adminActor,
-                'action' => "Status changed from \"$oldStatus\" to \"$newStatus\"",
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            if ($note !== '') {
-                DB::table('request_activity')->insert([
+            if (Schema::hasTable('request_activity')) {
+                $act1 = [
                     'request_id' => $id,
                     'actor' => $adminActor,
-                    'action' => "Internal note: $note",
+                    'action' => "Status changed from \"$oldStatus\" to \"$newStatus\"",
                     'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
-
-        // Notify user
-        $user = DB::table('users')->where('name', $req->requester)->first();
-        if ($user) {
-            $notifData = $this->getNotifDataForStatus($newStatus, (string)$req->title, $note);
-            if (Schema::hasTable('notifications')) {
-                $payload = [
-                    'user_id' => $user->id,
-                    'title' => $notifData['title'],
-                    'message' => $notifData['message'],
-                    'type' => $notifData['type'],
-                    'is_read' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
                 ];
-                if (Schema::hasColumn('notifications', 'request_id')) {
-                    $payload['request_id'] = $id;
+                if (Schema::hasColumn('request_activity', 'updated_at')) {
+                    $act1['updated_at'] = now();
                 }
-                if (Schema::hasColumn('notifications', 'request_status')) {
-                    $payload['request_status'] = $newStatus;
-                }
-                DB::table('notifications')->insert($payload);
-            }
-        }
+                DB::table('request_activity')->insert($act1);
 
-        return response()->json([
-            'success' => true,
-            'message' => "Status updated to $newStatus",
-            'data' => [
-                'id' => $id,
-                'status' => $newStatus,
-            ],
-        ], 200);
+                if ($note !== '') {
+                    $act2 = [
+                        'request_id' => $id,
+                        'actor' => $adminActor,
+                        'action' => "Internal note: $note",
+                        'created_at' => now(),
+                    ];
+                    if (Schema::hasColumn('request_activity', 'updated_at')) {
+                        $act2['updated_at'] = now();
+                    }
+                    DB::table('request_activity')->insert($act2);
+                }
+            }
+
+            // Notify user
+            $user = DB::table('users')->where('name', $req->requester)->first();
+            if ($user) {
+                $notifData = $this->getNotifDataForStatus($newStatus, (string)$req->title, $note);
+                if (Schema::hasTable('notifications')) {
+                    $payload = [
+                        'user_id' => $user->id,
+                        'title' => $notifData['title'],
+                        'message' => $notifData['message'],
+                        'type' => $notifData['type'],
+                        'is_read' => 0,
+                        'created_at' => now(),
+                    ];
+                    if (Schema::hasColumn('notifications', 'updated_at')) {
+                        $payload['updated_at'] = now();
+                    }
+                    if (Schema::hasColumn('notifications', 'request_id')) {
+                        $payload['request_id'] = $id;
+                    }
+                    if (Schema::hasColumn('notifications', 'request_status')) {
+                        $payload['request_status'] = $newStatus;
+                    }
+                    DB::table('notifications')->insert($payload);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Status updated to $newStatus",
+                'data' => [
+                    'id' => $id,
+                    'status' => $newStatus,
+                ],
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Status update failed: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     private function getNotifDataForStatus(string $status, string $title, string $note = ''): array

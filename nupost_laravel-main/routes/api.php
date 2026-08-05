@@ -10,6 +10,7 @@ Route::post('/resend_otp.php', [LegacyMobileApiController::class, 'resendOtp']);
 Route::get('/profile.php', [LegacyMobileApiController::class, 'profile']);
 Route::get('/requests.php', [LegacyMobileApiController::class, 'requests']);
 Route::post('/create_request.php', [LegacyMobileApiController::class, 'createRequest']);
+Route::post('/update_request.php', [LegacyMobileApiController::class, 'updateRequest']);
 Route::post('/generate_caption.php', [LegacyMobileApiController::class, 'generateCaption']);
 Route::get('/calendar.php', [LegacyMobileApiController::class, 'calendar']);
 Route::post('/update_profile.php', [LegacyMobileApiController::class, 'updateProfile']);
