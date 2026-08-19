@@ -1,4 +1,4 @@
-# NUPost &nbsp;·&nbsp; ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white) ![Dart](https://img.shields.io/badge/Dart-3.10-0175C2?logo=dart&logoColor=white) ![Laravel](https://img.shields.io/badge/Laravel-API-FF2D20?logo=laravel&logoColor=white) ![License](https://img.shields.io/badge/License-Academic-gold)
+# NUPost &nbsp;·&nbsp; ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white) ![Dart](https://img.shields.io/badge/Dart-3.10-0175C2?logo=dart&logoColor=white) ![Laravel](https://img.shields.io/badge/Laravel-API-FF2D20?logo=laravel&logoColor=white) ![Hostinger](https://img.shields.io/badge/Hostinger-Live-7209B7?logo=hostinger&logoColor=white) ![License](https://img.shields.io/badge/License-Academic-gold)
 
 <div align="center">
 
@@ -7,11 +7,12 @@
 ### **Optimizing University Social Media with Centralized Request Management**
 
 *A Capstone Project — Bachelor of Science in Information Technology*  
-*NU Lipa · School of Architecture, Computing, and Engineering · 2026*
+*NU Lipa · School of Architecture, Computing, and Engineering · 2026*  
+🌐 **Live Production API:** [https://nupost.site](https://nupost.site)
 
 ---
 
-**[✦ Overview](#-overview) &nbsp;·&nbsp; [Features](#-features) &nbsp;·&nbsp; [Tech Stack](#-tech-stack) &nbsp;·&nbsp; [Getting Started](#-getting-started) &nbsp;·&nbsp; [Project Structure](#-project-structure) &nbsp;·&nbsp; [Team](#-team)**
+**[✦ Overview](#-overview) &nbsp;·&nbsp; [Features](#-features) &nbsp;·&nbsp; [Tech Stack](#-tech-stack) &nbsp;·&nbsp; [Getting Started](#-getting-started) &nbsp;·&nbsp; [Production & APK](#-production--apk-export) &nbsp;·&nbsp; [Project Structure](#-project-structure) &nbsp;·&nbsp; [Team](#-team)**
 
 </div>
 
@@ -23,7 +24,7 @@
 
 > _"No centralized platform existed specifically for managing posting requests within an academic governance framework."_
 
-NUPost solves this by unifying **request submission**, **structured approvals**, **AI-assisted caption generation**, **calendar-based scheduling**, and **Meta Graph API analytics** into one cohesive system.
+NUPost solves this by unifying **request submission**, **structured approvals & admin rejection feedback**, **re-submission workflow**, **AI-assisted caption generation**, **calendar-based scheduling**, and **Meta Graph API analytics** into one cohesive system.
 
 ---
 
@@ -31,14 +32,15 @@ NUPost solves this by unifying **request submission**, **structured approvals**,
 
 | # | Feature | Description |
 |---|---------|-------------|
-| 1 | **📋 Posting Request Submission** | Standardized forms with title, description, platform selection, category & priority tagging, preferred date, and media upload (up to 4 files) |
-| 2 | **✅ Automated Approval Workflow** | Status tracking across Pending → Under Review → Approved → Posted with real-time notifications |
-| 3 | **✨ AI Caption Generator** | Google Gemini API generates context-aware, editable caption suggestions based on event details and uploaded media |
-| 4 | **📅 Post Calendar** | Visual calendar showing scheduled posts, conflict detection, and public/private toggle for department-wide visibility |
-| 5 | **🔔 Real-Time Notifications** | Push alerts for every status change with grouped notification history and unread counters |
-| 6 | **💬 Comment Threads** | Per-request admin↔requester messaging with real-time polling |
-| 7 | **📊 Analytics & Reports** | Meta Graph API integration — reach, engagement, and engagement rate per post *(web admin panel)* |
-| 8 | **🔐 Role-Based Access** | Separate flows for **Requestors** (mobile) and **Marketing Staff** (web admin) |
+| 1 | **📋 Posting Request Submission** | Standardized forms with title, description, platform selection, category & priority tagging, preferred date, and media upload |
+| 2 | **✅ Automated Approval Workflow** | Status tracking across `Pending` → `Under Review` → `Approved` / `Posted` / `Rejected` with real-time notifications |
+| 3 | **🔄 Re-submission & Rejection Feedback** | Admins can reject with feedback notes. Requestors receive an **Admin Rejection Reason** card, edit details/media, and **Re-submit** back to `Pending` review |
+| 4 | **✨ AI Caption Generator** | Google Gemini API generates context-aware, editable caption suggestions based on event details and uploaded media |
+| 5 | **📅 Post Calendar** | Visual calendar showing scheduled posts, conflict detection, and public/private toggle for department-wide visibility |
+| 6 | **🔔 Real-Time Notifications** | Push alerts for every status change with grouped notification history and unread counters |
+| 7 | **💬 Floating Chat & Messages** | Floating message drawer and per-request admin ↔ requester message threads |
+| 8 | **📊 Admin Dashboard & Analytics** | Staff status actions, request review filters, and Meta Graph API reach/engagement tracking |
+| 9 | **🔐 Role-Based Access** | Governed views tailored for **Requestors** (mobile request flow) and **Marketing Staff / Admins** |
 
 ---
 
@@ -47,17 +49,18 @@ NUPost solves this by unifying **request submission**, **structured approvals**,
 ### Mobile Application
 ```
 Flutter 3.x (Dart 3.10)   Cross-platform mobile framework
-DM Sans / Google Fonts     Typography
+DM Sans / Google Fonts     Typography & modern UI styling
 HTTP package               REST API communication
 File Picker                Media upload (images & video)
 Shimmer                    Skeleton loading states
 ```
 
-### Backend API
+### Backend API & Production Hosting
 ```
-Laravel (PHP)              MVC REST API
+Laravel (PHP)              MVC REST API backend
+Hostinger                  Production cloud hosting (https://nupost.site)
 MySQL                      Relational database
-Laravel Sanctum            Auth & session tokens
+Laravel Sanctum            Auth & session security
 Google Gemini API          AI caption generation
 Meta Graph API v19+        Facebook post analytics
 ```
@@ -66,7 +69,7 @@ Meta Graph API v19+        Facebook post analytics
 ```
 GitHub                     Version control & collaboration
 Figma                      UI/UX design & prototyping
-Android Studio             Emulator testing
+Android Studio             Emulator testing & APK bundling
 Visual Studio Code         Primary IDE
 ```
 
@@ -100,45 +103,52 @@ cd nupost_app
 flutter pub get
 ```
 
-### 3 · Configure API Base URL
-
-The app auto-detects between **Laravel** (`http://10.0.2.2:8000/api`) and **Legacy PHP** (`http://10.0.2.2/nupost-main/api`).
-
-To force a specific URL, use a `--dart-define` flag at run time:
+### 3 · Run the App (Local / Emulator)
 
 ```bash
-# Android Emulator (Laravel)
+# Android Emulator (Laravel local backend)
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
 
-# Physical Device (use your machine's LAN IP)
-flutter run --dart-define=API_BASE_URL=http://192.168.1.x:8000/api
-```
-
-### 4 · Run the App
-
-```bash
-flutter run                  # debug mode
-flutter run --release        # release mode
+# Connect directly to Production Hostinger Backend
+flutter run --dart-define=API_BASE_URL=https://nupost.site/api
 ```
 
 ---
 
-### Backend Setup (Laravel)
+## ✦ Production & APK Export
+
+### Building the Release APK (Connected to Hostinger)
+
+To export the production release APK configured for **`https://nupost.site`**:
+
+```powershell
+flutter build apk --release --dart-define=API_BASE_URL=https://nupost.site/api
+```
+
+#### 📁 APK Output Path:
+```
+build/app/outputs/flutter-apk/app-release.apk
+```
+
+---
+
+## ✦ Backend Setup (Laravel / Hostinger)
 
 ```bash
-cd nupost-api
+cd nupost_laravel-main
 composer install
 cp .env.example .env
 php artisan key:generate
 
-# Configure your .env database credentials, then:
+# Configure database credentials in .env, then:
 php artisan migrate --seed
 php artisan serve              # runs on http://localhost:8000
 ```
 
-Add these keys to `.env`:
+Required `.env` variables:
 
 ```env
+APP_URL=https://nupost.site
 GEMINI_API_KEY=your_google_gemini_api_key
 META_GRAPH_TOKEN=your_meta_graph_api_token
 META_PAGE_ID=your_facebook_page_id
@@ -152,7 +162,8 @@ META_PAGE_ID=your_facebook_page_id
 nupost_app/
 ├── lib/
 │   ├── main.dart                      # App entry point & routes
-│   ├── app_bottom_nav.dart            # Shared navigation bar
+│   ├── main_shell.dart                # Dynamic role shell & navigation container
+│   ├── app_bottom_nav.dart            # Custom bottom navigation bar
 │   ├── screens/
 │   │   ├── splash_screen.dart
 │   │   ├── login_screen.dart
@@ -160,27 +171,32 @@ nupost_app/
 │   │   ├── otp_screen.dart
 │   │   ├── home_screen.dart
 │   │   ├── requests_screen.dart
-│   │   ├── create_request_screen.dart
-│   │   ├── request_tracking_screen.dart
+│   │   ├── create_request_screen.dart # Request creation & Re-submission form
+│   │   ├── request_tracking_screen.dart # Status tracking & Admin Rejection Note
 │   │   ├── notifications_screen.dart
 │   │   ├── profile_screen.dart
 │   │   ├── edit_profile_screen.dart
 │   │   ├── account_security_screen.dart
 │   │   ├── post_calendar_screen.dart
 │   │   ├── messages_screen.dart
-│   │   └── message_thread_screen.dart
+│   │   ├── message_thread_screen.dart
+│   │   └── admin/
+│   │       └── admin_dashboard_screen.dart # Admin management dashboard
 │   ├── services/
-│   │   ├── api_service.dart           # All HTTP calls
-│   │   └── session_store.dart         # User session management
+│   │   ├── api_service.dart           # Production & local REST API handler
+│   │   ├── session_store.dart         # Role & session management
+│   │   └── chat_read_store.dart       # Read state persistence
 │   ├── theme/
-│   │   └── app_theme.dart             # Colors, typography, theme data
+│   │   └── app_theme.dart             # DM Sans typography & color system
 │   └── widgets/
 │       ├── floating_message_button.dart
 │       ├── intensity_date_picker.dart
+│       ├── media_preview_gallery.dart
 │       └── skeleton_loader.dart
 ├── assets/
 │   ├── nu_shield.png
 │   └── bg.png
+├── nupost_laravel-main/              # Laravel REST API backend codebase
 ├── pubspec.yaml
 └── README.md
 ```
@@ -193,52 +209,17 @@ nupost_app/
 SplashScreen
     ├── LoginScreen ──── RegisterScreen ──── OtpScreen
     │       └── (Unverified) ─────────────── OtpScreen
-    └── HomeScreen
-                    ├── RequestsScreen ── RequestTrackingScreen
-                    ├── CreateRequestScreen
-                    ├── NotificationsScreen
-                    ├── ProfileScreen ── EditProfileScreen
-                    │                └── AccountSecurityScreen
-                    ├── PostCalendarScreen
-                    └── MessagesScreen ── MessageThreadScreen
+    └── MainShell
+            ├── Requestor Mode:
+            │       ├── HomeScreen
+            │       ├── RequestsScreen ── RequestTrackingScreen (With Re-submit & Rejection Reason)
+            │       ├── CreateRequestScreen (New & Edit/Resubmit)
+            │       ├── NotificationsScreen
+            │       ├── ProfileScreen ── EditProfileScreen / AccountSecurityScreen
+            │       └── MessagesScreen ── MessageThreadScreen
+            └── Admin Mode:
+                    └── AdminDashboardScreen ── RequestTrackingScreen (Admin Status Actions)
 ```
-
----
-
-## ✦ Key Dependencies
-
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  http: ^1.2.2              # REST API calls
-  file_picker: ^8.1.2       # Media upload
-  google_fonts: ^8.0.2      # DM Sans typography
-  shimmer: ^3.0.0           # Skeleton loaders
-  cupertino_icons: ^1.0.8
-```
-
----
-
-## ✦ Database
-
-The project ships with a MySQL dump at `nupost_laravel.sql`. Import it to get started:
-
-```bash
-mysql -u root -p nupost_laravel < nupost_laravel.sql
-```
-
-**Core Tables**
-
-| Table | Purpose |
-|-------|---------|
-| `users` | Requestor accounts with role, org, phone |
-| `otp_codes` | OTP verification codes and expiration tracking |
-| `post_requests` | All posting requests with status, platform, caption |
-| `request_comments` | Admin ↔ requester message threads |
-| `request_activity` | Full audit log per request |
-| `notifications` | Per-user notification records |
-| `login_attempts` | Security audit log |
 
 ---
 
@@ -271,24 +252,11 @@ This system is evaluated against the following quality characteristics:
 
 ---
 
-## ✦ Related Systems Comparison
-
-| Feature | Outlook | Jira | Trello | Hootsuite | **NUPost** |
-|---------|:-------:|:----:|:------:|:---------:|:---------:|
-| Priority & Category Tagging | ✓ | ✓ | ✓ | ✓ | **✓** |
-| Automated Approval Workflow | ✗ | ✓ | ✗ | ✗ | **✓** |
-| AI Caption Generator | ✗ | ✗ | ✗ | ✗ | **✓** |
-| Analytics & Reports | ✗ | ✓ | ✗ | ✓ | **✓** |
-| Template-Driven Submissions | ✓ | ✓ | ✓ | ✓ | **✓** |
-| Academic Governance Context | ✗ | ✗ | ✗ | ✗ | **✓** |
-
----
-
 ## ✦ License
 
 This project is developed as an academic capstone for **NU Lipa — School of Architecture, Computing, and Engineering** in partial fulfillment of the requirements for the degree **Bachelor of Science in Information Technology with Specialization in Mobile and Web Applications**.
 
-All rights reserved · February 2026
+All rights reserved · 2026
 
 ---
 
@@ -296,6 +264,6 @@ All rights reserved · February 2026
 
 **NUPost** · NU Lipa Marketing Office · Lipa City, Batangas, Philippines
 
-*Built with Flutter · Powered by Laravel · AI by Google Gemini · Analytics by Meta Graph API*
+*Built with Flutter · Powered by Laravel & Hostinger · AI by Google Gemini · Analytics by Meta Graph API*
 
 </div>
