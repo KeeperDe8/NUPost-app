@@ -38,9 +38,10 @@ NUPost solves this by unifying **request submission**, **structured approvals & 
 | 4 | **✨ AI Caption Generator** | Google Gemini API generates context-aware, editable caption suggestions based on event details and uploaded media |
 | 5 | **📅 Post Calendar** | Visual calendar showing scheduled posts, conflict detection, and public/private toggle for department-wide visibility |
 | 6 | **🔔 Real-Time Notifications** | Push alerts for every status change with grouped notification history and unread counters |
-| 7 | **💬 Floating Chat & Messages** | Floating message drawer and per-request admin ↔ requester message threads |
+| 7 | **💬 Floating Chat & Messages** | Floating message drawer and per-request admin ↔ requester message threads with bottom-nav quick exit |
 | 8 | **📊 Admin Dashboard & Analytics** | Staff status actions, request review filters, and Meta Graph API reach/engagement tracking |
-| 9 | **🔐 Role-Based Access** | Governed views tailored for **Requestors** (mobile request flow) and **Marketing Staff / Admins** |
+| 9 | **🔐 Role-Based Access & Security** | Governed views tailored for **Requestors** and **Marketing Staff / Admins** with 6-digit email OTP verification |
+| 10 | **⚡ Persistent Session & Auto-Login** | Lightweight local session persistence via `SharedPreferences` keeping users logged in across app restarts |
 
 ---
 
@@ -51,6 +52,7 @@ NUPost solves this by unifying **request submission**, **structured approvals & 
 Flutter 3.x (Dart 3.10)   Cross-platform mobile framework
 DM Sans / Google Fonts     Typography & modern UI styling
 HTTP package               REST API communication
+Shared Preferences         Persistent user session storage
 File Picker                Media upload (images & video)
 Shimmer                    Skeleton loading states
 ```
@@ -93,8 +95,8 @@ Visual Studio Code         Primary IDE
 ### 1 · Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/nupost_app.git
-cd nupost_app
+git clone https://github.com/KeeperDe8/NUPost-app.git
+cd NUPost-app
 ```
 
 ### 2 · Install Flutter Dependencies
@@ -125,9 +127,9 @@ To export the production release APK configured for **`https://nupost.site`**:
 flutter build apk --release --dart-define=API_BASE_URL=https://nupost.site/api
 ```
 
-#### 📁 APK Output Path:
+#### 📁 APK Output Path & Size:
 ```
-build/app/outputs/flutter-apk/app-release.apk
+build/app/outputs/flutter-apk/app-release.apk   (~23.7 MB optimized release)
 ```
 
 ---
@@ -165,10 +167,10 @@ nupost_app/
 │   ├── main_shell.dart                # Dynamic role shell & navigation container
 │   ├── app_bottom_nav.dart            # Custom bottom navigation bar
 │   ├── screens/
-│   │   ├── splash_screen.dart
+│   │   ├── splash_screen.dart         # Auto-session check & branded entry
 │   │   ├── login_screen.dart
 │   │   ├── register_screen.dart
-│   │   ├── otp_screen.dart
+│   │   ├── otp_screen.dart            # 6-digit verification with auto-focus & lifecycle restore
 │   │   ├── home_screen.dart
 │   │   ├── requests_screen.dart
 │   │   ├── create_request_screen.dart # Request creation & Re-submission form
@@ -184,11 +186,12 @@ nupost_app/
 │   │       └── admin_dashboard_screen.dart # Admin management dashboard
 │   ├── services/
 │   │   ├── api_service.dart           # Production & local REST API handler
-│   │   ├── session_store.dart         # Role & session management
+│   │   ├── session_store.dart         # SharedPreferences persistent auth session
 │   │   └── chat_read_store.dart       # Read state persistence
 │   ├── theme/
 │   │   └── app_theme.dart             # DM Sans typography & color system
 │   └── widgets/
+│       ├── app_snackbar.dart          # Floating status notifications
 │       ├── floating_message_button.dart
 │       ├── intensity_date_picker.dart
 │       ├── media_preview_gallery.dart
@@ -207,8 +210,9 @@ nupost_app/
 
 ```
 SplashScreen
-    ├── LoginScreen ──── RegisterScreen ──── OtpScreen
-    │       └── (Unverified) ─────────────── OtpScreen
+    ├── [Session Exists] ──────────────────────────────────────────► MainShell
+    └── [No Session] ──► LoginScreen ──── RegisterScreen ──── OtpScreen
+                               └── (Unverified) ─────────────── OtpScreen
     └── MainShell
             ├── Requestor Mode:
             │       ├── HomeScreen
@@ -216,7 +220,7 @@ SplashScreen
             │       ├── CreateRequestScreen (New & Edit/Resubmit)
             │       ├── NotificationsScreen
             │       ├── ProfileScreen ── EditProfileScreen / AccountSecurityScreen
-            │       └── MessagesScreen ── MessageThreadScreen
+            │       └── MessagesScreen ── MessageThreadScreen (With quick bottom-nav exit)
             └── Admin Mode:
                     └── AdminDashboardScreen ── RequestTrackingScreen (Admin Status Actions)
 ```
