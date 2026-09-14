@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'login_screen.dart';
+import '../main_shell.dart';
+import '../services/session_store.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,6 +24,7 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _taglineFade;
   late final Animation<double> _pulse;
   late final Animation<double> _shimmer;
+  bool _hasActiveSession = false;
 
   @override
   void initState() {
@@ -33,6 +36,8 @@ class _SplashScreenState extends State<SplashScreen>
         statusBarIconBrightness: Brightness.light,
       ),
     );
+
+    _checkSavedSession();
 
     _mainCtrl = AnimationController(
       vsync: this,
@@ -103,15 +108,26 @@ class _SplashScreenState extends State<SplashScreen>
     // Sequence: start main, then shimmer, then navigate
     _mainCtrl.forward().then((_) {
       _shimmerCtrl.forward();
-      Future.delayed(const Duration(milliseconds: 1200), _goToLogin);
+      Future.delayed(const Duration(milliseconds: 1200), _proceedToNextScreen);
     });
   }
 
-  void _goToLogin() {
+  Future<void> _checkSavedSession() async {
+    try {
+      final loggedIn = await SessionStore.loadSession();
+      if (mounted) {
+        setState(() => _hasActiveSession = loggedIn);
+      }
+    } catch (_) {}
+  }
+
+  void _proceedToNextScreen() {
     if (!mounted) return;
+    final targetScreen = _hasActiveSession ? const MainShell() : const LoginScreen();
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const LoginScreen(),
+        pageBuilder: (_, __, ___) => targetScreen,
         transitionsBuilder: (_, anim, __, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 600),

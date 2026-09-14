@@ -423,7 +423,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                       updateToggle: true,
                     );
                   },
-                  activeThumbColor: const Color(0xFF002366),
+                  activeColor: const Color(0xFF002366),
                   activeTrackColor: const Color(0xFF002366).withOpacity(0.3),
                   inactiveThumbColor: const Color(0xFF9AA3B2),
                   inactiveTrackColor: const Color(0xFFE9EDF6),

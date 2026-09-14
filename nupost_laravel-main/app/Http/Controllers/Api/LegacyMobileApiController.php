@@ -145,7 +145,13 @@ class LegacyMobileApiController extends Controller
             ], 403);
         }
 
-        $userRole = (string) ($user->role ?? (str_contains(strtolower($user->email), 'admin') ? 'admin' : 'staff'));
+        $rawRole = trim((string) ($user->role ?? ''));
+        if ($rawRole !== '') {
+            $userRole = strtolower($rawRole);
+        } else {
+            $isAdminUser = str_contains(strtolower($user->email ?? ''), 'admin') || str_contains(strtolower($user->name ?? ''), 'admin');
+            $userRole = $isAdminUser ? 'admin' : 'staff';
+        }
         $uId = (int) $user->id;
 
         return response()->json([

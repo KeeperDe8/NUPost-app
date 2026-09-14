@@ -178,10 +178,18 @@ class _MessagesScreenState extends State<MessagesScreen>
         children: [
           // Back button
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                Navigator.of(context, rootNavigator: true).maybePop();
+              }
+            },
             child: Container(
-              width: 38,
-              height: 38,
+              width: 42,
+              height: 42,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: const Color(0xFF002366).withOpacity(0.07),
                 borderRadius: BorderRadius.circular(12),

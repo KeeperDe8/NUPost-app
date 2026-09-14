@@ -23,7 +23,8 @@ class OtpScreen extends StatefulWidget {
   State<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
+class _OtpScreenState extends State<OtpScreen>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final _otpCtrl = TextEditingController();
   final _focusNode = FocusNode();
   bool _isVerifying = false;
@@ -49,6 +50,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -112,7 +114,21 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Ensure focus re-attaches immediately upon returning to the app
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted && _otpCtrl.text.length < 6) {
+          _focusNode.unfocus();
+          _focusNode.requestFocus();
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _otpCtrl.dispose();
     _focusNode.dispose();
     _entryCtrl.dispose();
@@ -345,25 +361,6 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                 // OTP boxes
                                 _buildOtpBoxes(),
 
-                                // Hidden keyboard input
-                                Opacity(
-                                  opacity: 0,
-                                  child: SizedBox(
-                                    height: 0,
-                                    width: 0,
-                                    child: TextField(
-                                      controller: _otpCtrl,
-                                      focusNode: _focusNode,
-                                      keyboardType: TextInputType.number,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                      ],
-                                      maxLength: 6,
-                                      autofocus: true,
-                                    ),
-                                  ),
-                                ),
-
                                 const SizedBox(height: 28),
 
                                 // Verify button
@@ -517,66 +514,112 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
         child: child,
       ),
       child: GestureDetector(
-        onTap: () => _focusNode.requestFocus(),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(6, (i) {
-            final text = _otpCtrl.text;
-            final char = text.length > i ? text[i] : '';
-            final isFocused = text.length == i && _focusNode.hasFocus;
-            final isFilled = text.length > i;
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          _focusNode.requestFocus();
+          SystemChannels.textInput.invokeMethod('TextInput.show');
+        },
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Visual 6 digit boxes
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(6, (i) {
+                final text = _otpCtrl.text;
+                final char = text.length > i ? text[i] : '';
+                final isFocused = (text.length == i || (text.length == 6 && i == 5)) && _focusNode.hasFocus;
+                final isFilled = text.length > i;
 
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              width: 44,
-              height: 54,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                gradient: isFilled
-                    ? const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFF0F5FF), Color(0xFFE8F0FF)],
-                      )
-                    : null,
-                color: isFilled ? null : const Color(0xFFF8FAFE),
-                border: Border.all(
-                  color: isFocused
-                      ? const Color(0xFF2B5CE6)
-                      : isFilled
-                      ? const Color(0xFF002366)
-                      : const Color(0xFFE4E8F0),
-                  width: isFocused || isFilled ? 2 : 1.5,
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  width: 44,
+                  height: 54,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: isFilled
+                        ? const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFF0F5FF), Color(0xFFE8F0FF)],
+                          )
+                        : null,
+                    color: isFilled ? null : const Color(0xFFF8FAFE),
+                    border: Border.all(
+                      color: isFocused
+                          ? const Color(0xFF2B5CE6)
+                          : isFilled
+                          ? const Color(0xFF002366)
+                          : const Color(0xFFE4E8F0),
+                      width: isFocused || isFilled ? 2 : 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: isFilled
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF002366).withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: char.isNotEmpty
+                      ? Text(
+                          char,
+                          style: const TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF002366),
+                            letterSpacing: -0.5,
+                          ),
+                        )
+                      : isFocused
+                      // Blinking cursor dot
+                      ? _BlinkingCursor()
+                      : null,
+                );
+              }),
+            ),
+
+            // Real, full-size interactive TextField overlaid on top
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.01,
+                child: TextField(
+                  controller: _otpCtrl,
+                  focusNode: _focusNode,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
+                  maxLength: 6,
+                  autofocus: true,
+                  showCursor: false,
+                  enableInteractiveSelection: false,
+                  style: const TextStyle(
+                    color: Colors.transparent,
+                    fontSize: 1,
+                  ),
+                  cursorColor: Colors.transparent,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    counterText: '',
+                    fillColor: Colors.transparent,
+                    filled: true,
+                    contentPadding: EdgeInsets.zero,
+                    isDense: true,
+                  ),
+                  onTap: () {
+                    _focusNode.requestFocus();
+                    SystemChannels.textInput.invokeMethod('TextInput.show');
+                  },
                 ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: isFilled
-                    ? [
-                        BoxShadow(
-                          color: const Color(0xFF002366).withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : null,
               ),
-              child: char.isNotEmpty
-                  ? Text(
-                      char,
-                      style: const TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF002366),
-                        letterSpacing: -0.5,
-                      ),
-                    )
-                  : isFocused
-                  // Blinking cursor dot
-                  ? _BlinkingCursor()
-                  : null,
-            );
-          }),
+            ),
+          ],
         ),
       ),
     );

@@ -14,11 +14,11 @@ class AppBottomNav extends StatelessWidget {
   });
 
   void _navigate(BuildContext context, int index) {
-    if (currentIndex >= 0 && index == currentIndex) return;
     if (onTap != null) {
       onTap!(index);
       return;
     }
+    if (currentIndex >= 0 && index == currentIndex) return;
     switch (index) {
       case 0:
         Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);

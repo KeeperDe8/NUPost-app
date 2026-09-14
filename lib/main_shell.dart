@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'app_bottom_nav.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/home_screen.dart';
@@ -43,10 +44,12 @@ class _MainShellState extends State<MainShell> {
   }
 
   void setIndex(int i) {
+    if (_shellNavKey.currentState?.canPop() == true) {
+      _shellNavKey.currentState!.popUntil((route) => route.isFirst);
+    }
     if (i == _currentIndex) return;
     setState(() => _currentIndex = i);
     _indexNotifier.value = i;
-    _shellNavKey.currentState?.popUntil((route) => route.isFirst);
   }
 
   Widget _screenFor(int i) {
@@ -109,8 +112,13 @@ class _MainShellState extends State<MainShell> {
       body: PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
-          if (!didPop && (_shellNavKey.currentState?.canPop() == true)) {
+          if (didPop) return;
+          if (_shellNavKey.currentState?.canPop() == true) {
             _shellNavKey.currentState!.pop();
+          } else if (_currentIndex != 0) {
+            setIndex(0);
+          } else {
+            SystemNavigator.pop();
           }
         },
         child: Navigator(
