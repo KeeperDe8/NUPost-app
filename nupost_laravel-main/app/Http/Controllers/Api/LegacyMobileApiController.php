@@ -148,9 +148,12 @@ class LegacyMobileApiController extends Controller
         $rawRole = trim((string) ($user->role ?? ''));
         if ($rawRole !== '') {
             $userRole = strtolower($rawRole);
+            if ($userRole === 'staff') {
+                $userRole = 'requestor';
+            }
         } else {
             $isAdminUser = str_contains(strtolower($user->email ?? ''), 'admin') || str_contains(strtolower($user->name ?? ''), 'admin');
-            $userRole = $isAdminUser ? 'admin' : 'staff';
+            $userRole = $isAdminUser ? 'admin' : 'requestor';
         }
         $uId = (int) $user->id;
 
@@ -217,7 +220,7 @@ class LegacyMobileApiController extends Controller
         }
 
         if (Schema::hasColumn('users', 'role')) {
-            $payload['role'] = 'staff';
+            $payload['role'] = 'requestor';
         }
 
         if (Schema::hasColumn('users', 'created_at')) {
@@ -427,7 +430,7 @@ class LegacyMobileApiController extends Controller
                 'email' => (string) ($user->email ?? ''),
                 'phone' => (string) ($user->phone ?? ''),
                 'organization' => (string) ($user->organization ?? ''),
-                'role' => (string) ($user->role ?? 'staff'),
+                'role' => (strtolower(trim((string) ($user->role ?? ''))) === 'staff' || empty($user->role)) ? 'requestor' : (string) $user->role,
                 'public_profile' => (int) ($user->public_profile ?? 0),
                 'public_calendar' => (int) ($user->public_calendar ?? 0),
                 'stats' => [

@@ -40,7 +40,9 @@ class SessionStore {
         userId = id;
         name = storedName ?? 'User';
         email = storedEmail;
-        role = storedRole ?? 'staff';
+        role = (storedRole == null || storedRole.isEmpty || storedRole == 'staff')
+            ? 'requestor'
+            : storedRole;
         return true;
       }
     } catch (_) {}
@@ -58,10 +60,10 @@ class SessionStore {
     email = userEmail;
     final r = (userRole ?? '').toLowerCase().trim();
     if (r.isNotEmpty) {
-      role = r;
+      role = (r == 'staff') ? 'requestor' : r;
     } else {
       final isAdm = userEmail.toLowerCase().contains('admin') || userName.toLowerCase().contains('admin');
-      role = isAdm ? 'admin' : 'staff';
+      role = isAdm ? 'admin' : 'requestor';
     }
 
     _persistSession();
