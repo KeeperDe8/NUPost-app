@@ -42,6 +42,10 @@ NUPost solves this by unifying **request submission**, **structured approvals & 
 | 8 | **📊 Admin Dashboard & Analytics** | Staff status actions, request review filters, and Meta Graph API reach/engagement tracking |
 | 9 | **🔐 Role-Based Access & Security** | Governed views tailored for **Requestors** and **Marketing Staff / Admins** with 6-digit email OTP verification |
 | 10 | **⚡ Persistent Session & Auto-Login** | Lightweight local session persistence via `SharedPreferences` keeping users logged in across app restarts |
+| 11 | **📜 Governance & Policy Terms** | Dedicated Terms & Guidelines screen, registration acceptance checkbox, and in-app policy viewer |
+| 12 | **⚙️ Notification Preferences & Help Center** | Persistent notification toggles via `SharedPreferences` and in-app Help Center with direct office support |
+| 13 | **📶 Adaptive Network Queue & Offline Cache** | Dynamic 6s/10s adaptive timeouts, retry backoff, 60s sliding window circuit breaker, and stale-while-revalidate local caching |
+| 14 | **✨ Shimmer Skeleton Loaders** | Modern pulsating placeholder animations across all primary screens (Home, Requests, Messages, Calendar, Profile) |
 
 ---
 
@@ -129,7 +133,7 @@ flutter build apk --release --dart-define=API_BASE_URL=https://nupost.site/api
 
 #### 📁 APK Output Path & Size:
 ```
-build/app/outputs/flutter-apk/app-release.apk   (~23.7 MB optimized release)
+build/app/outputs/flutter-apk/app-release.apk   (~23.8 MB optimized release binary)
 ```
 
 ---
@@ -179,6 +183,9 @@ nupost_app/
 │   │   ├── profile_screen.dart
 │   │   ├── edit_profile_screen.dart
 │   │   ├── account_security_screen.dart
+│   │   ├── notification_settings_screen.dart # Persistent notification preferences
+│   │   ├── terms_guidelines_screen.dart      # Governance & posting policy viewer
+│   │   ├── help_center_screen.dart           # Help center & support contact
 │   │   ├── post_calendar_screen.dart
 │   │   ├── messages_screen.dart
 │   │   ├── message_thread_screen.dart
@@ -187,7 +194,8 @@ nupost_app/
 │   ├── services/
 │   │   ├── api_service.dart           # Production & local REST API handler
 │   │   ├── session_store.dart         # SharedPreferences persistent auth session
-│   │   └── chat_read_store.dart       # Read state persistence
+│   │   ├── chat_read_store.dart       # Read state persistence
+│   │   └── network_queue_manager.dart # In-flight queue, sliding-window breaker & offline cache
 │   ├── theme/
 │   │   └── app_theme.dart             # DM Sans typography & color system
 │   └── widgets/
@@ -195,7 +203,7 @@ nupost_app/
 │       ├── floating_message_button.dart
 │       ├── intensity_date_picker.dart
 │       ├── media_preview_gallery.dart
-│       └── skeleton_loader.dart
+│       └── skeleton_loader.dart       # Shimmer skeletons for all main views
 ├── assets/
 │   ├── nu_shield.png
 │   └── bg.png
@@ -219,7 +227,7 @@ SplashScreen
             │       ├── RequestsScreen ── RequestTrackingScreen (With Re-submit & Rejection Reason)
             │       ├── CreateRequestScreen (New & Edit/Resubmit)
             │       ├── NotificationsScreen
-            │       ├── ProfileScreen ── EditProfileScreen / AccountSecurityScreen
+            │       ├── ProfileScreen ── EditProfileScreen / AccountSecurityScreen / NotificationSettingsScreen / TermsGuidelinesScreen / HelpCenterScreen
             │       └── MessagesScreen ── MessageThreadScreen (With quick bottom-nav exit)
             └── Admin Mode:
                     └── AdminDashboardScreen ── RequestTrackingScreen (Admin Status Actions)
