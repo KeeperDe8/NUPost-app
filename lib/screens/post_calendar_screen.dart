@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/skeleton_loader.dart';
 
 class PostCalendarScreen extends StatefulWidget {
   const PostCalendarScreen({super.key});
@@ -255,12 +256,14 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                 children: [
                   _buildHeader(),
                   Expanded(
-                    child: RefreshIndicator(
-                      color: const Color(0xFF002366),
-                      onRefresh: () => _loadScheduledPosts(),
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                    child: _isLoading && _posts.isEmpty
+                        ? const CalendarSkeleton()
+                        : RefreshIndicator(
+                            color: const Color(0xFF002366),
+                            onRefresh: () => _loadScheduledPosts(),
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

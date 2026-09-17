@@ -5,6 +5,7 @@ import '../services/session_store.dart';
 import '../theme/app_theme.dart';
 import 'message_thread_screen.dart';
 import '../services/chat_read_store.dart';
+import '../widgets/skeleton_loader.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -103,10 +104,11 @@ class _MessagesScreenState extends State<MessagesScreen>
               _buildHeader(),
               Expanded(
                 child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
+                    ? ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
+                        itemCount: 5,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (_, __) => const MessageThreadSkeleton(),
                       )
                     : _error != null
                     ? _buildError()

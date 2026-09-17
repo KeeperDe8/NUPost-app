@@ -3,6 +3,7 @@ import '../main_shell.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/skeleton_loader.dart';
 import 'request_tracking_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -589,13 +590,12 @@ class _HomeScreenState extends State<HomeScreen>
   // ── Recent Requests ────────────────────────────────────────────────────────
   Widget _buildRecentRequests() {
     if (_isLoadingRequests) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation(Color(0xFF001540)),
-          ),
-        ),
+      return Column(
+        children: const [
+          RequestCardSkeleton(),
+          RequestCardSkeleton(),
+          RequestCardSkeleton(),
+        ],
       );
     }
     if (_recentRequests.isEmpty) {

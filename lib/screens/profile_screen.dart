@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../widgets/skeleton_loader.dart';
 import 'login_screen.dart';
 import 'edit_profile_screen.dart';
 import 'account_security_screen.dart';
+import 'notification_settings_screen.dart';
+import 'help_center_screen.dart';
+import 'terms_guidelines_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -412,7 +416,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     if (_isLoading)
                       const Padding(
                         padding: EdgeInsets.only(top: 16),
-                        child: Center(child: CircularProgressIndicator()),
+                        child: ProfileSkeleton(),
                       )
                     else ...[
                       const SizedBox(height: 16),
@@ -476,7 +480,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                             _MenuItem(
                               icon: Icons.notifications_outlined,
                               label: 'Notification Settings',
-                              onTap: () {},
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const NotificationSettingsScreen(),
+                                  ),
+                                );
+                              },
                             ),
                             _MenuItem(
                               icon: Icons.person_outline_rounded,
@@ -510,12 +522,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                             _MenuItem(
                               icon: Icons.help_outline_rounded,
                               label: 'Help Center',
-                              onTap: () {},
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HelpCenterScreen(),
+                                  ),
+                                );
+                              },
                             ),
                             _MenuItem(
                               icon: Icons.description_outlined,
                               label: 'Terms & Guidelines',
-                              onTap: () {},
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const TermsGuidelinesScreen(),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'request_tracking_screen.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../widgets/skeleton_loader.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -431,10 +432,14 @@ class _RequestsScreenState extends State<RequestsScreen>
                                 return e.status == tab;
                               }).toList();
                         if (_isLoading) {
-                          return const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF002366),
-                            ),
+                          return ListView(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            children: const [
+                              RequestCardSkeleton(),
+                              RequestCardSkeleton(),
+                              RequestCardSkeleton(),
+                              RequestCardSkeleton(),
+                            ],
                           );
                         }
                         if (_error != null) {

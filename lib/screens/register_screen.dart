@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/app_snackbar.dart';
 import 'otp_screen.dart';
+import 'terms_guidelines_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -27,6 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isSubmitting = false;
+  bool _acceptedTerms = false;
 
   @override
   void initState() {
@@ -91,6 +93,14 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
     if (password != confirmPassword) {
       AppSnackbar.show(context, 'Passwords do not match.', isError: true);
+      return;
+    }
+    if (!_acceptedTerms) {
+      AppSnackbar.show(
+        context,
+        'Please agree to the Terms & Guidelines to register.',
+        isError: true,
+      );
       return;
     }
 
@@ -333,7 +343,110 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 28),
+                              const SizedBox(height: 16),
+
+                              // Terms & Conditions Checkbox
+                              GestureDetector(
+                                onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
+                                behavior: HitTestBehavior.opaque,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    AnimatedContainer(
+                                      duration: const Duration(milliseconds: 180),
+                                      width: 22,
+                                      height: 22,
+                                      margin: const EdgeInsets.only(top: 2),
+                                      decoration: BoxDecoration(
+                                        color: _acceptedTerms
+                                            ? const Color(0xFF002366)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: _acceptedTerms
+                                              ? const Color(0xFF002366)
+                                              : const Color(0xFF9AA3B2),
+                                          width: 1.8,
+                                        ),
+                                      ),
+                                      child: _acceptedTerms
+                                          ? const Icon(
+                                              Icons.check_rounded,
+                                              size: 15,
+                                              color: Colors.white,
+                                            )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text.rich(
+                                        TextSpan(
+                                          text: 'I agree to the ',
+                                          style: const TextStyle(
+                                            fontFamily: 'DM Sans',
+                                            fontSize: 12.5,
+                                            color: Color(0xFF6B7280),
+                                            height: 1.4,
+                                          ),
+                                          children: [
+                                            WidgetSpan(
+                                              alignment: PlaceholderAlignment.baseline,
+                                              baseline: TextBaseline.alphabetic,
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => const TermsGuidelinesScreen(),
+                                                    ),
+                                                  );
+                                                },
+                                                child: const Text(
+                                                  'Terms & Conditions',
+                                                  style: TextStyle(
+                                                    fontFamily: 'DM Sans',
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xFF002366),
+                                                    decoration: TextDecoration.underline,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const TextSpan(text: ' and '),
+                                            WidgetSpan(
+                                              alignment: PlaceholderAlignment.baseline,
+                                              baseline: TextBaseline.alphabetic,
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => const TermsGuidelinesScreen(),
+                                                    ),
+                                                  );
+                                                },
+                                                child: const Text(
+                                                  'Posting Guidelines',
+                                                  style: TextStyle(
+                                                    fontFamily: 'DM Sans',
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xFF002366),
+                                                    decoration: TextDecoration.underline,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 24),
 
                               // Create account button
                               GestureDetector(
