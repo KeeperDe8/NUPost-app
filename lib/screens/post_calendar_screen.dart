@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../services/app_memory_cache.dart';
 import '../theme/app_theme.dart';
 import '../widgets/skeleton_loader.dart';
 
@@ -60,7 +61,18 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
       duration: const Duration(milliseconds: 700),
     );
 
-    _loadScheduledPosts();
+    // Warm-start from session cache: 0ms instant display, no skeleton if already loaded
+    final hasWarmData = AppMemoryCache.hasCalendar(_focusedMonth.month, _focusedMonth.year);
+    if (hasWarmData) {
+      final postsList = AppMemoryCache.calendarPosts!;
+      final nextPosts = _parseCalendarPosts(postsList);
+      _posts
+        ..clear()
+        ..addAll(nextPosts);
+      _isLoading = false;
+    }
+
+    _loadScheduledPosts(showLoading: !hasWarmData);
   }
 
   @override
@@ -71,20 +83,55 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
     super.dispose();
   }
 
+  List<_CalendarPost> _parseCalendarPosts(List postsList) {
+    final nextPosts = <_CalendarPost>[];
+    for (final post in postsList) {
+      if (post is! Map) continue;
+      final status = post['status'] ?? 'Pending';
+      final priority = post['priority'] ?? 'normal';
+      final requester = (post['requester'] ?? '').toString();
+      final isMine =
+          requester.isNotEmpty && requester == (SessionStore.name ?? '');
+      DateTime? requestDate;
+      DateTime? scheduledDate;
+      if (post['request_date'] != null && post['request_date'] != '') {
+        requestDate = DateTime.tryParse(post['request_date'].toString());
+      }
+      if (post['scheduled_date'] != null && post['scheduled_date'] != '') {
+        scheduledDate = DateTime.tryParse(post['scheduled_date'].toString());
+      }
+      nextPosts.add(
+        _CalendarPost(
+          label: post['title'] ?? 'Post',
+          status: status,
+          priority: priority,
+          isMine: isMine,
+          color: _CalendarPost.getStatusColor(status),
+          requestDate: requestDate,
+          scheduledDate: scheduledDate,
+        ),
+      );
+    }
+    return nextPosts;
+  }
+
   // ── All original logic preserved ─────────────────────────────────────────
   Future<void> _loadScheduledPosts({
     bool? forcePublicView,
     bool updateToggle = false,
+    bool showLoading = true,
   }) async {
     final publicView = forcePublicView ?? _isPublicCalendar;
-    setState(() {
-      _isLoading = true;
-      _loadError = null;
-    });
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _loadError = null;
+      });
+    }
     try {
       final userId = SessionStore.userId;
       if (userId == null || userId == 0) {
-        setState(() => _isLoading = false);
+        if (mounted) setState(() => _isLoading = false);
         return;
       }
       final calendarData = await ApiService.fetchCalendar(
@@ -96,36 +143,12 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
       if (calendarData['success'] == true) {
         final data = calendarData['data'] ?? {};
         final postsList = data['posts'] ?? [];
-        final nextPosts = <_CalendarPost>[];
-
         if (postsList is List) {
-          for (final post in postsList) {
-            final status = post['status'] ?? 'Pending';
-            final priority = post['priority'] ?? 'normal';
-            final requester = (post['requester'] ?? '').toString();
-            final isMine =
-                requester.isNotEmpty && requester == (SessionStore.name ?? '');
-            DateTime? requestDate;
-            DateTime? scheduledDate;
-            if (post['request_date'] != null && post['request_date'] != '') {
-              requestDate = DateTime.tryParse(post['request_date']);
-            }
-            if (post['scheduled_date'] != null && post['scheduled_date'] != '') {
-              scheduledDate = DateTime.tryParse(post['scheduled_date']);
-            }
-            nextPosts.add(
-              _CalendarPost(
-                label: post['title'] ?? 'Post',
-                status: status,
-                priority: priority,
-                isMine: isMine,
-                color: _CalendarPost.getStatusColor(status),
-                requestDate: requestDate,
-                scheduledDate: scheduledDate,
-              ),
-            );
-          }
+          AppMemoryCache.calendarPosts = postsList.whereType<Map<String, dynamic>>().toList();
+          AppMemoryCache.calendarMonth = _focusedMonth.month;
+          AppMemoryCache.calendarYear = _focusedMonth.year;
         }
+        final nextPosts = _parseCalendarPosts(postsList is List ? postsList : []);
 
         if (mounted) {
           setState(() {

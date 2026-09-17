@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../main_shell.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../services/app_memory_cache.dart';
 import '../theme/app_theme.dart';
 import '../widgets/skeleton_loader.dart';
 import 'request_tracking_screen.dart';
@@ -46,6 +47,18 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         );
 
+    // Warm-start from session cache: 0ms instant display, no skeleton if loaded in this session
+    if (AppMemoryCache.hasHomeData) {
+      _recentRequests = AppMemoryCache.homeRecentRequests!;
+      if (AppMemoryCache.homeStats != null) {
+        final stats = AppMemoryCache.homeStats!;
+        _pendingCount = (stats['pending'] as num?)?.toInt() ?? 0;
+        _approvedCount = (stats['approved'] as num?)?.toInt() ?? 0;
+        _postedCount = (stats['posted'] as num?)?.toInt() ?? 0;
+      }
+      _isLoadingRequests = false;
+    }
+
     _loadStats();
   }
 
@@ -76,12 +89,17 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         if (profileData['success'] == true) {
           final stats = profileData['data']?['stats'] ?? {};
+          if (stats is Map<String, dynamic>) {
+            AppMemoryCache.homeStats = stats;
+          }
           _pendingCount = (stats['pending'] as num?)?.toInt() ?? 0;
           _approvedCount = (stats['approved'] as num?)?.toInt() ?? 0;
           _postedCount = (stats['posted'] as num?)?.toInt() ?? 0;
         }
         if (requests.isNotEmpty) {
-          _recentRequests = requests.take(3).toList();
+          final top3 = requests.take(3).toList();
+          AppMemoryCache.homeRecentRequests = top3;
+          _recentRequests = top3;
         }
         _isLoadingRequests = false;
       });

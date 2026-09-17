@@ -30,10 +30,12 @@ class _MainShellState extends State<MainShell> {
   late int _currentIndex = widget.initialIndex;
   final GlobalKey<NavigatorState> _shellNavKey = GlobalKey<NavigatorState>();
   late final ValueNotifier<int> _indexNotifier;
+  final Set<int> _activatedTabs = {};
 
   @override
   void initState() {
     super.initState();
+    _activatedTabs.add(widget.initialIndex);
     _indexNotifier = ValueNotifier<int>(widget.initialIndex);
   }
 
@@ -47,12 +49,16 @@ class _MainShellState extends State<MainShell> {
     if (_shellNavKey.currentState?.canPop() == true) {
       _shellNavKey.currentState!.popUntil((route) => route.isFirst);
     }
+    _activatedTabs.add(i);
     if (i == _currentIndex) return;
     setState(() => _currentIndex = i);
     _indexNotifier.value = i;
   }
 
-  Widget _screenFor(int i) {
+  Widget _buildTab(int i) {
+    if (!_activatedTabs.contains(i)) {
+      return const SizedBox.shrink();
+    }
     switch (i) {
       case 0:
         return SessionStore.isAdmin ? const AdminDashboardScreen() : const HomeScreen();
@@ -65,7 +71,7 @@ class _MainShellState extends State<MainShell> {
       case 4:
         return const ProfileScreen();
       default:
-        return SessionStore.isAdmin ? const AdminDashboardScreen() : const HomeScreen();
+        return const SizedBox.shrink();
     }
   }
 
@@ -74,26 +80,15 @@ class _MainShellState extends State<MainShell> {
       children: [
         ValueListenableBuilder<int>(
           valueListenable: _indexNotifier,
-          builder: (context2, index, child2) => AnimatedSwitcher(
-            duration: const Duration(milliseconds: 280),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, animation) => ClipRect(
-              child: FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.02),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              ),
-            ),
-            child: KeyedSubtree(
-              key: ValueKey<int>(index),
-              child: _screenFor(index),
-            ),
+          builder: (context2, index, child2) => IndexedStack(
+            index: index,
+            children: [
+              _buildTab(0),
+              _buildTab(1),
+              _buildTab(2),
+              _buildTab(3),
+              _buildTab(4),
+            ],
           ),
         ),
         const FloatingMessageButton(bottom: 18),

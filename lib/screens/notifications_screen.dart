@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../services/app_memory_cache.dart';
 import 'request_tracking_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -43,7 +44,17 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       duration: const Duration(milliseconds: 800),
     );
 
-    _loadNotifications();
+    // Warm-start from session cache: 0ms instant display, no skeleton if already loaded
+    if (AppMemoryCache.hasNotifications) {
+      _notifications = AppMemoryCache.notifications!
+          .whereType<Map<String, dynamic>>()
+          .map(_Notif.fromJson)
+          .toList();
+      _unreadCount = AppMemoryCache.notificationsUnreadCount;
+      _isLoading = false;
+    }
+
+    _loadNotifications(showLoading: !AppMemoryCache.hasNotifications);
     _pollTimer = Timer.periodic(
       const Duration(seconds: 10),
       (_) => _loadNotifications(showLoading: false),
@@ -69,9 +80,11 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         final data = response['data'] ?? {};
         final notifList = data['notifications'] as List? ?? [];
         final unread = data['unread_count'] as int? ?? 0;
+        final listMaps = notifList.whereType<Map<String, dynamic>>().toList();
+        AppMemoryCache.notifications = listMaps;
+        AppMemoryCache.notificationsUnreadCount = unread;
         setState(() {
-          _notifications = notifList
-              .whereType<Map<String, dynamic>>()
+          _notifications = listMaps
               .map(_Notif.fromJson)
               .toList();
           _unreadCount = unread;

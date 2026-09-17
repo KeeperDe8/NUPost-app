@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../services/app_memory_cache.dart';
 import '../theme/app_theme.dart';
 import 'message_thread_screen.dart';
 import '../services/chat_read_store.dart';
@@ -36,7 +37,16 @@ class _MessagesScreenState extends State<MessagesScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _loadThreads();
+
+    // Warm-start from session cache: 0ms instant display, no skeleton if already loaded
+    if (AppMemoryCache.hasMessageThreads) {
+      _threads = AppMemoryCache.messageThreads!
+          .map(_ThreadItem.fromJson)
+          .toList();
+      _isLoading = false;
+    }
+
+    _loadThreads(showLoading: !AppMemoryCache.hasMessageThreads);
   }
 
   @override
@@ -46,7 +56,7 @@ class _MessagesScreenState extends State<MessagesScreen>
     super.dispose();
   }
 
-  Future<void> _loadThreads() async {
+  Future<void> _loadThreads({bool showLoading = true}) async {
     final userId = SessionStore.userId;
     if (userId == null || userId == 0) {
       setState(() {
@@ -55,10 +65,12 @@ class _MessagesScreenState extends State<MessagesScreen>
       });
       return;
     }
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     try {
       final result = await ApiService.fetchMessageThreads(userId: userId);
       final rows = (result['data'] as List?) ?? const [];
@@ -66,6 +78,8 @@ class _MessagesScreenState extends State<MessagesScreen>
           .whereType<Map<String, dynamic>>()
           .map(_ThreadItem.fromJson)
           .toList();
+
+      AppMemoryCache.messageThreads = rows.whereType<Map<String, dynamic>>().toList();
 
       // Calculate unread counts locally
       final updatedThreads = <_ThreadItem>[];

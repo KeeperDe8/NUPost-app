@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'request_tracking_screen.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../services/app_memory_cache.dart';
 import '../widgets/skeleton_loader.dart';
 
 class RequestsScreen extends StatefulWidget {
@@ -47,6 +48,13 @@ class _RequestsScreenState extends State<RequestsScreen>
             curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic),
           ),
         );
+
+    // Warm-start from session cache: 0ms instant display, no skeleton if loaded in this session
+    if (AppMemoryCache.hasRequests) {
+      _requests = _mapRowsToPreviews(AppMemoryCache.requests!);
+      _isLoading = false;
+    }
+
     _tabController.addListener(() {
       setState(() {});
       if (!_tabController.indexIsChanging) _loadRequests();
@@ -65,6 +73,24 @@ class _RequestsScreenState extends State<RequestsScreen>
   void _replayStagger() {
     _staggerController.reset();
     _staggerController.forward();
+  }
+
+  List<_RequestPreview> _mapRowsToPreviews(List<Map<String, dynamic>> rows) {
+    return rows.map((row) {
+      final id = (row['id'] as num?)?.toInt() ?? 0;
+      final reqNo = (row['request_id'] ?? '').toString();
+      final createdAt = (row['created_at'] ?? '').toString();
+      return _RequestPreview(
+        id: id,
+        number: reqNo.isEmpty ? 'REQ-$id' : reqNo,
+        title: (row['title'] ?? '').toString(),
+        status: (row['status'] ?? 'Pending').toString(),
+        submittedAt: createdAt.isEmpty
+            ? 'Submitted —'
+            : 'Submitted $createdAt',
+        priority: (row['priority'] ?? '').toString(),
+      );
+    }).toList();
   }
 
   Future<void> _loadRequests() async {
@@ -91,21 +117,10 @@ class _RequestsScreenState extends State<RequestsScreen>
           status: status,
         );
       }
-      final mapped = rows.map((row) {
-        final id = (row['id'] as num?)?.toInt() ?? 0;
-        final reqNo = (row['request_id'] ?? '').toString();
-        final createdAt = (row['created_at'] ?? '').toString();
-        return _RequestPreview(
-          id: id,
-          number: reqNo.isEmpty ? 'REQ-$id' : reqNo,
-          title: (row['title'] ?? '').toString(),
-          status: (row['status'] ?? 'Pending').toString(),
-          submittedAt: createdAt.isEmpty
-              ? 'Submitted —'
-              : 'Submitted $createdAt',
-          priority: (row['priority'] ?? '').toString(),
-        );
-      }).toList();
+      final mapped = _mapRowsToPreviews(rows);
+      if (_tabController.index == 0) {
+        AppMemoryCache.requests = rows;
+      }
       setState(() {
         _requests = mapped;
       });
@@ -113,7 +128,7 @@ class _RequestsScreenState extends State<RequestsScreen>
     } catch (e) {
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
-        _requests = const [];
+        if (_requests.isEmpty) _requests = const [];
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);

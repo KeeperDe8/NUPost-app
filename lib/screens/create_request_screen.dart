@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../services/app_memory_cache.dart';
 import '../widgets/app_snackbar.dart';
 
 class CreateRequestScreen extends StatefulWidget {
@@ -464,6 +465,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           keepExistingMedia: _mediaFiles.isEmpty,
         );
 
+        AppMemoryCache.invalidateRequests();
+
         if (!mounted) return;
 
         setState(() {
@@ -490,6 +493,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         caption: finalCaption,
         mediaFiles: _mediaFiles,
       );
+
+      AppMemoryCache.invalidateRequests();
+
       if (!mounted) return;
 
       // Show success overlay

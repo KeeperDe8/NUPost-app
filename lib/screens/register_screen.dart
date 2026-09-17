@@ -448,62 +448,66 @@ class _RegisterScreenState extends State<RegisterScreen>
 
                               const SizedBox(height: 24),
 
-                              // Create account button
-                              GestureDetector(
-                                onTapDown: (_) => _btnCtrl.forward(),
-                                onTapUp: (_) {
-                                  _btnCtrl.reverse();
-                                  _onCreateAccount();
-                                },
-                                onTapCancel: () => _btnCtrl.reverse(),
-                                child: ScaleTransition(
-                                  scale: _btnScale,
-                                  child: Container(
-                                    width: double.infinity,
-                                    height: 52,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFF001540),
-                                          Color(0xFF0032A0),
+                              // Create account button (dimmed until Terms & Guidelines are accepted)
+                              AnimatedOpacity(
+                                duration: const Duration(milliseconds: 200),
+                                opacity: _acceptedTerms ? 1.0 : 0.55,
+                                child: GestureDetector(
+                                  onTapDown: (_) => _btnCtrl.forward(),
+                                  onTapUp: (_) {
+                                    _btnCtrl.reverse();
+                                    _onCreateAccount();
+                                  },
+                                  onTapCancel: () => _btnCtrl.reverse(),
+                                  child: ScaleTransition(
+                                    scale: _btnScale,
+                                    child: Container(
+                                      width: double.infinity,
+                                      height: 52,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Color(0xFF001540),
+                                            Color(0xFF0032A0),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFF001540,
+                                            ).withOpacity(0.35),
+                                            blurRadius: 18,
+                                            offset: const Offset(0, 7),
+                                          ),
                                         ],
                                       ),
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFF001540,
-                                          ).withOpacity(0.35),
-                                          blurRadius: 18,
-                                          offset: const Offset(0, 7),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: _isSubmitting
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                valueColor:
-                                                    AlwaysStoppedAnimation(
-                                                      Colors.white,
-                                                    ),
+                                      child: Center(
+                                        child: _isSubmitting
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation(
+                                                        Colors.white,
+                                                      ),
+                                                ),
+                                              )
+                                            : const Text(
+                                                'CREATE ACCOUNT',
+                                                style: TextStyle(
+                                                  fontFamily: 'DM Sans',
+                                                  fontWeight: FontWeight.w900,
+                                                  fontSize: 14,
+                                                  color: Colors.white,
+                                                  letterSpacing: 1.0,
+                                                ),
                                               ),
-                                            )
-                                          : const Text(
-                                              'CREATE ACCOUNT',
-                                              style: TextStyle(
-                                                fontFamily: 'DM Sans',
-                                                fontWeight: FontWeight.w900,
-                                                fontSize: 14,
-                                                color: Colors.white,
-                                                letterSpacing: 1.0,
-                                              ),
-                                            ),
+                                      ),
                                     ),
                                   ),
                                 ),

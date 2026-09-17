@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../services/app_memory_cache.dart';
 import '../widgets/skeleton_loader.dart';
 import 'login_screen.dart';
 import 'edit_profile_screen.dart';
@@ -144,6 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             onPressed: () {
               Navigator.pop(context);
               SessionStore.clear();
+              AppMemoryCache.clear();
               Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (_) => false,
