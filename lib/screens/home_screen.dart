@@ -56,31 +56,35 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _loadStats() async {
-    try {
-      final userId = SessionStore.userId;
-      if (userId == null || userId == 0) {
-        if (mounted) setState(() => _isLoadingRequests = false);
-        return;
-      }
-      final profileData = await ApiService.fetchProfile(userId: userId);
-      if (profileData['success'] == true) {
-        final stats = profileData['data']['stats'] ?? {};
-        if (mounted) {
-          setState(() {
-            _pendingCount = stats['pending'] ?? 0;
-            _approvedCount = stats['approved'] ?? 0;
-            _postedCount = stats['posted'] ?? 0;
-          });
-        }
-      }
+    final userId = SessionStore.userId;
+    if (userId == null || userId == 0) {
+      if (mounted) setState(() => _isLoadingRequests = false);
+      return;
+    }
 
-      final requests = await ApiService.fetchRequests(userId: userId);
-      if (mounted) {
-        setState(() {
+    try {
+      final results = await Future.wait([
+        ApiService.fetchProfile(userId: userId).catchError((_) => <String, dynamic>{}),
+        ApiService.fetchRequests(userId: userId).catchError((_) => <Map<String, dynamic>>[]),
+      ]);
+
+      if (!mounted) return;
+
+      final profileData = results[0] as Map<String, dynamic>;
+      final requests = results[1] as List<Map<String, dynamic>>;
+
+      setState(() {
+        if (profileData['success'] == true) {
+          final stats = profileData['data']?['stats'] ?? {};
+          _pendingCount = (stats['pending'] as num?)?.toInt() ?? 0;
+          _approvedCount = (stats['approved'] as num?)?.toInt() ?? 0;
+          _postedCount = (stats['posted'] as num?)?.toInt() ?? 0;
+        }
+        if (requests.isNotEmpty) {
           _recentRequests = requests.take(3).toList();
-          _isLoadingRequests = false;
-        });
-      }
+        }
+        _isLoadingRequests = false;
+      });
     } catch (e) {
       debugPrint('Error loading home stats: $e');
       if (mounted) setState(() => _isLoadingRequests = false);

@@ -17,9 +17,13 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
-  String _name = '', _role = '', _organization = '', _email = '', _contact = '';
+  String _name = SessionStore.name ?? '';
+  String _role = SessionStore.role ?? 'Requestor';
+  String _organization = '';
+  String _email = SessionStore.email ?? '';
+  String _contact = '';
   int _totalRequests = 0, _approved = 0, _pending = 0;
-  bool _isLoading = true;
+  bool _isLoading = false;
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _entryFade;
@@ -413,7 +417,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
 
-                    if (_isLoading)
+                    if (_name.isEmpty && _isLoading)
                       const Padding(
                         padding: EdgeInsets.only(top: 16),
                         child: ProfileSkeleton(),

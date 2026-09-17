@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import 'network_queue_manager.dart';
 
 class ApiService {
   // Android emulator: 10.0.2.2 maps to localhost on your PC.
@@ -12,18 +13,15 @@ class ApiService {
     'API_BASE_URL',
   );
 
-  static const String _laravelBaseUrl = 'https://nupost.site/api';
-  static const String _legacyBaseUrl = 'https://nupost.site/api';
+  static const String _defaultBaseUrl = 'https://nupost.site/api';
 
   static String get _baseUrl {
     if (_configuredBaseUrl.isNotEmpty) {
       return _configuredBaseUrl;
     }
 
-    return _legacyBaseUrl;
+    return _defaultBaseUrl;
   }
-
-  static const Duration _requestTimeout = Duration(seconds: 15);
 
   static String resolveMediaUrl(String rawPath) {
     final path = rawPath.trim();
@@ -421,76 +419,88 @@ class ApiService {
     ).replace(queryParameters: queryParameters);
   }
 
-  static List<Uri> _candidateUris(Uri originalUri) {
-    if (_configuredBaseUrl.isNotEmpty) {
-      return [originalUri];
-    }
-
-    final endpoint = originalUri.pathSegments.isNotEmpty
-        ? originalUri.pathSegments.last
-        : '';
-    final query = originalUri.queryParameters.isEmpty
-        ? null
-        : originalUri.queryParameters;
-
-    final laravel = _buildUri(_laravelBaseUrl, endpoint, query);
-    final legacy = _buildUri(_legacyBaseUrl, endpoint, query);
-
-    final ordered = <Uri>[legacy, laravel];
-    final unique = <Uri>[];
-    for (final uri in ordered) {
-      if (!unique.contains(uri)) {
-        unique.add(uri);
-      }
-    }
-    return unique;
-  }
-
   static Future<Map<String, dynamic>> _getJson(
     Uri uri, {
     required String fallbackMessage,
+    bool enableCache = true,
   }) async {
-    final candidates = _candidateUris(uri);
-    for (var i = 0; i < candidates.length; i++) {
-      final candidate = candidates[i];
-      final hasNext = i < candidates.length - 1;
+    final netMgr = NetworkQueueManager.instance;
+    netMgr.trackRequestStart();
+    final cacheKey = uri.toString();
+    final maxRetries = netMgr.maxRetries;
+    final timeout = netMgr.adaptiveTimeout;
 
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        final response = await http.get(candidate).timeout(_requestTimeout);
-        if ((response.statusCode == 404 || response.statusCode >= 500) &&
-            hasNext) {
-          continue;
-        }
-        return _parseResponse(
+        final response = await http.get(uri).timeout(timeout);
+        netMgr.recordSuccess();
+        final parsed = _parseResponse(
           response,
-          uri: candidate,
+          uri: uri,
           fallbackMessage: fallbackMessage,
         );
+        if (enableCache) {
+          unawaited(netMgr.cacheResponse(cacheKey, parsed));
+        }
+        netMgr.trackRequestEnd();
+        return parsed;
       } on TimeoutException {
-        if (hasNext) {
+        netMgr.recordTimeout();
+        if (attempt < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 250 * (attempt + 1)));
           continue;
         }
+        // Check if offline/local cache exists to keep user experience smooth
+        if (enableCache) {
+          final cached = await netMgr.getCachedResponse(cacheKey);
+          if (cached != null) {
+            netMgr.trackRequestEnd();
+            return cached;
+          }
+        }
+        netMgr.trackRequestEnd();
         throw Exception(
           'Connection timed out. Please check your internet and try again.',
         );
       } on SocketException {
-        if (hasNext) {
+        netMgr.recordTimeout();
+        if (attempt < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 250 * (attempt + 1)));
           continue;
         }
+        if (enableCache) {
+          final cached = await netMgr.getCachedResponse(cacheKey);
+          if (cached != null) {
+            netMgr.trackRequestEnd();
+            return cached;
+          }
+        }
+        netMgr.trackRequestEnd();
         throw Exception(
           'No internet connection. Please check your Wi-Fi or mobile data.',
         );
       } catch (e) {
         if (e is Exception && e.toString().contains('Exception: ')) {
+          netMgr.trackRequestEnd();
           rethrow;
         }
-        if (hasNext) {
+        if (attempt < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 250 * (attempt + 1)));
           continue;
         }
+        if (enableCache) {
+          final cached = await netMgr.getCachedResponse(cacheKey);
+          if (cached != null) {
+            netMgr.trackRequestEnd();
+            return cached;
+          }
+        }
+        netMgr.trackRequestEnd();
         throw Exception('Network error. Please try again.');
       }
     }
 
+    netMgr.trackRequestEnd();
     throw Exception(
       'No internet connection. Please check your Wi-Fi or mobile data.',
     );
@@ -501,53 +511,63 @@ class ApiService {
     Map<String, dynamic> payload, {
     required String fallbackMessage,
   }) async {
-    final candidates = _candidateUris(uri);
-    for (var i = 0; i < candidates.length; i++) {
-      final candidate = candidates[i];
-      final hasNext = i < candidates.length - 1;
+    final netMgr = NetworkQueueManager.instance;
+    netMgr.trackRequestStart();
+    final maxRetries = netMgr.maxRetries;
+    final timeout = netMgr.adaptiveTimeout;
 
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         final response = await http
             .post(
-              candidate,
+              uri,
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(payload),
             )
-            .timeout(_requestTimeout);
-        if ((response.statusCode == 404 || response.statusCode >= 500) &&
-            hasNext) {
-          continue;
-        }
-        return _parseResponse(
+            .timeout(timeout);
+        netMgr.recordSuccess();
+        final parsed = _parseResponse(
           response,
-          uri: candidate,
+          uri: uri,
           fallbackMessage: fallbackMessage,
         );
+        netMgr.trackRequestEnd();
+        return parsed;
       } on TimeoutException {
-        if (hasNext) {
+        netMgr.recordTimeout();
+        if (attempt < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 300 * (attempt + 1)));
           continue;
         }
+        netMgr.trackRequestEnd();
         throw Exception(
           'Connection timed out. Please check your internet and try again.',
         );
       } on SocketException {
-        if (hasNext) {
+        netMgr.recordTimeout();
+        if (attempt < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 300 * (attempt + 1)));
           continue;
         }
+        netMgr.trackRequestEnd();
         throw Exception(
           'No internet connection. Please check your Wi-Fi or mobile data.',
         );
       } catch (e) {
         if (e is Exception && e.toString().contains('Exception: ')) {
+          netMgr.trackRequestEnd();
           rethrow;
         }
-        if (hasNext) {
+        if (attempt < maxRetries) {
+          await Future.delayed(Duration(milliseconds: 300 * (attempt + 1)));
           continue;
         }
+        netMgr.trackRequestEnd();
         throw Exception('Network error. Please try again.');
       }
     }
 
+    netMgr.trackRequestEnd();
     throw Exception(
       'No internet connection. Please check your Wi-Fi or mobile data.',
     );
@@ -618,7 +638,7 @@ class ApiService {
               'department': department,
             },
           )
-          .timeout(_requestTimeout);
+          .timeout(NetworkQueueManager.instance.adaptiveTimeout);
 
       return _parseResponse(
         response,

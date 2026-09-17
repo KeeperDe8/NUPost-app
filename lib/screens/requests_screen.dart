@@ -77,7 +77,7 @@ class _RequestsScreenState extends State<RequestsScreen>
       return;
     }
     setState(() {
-      _isLoading = true;
+      _isLoading = _requests.isEmpty;
       _error = null;
     });
     try {
@@ -431,7 +431,7 @@ class _RequestsScreenState extends State<RequestsScreen>
                                 }
                                 return e.status == tab;
                               }).toList();
-                        if (_isLoading) {
+                        if (_isLoading && _requests.isEmpty) {
                           return ListView(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             children: const [
