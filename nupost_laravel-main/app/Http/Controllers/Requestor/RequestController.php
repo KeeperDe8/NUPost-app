@@ -86,9 +86,11 @@ class RequestController extends Controller
 
             foreach (array_slice($request->file('media'), 0, 4) as $file) {
                 if (!$file->isValid()) continue;
-                if ($file->getSize() > $max_size) continue;
-                if (!in_array($file->getMimeType(), $allowed_types)) continue;
-                $filename  = 'media_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $ext = strtolower((string) $file->getClientOriginalExtension());
+                if ($ext === 'jfif') {
+                    $ext = 'jpg';
+                }
+                $filename  = 'media_' . uniqid() . '.' . $ext;
                 $file->move($upload_dir, $filename);
                 $uploaded[] = $filename;
             }

@@ -74,7 +74,11 @@ class MediaPreviewGallery extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               final url = urls[index];
-              final isVideo = url.endsWith('.mp4') || url.endsWith('.mov');
+              final cleanUrl = url.split('?').first.toLowerCase();
+              final isVideo = cleanUrl.endsWith('.mp4') ||
+                  cleanUrl.endsWith('.mov') ||
+                  cleanUrl.endsWith('.avi') ||
+                  cleanUrl.endsWith('.mkv');
 
               return GestureDetector(
                 onTap: () => _showMediaDialog(context, url, isVideo),
@@ -92,7 +96,7 @@ class MediaPreviewGallery extends StatelessWidget {
                       children: [
                         if (isVideo)
                           Container(
-                            color: AppColors.primary.withOpacity(0.85),
+                            color: AppColors.primary.withValues(alpha: 0.85),
                             child: const Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -115,13 +119,13 @@ class MediaPreviewGallery extends StatelessWidget {
                             url,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(
-                              color: AppColors.surface,
+                              color: const Color(0xFFF1F4F9),
                               padding: const EdgeInsets.all(8),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.insert_drive_file,
-                                      color: AppColors.accent, size: 28),
+                                  const Icon(Icons.broken_image_rounded,
+                                      color: Color(0xFF94A3B8), size: 28),
                                   const SizedBox(height: 4),
                                   Text(
                                     url.split('/').last,
@@ -131,6 +135,7 @@ class MediaPreviewGallery extends StatelessWidget {
                                     style: const TextStyle(
                                       color: AppColors.inkMute,
                                       fontSize: 10,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -206,11 +211,28 @@ class MediaPreviewGallery extends StatelessWidget {
                     : Image.network(
                         url,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text(
-                            'Failed to load media preview.',
-                            style: TextStyle(color: Colors.white70),
+                        errorBuilder: (_, __, ___) => Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.broken_image_rounded,
+                                  color: Colors.white54, size: 48),
+                              const SizedBox(height: 12),
+                              Text(
+                                'File: ${url.split('/').last}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 13),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Media file not found on server (404).',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: Colors.white38, fontSize: 11),
+                              ),
+                            ],
                           ),
                         ),
                       ),

@@ -564,7 +564,7 @@ class LegacyMobileApiController extends Controller
                     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
                     'video/mp4', 'video/quicktime',
                 ];
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'];
+                $allowedExtensions = ['jpg', 'jpeg', 'jfif', 'png', 'gif', 'webp', 'mp4', 'mov'];
                 $maxSize = 10 * 1024 * 1024;
 
                 foreach (array_slice($files, 0, 4) as $file) {
@@ -578,6 +578,11 @@ class LegacyMobileApiController extends Controller
                     $validExt = in_array($ext, $allowedExtensions, true);
                     if (!$validType && !$validExt) {
                         continue;
+                    }
+
+                    // Normalize jfif to standard jpg so web templates and web servers serve it as image/jpeg
+                    if ($ext === 'jfif') {
+                        $ext = 'jpg';
                     }
 
                     $newName = uniqid('media_', true) . ($ext !== '' ? ".{$ext}" : '');
@@ -786,7 +791,7 @@ class LegacyMobileApiController extends Controller
                     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
                     'video/mp4', 'video/quicktime',
                 ];
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov'];
+                $allowedExtensions = ['jpg', 'jpeg', 'jfif', 'png', 'gif', 'webp', 'mp4', 'mov'];
                 $maxSize = 10 * 1024 * 1024;
 
                 foreach (array_slice($files, 0, 4) as $file) {
@@ -800,6 +805,11 @@ class LegacyMobileApiController extends Controller
                     $validExt = in_array($ext, $allowedExtensions, true);
                     if (!$validType && !$validExt) {
                         continue;
+                    }
+
+                    // Normalize jfif to standard jpg so web templates and web servers serve it as image/jpeg
+                    if ($ext === 'jfif') {
+                        $ext = 'jpg';
                     }
 
                     $newName = uniqid('media_', true) . ($ext !== '' ? ".{$ext}" : '');
