@@ -96,17 +96,19 @@ class RequestManagementController extends Controller
         $old_status = $req->status;
         $req->update(['status' => $new_status]);
 
+        $adminEmail = session('admin_name', session('admin_email', 'Admin'));
+
         // Log activity
         RequestActivity::create([
             'request_id' => $id,
-            'actor'      => 'admin@nupost.com',
+            'actor'      => $adminEmail,
             'action'     => "Status changed from \"$old_status\" to \"$new_status\"",
         ]);
 
         if ($note) {
             RequestActivity::create([
                 'request_id' => $id,
-                'actor'      => 'admin@nupost.com',
+                'actor'      => $adminEmail,
                 'action'     => "Internal note: $note",
             ]);
         }
@@ -175,7 +177,7 @@ class RequestManagementController extends Controller
         RequestComment::create([
             'request_id'  => $id,
             'sender_role' => 'admin',
-            'sender_name' => 'admin@nupost.com',
+            'sender_name' => session('admin_name', session('admin_email', 'Admin')),
             'message'     => $message,
         ]);
 

@@ -24,33 +24,43 @@ class LoginController extends Controller
         $email    = trim($request->input('email', ''));
         $password = trim($request->input('password', ''));
 
-        // Admin login
-        if ($email === 'admin@nupost.com' && $password === 'admin123') {
-            session()->regenerate();
-            session(['role' => 'admin', 'admin_email' => $email]);
-            return redirect()->route('admin.dashboard');
-        }
-
         // Rate limit check
         if (LoginAttempt::isRateLimited($email)) {
             return back()->withInput()->with('error', 'Too many failed attempts. Please wait 15 minutes.');
         }
 
-        // Requestor login
+        // Role-based login via database
         $user = User::where('email', $email)->first();
 
         if ($user && (Hash::check($password, $user->password) || $user->password === $password)) {
-            if (!$user->is_verified) {
+            $role = strtolower(trim((string) ($user->role ?? 'requestor')));
+
+            if ($role !== 'admin' && !$user->is_verified) {
                 LoginAttempt::create(['email' => $email, 'ip_address' => $request->ip(), 'success' => false, 'attempted_at' => now()]);
                 return back()->withInput()->with('error', 'Please verify your email first.');
             }
 
             LoginAttempt::create(['email' => $email, 'ip_address' => $request->ip(), 'success' => true, 'attempted_at' => now()]);
             session()->regenerate();
+
+            if ($role === 'admin') {
+                session([
+                    'role'        => 'admin',
+                    'admin_id'    => $user->id,
+                    'admin_email' => $user->email,
+                    'admin_name'  => $user->name,
+                    'user_id'     => $user->id,
+                    'name'        => $user->name,
+                ]);
+                return redirect()->route('admin.dashboard');
+            }
+
+            $reqRole = ($role === 'staff' || $role === '') ? 'requestor' : $role;
             session([
-                'role'    => 'requestor',
+                'role'    => $reqRole,
                 'user_id' => $user->id,
                 'name'    => $user->name,
+                'email'   => $user->email,
             ]);
 
             // Remember Me

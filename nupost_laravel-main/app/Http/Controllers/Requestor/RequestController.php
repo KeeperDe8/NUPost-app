@@ -111,14 +111,7 @@ class RequestController extends Controller
         ]);
 
         if (Schema::hasTable('notifications')) {
-            $adminUsers = \App\Models\User::where(function ($q) {
-                if (Schema::hasColumn('users', 'role')) {
-                    $q->where('role', 'admin');
-                }
-                $q->orWhere('email', 'admin@nupost.com')
-                  ->orWhere('email', 'like', '%admin%')
-                  ->orWhere('name', 'like', '%admin%');
-            })->get();
+            $adminUsers = \App\Models\User::where('role', 'admin')->get();
 
             foreach ($adminUsers as $admin) {
                 $payload = [

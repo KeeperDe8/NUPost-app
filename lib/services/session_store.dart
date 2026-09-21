@@ -14,16 +14,10 @@ class SessionStore {
   static bool get isLoggedIn => userId != null && (userId ?? 0) > 0;
   static bool get isAdmin {
     final r = (role ?? '').toLowerCase().trim();
-    final e = (email ?? '').toLowerCase().trim();
-    final n = (name ?? '').toLowerCase().trim();
     return r == 'admin' ||
         r == 'administrator' ||
         r == 'marketing' ||
-        r == 'marketing staff' ||
-        r.contains('admin') ||
-        e.contains('admin') ||
-        n.contains('admin') ||
-        e == 'admin@nupost.com';
+        r == 'marketing staff';
   }
 
   /// Loads saved user session from local storage.

@@ -119,7 +119,7 @@ td { padding: 12px 14px; font-size: 12.5px; vertical-align: middle; }
         <h1>Request Management</h1>
         <div class="admin-badge">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            {{ session('admin_email', 'admin@nupost.com') }}
+            {{ session('admin_name', session('admin_email', 'Admin')) }}
         </div>
     </div>
 

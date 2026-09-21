@@ -95,28 +95,6 @@ class LegacyMobileApiController extends Controller
             ], 422);
         }
 
-        // Dedicated Admin Login fallback matching web LoginController
-        if ($email === 'admin@nupost.com' && $password === 'admin123') {
-            $adminUser = DB::table('users')->where('email', 'admin@nupost.com')->first();
-            $adminId = $adminUser ? (int) $adminUser->id : 1;
-            $adminName = !empty($adminUser?->name) ? (string) $adminUser->name : 'System Admin';
-            return response()->json([
-                'success' => true,
-                'id' => $adminId,
-                'user_id' => $adminId,
-                'name' => $adminName,
-                'email' => 'admin@nupost.com',
-                'role' => 'admin',
-                'data' => [
-                    'id' => $adminId,
-                    'user_id' => $adminId,
-                    'name' => $adminName,
-                    'email' => 'admin@nupost.com',
-                    'role' => 'admin',
-                ],
-            ], 200);
-        }
-
         $user = DB::table('users')
             ->select('id', 'name', 'email', 'password', 'is_verified', 'role')
             ->where('email', $email)
@@ -139,24 +117,16 @@ class LegacyMobileApiController extends Controller
             ], 401);
         }
 
-        if (isset($user->is_verified) && (int) $user->is_verified === 0) {
+        $rawRole = strtolower(trim((string) ($user->role ?? 'requestor')));
+        $userRole = ($rawRole === 'staff' || $rawRole === '') ? 'requestor' : $rawRole;
+        $uId = (int) $user->id;
+
+        if ($userRole !== 'admin' && isset($user->is_verified) && (int) $user->is_verified === 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please verify your email first',
             ], 403);
         }
-
-        $rawRole = trim((string) ($user->role ?? ''));
-        if ($rawRole !== '') {
-            $userRole = strtolower($rawRole);
-            if ($userRole === 'staff') {
-                $userRole = 'requestor';
-            }
-        } else {
-            $isAdminUser = str_contains(strtolower($user->email ?? ''), 'admin') || str_contains(strtolower($user->name ?? ''), 'admin');
-            $userRole = $isAdminUser ? 'admin' : 'requestor';
-        }
-        $uId = (int) $user->id;
 
         return response()->json([
             'success' => true,
@@ -237,13 +207,20 @@ class LegacyMobileApiController extends Controller
         // Generate OTP
         $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         
-        DB::table('otp_codes')->insert([
+        $otpPayload = [
             'user_id' => $newId,
             'email' => $email,
             'otp_code' => $otp,
             'expires_at' => now()->addMinutes(10),
             'is_used' => 0,
-        ]);
+        ];
+        if (Schema::hasColumn('otp_codes', 'created_at')) {
+            $otpPayload['created_at'] = now();
+        }
+        if (Schema::hasColumn('otp_codes', 'updated_at')) {
+            $otpPayload['updated_at'] = now();
+        }
+        DB::table('otp_codes')->insert($otpPayload);
 
         $this->sendOtpEmail($email, $name, $otp);
 
@@ -322,8 +299,17 @@ class LegacyMobileApiController extends Controller
             ->first();
 
         if ($record) {
-            DB::table('otp_codes')->where('id', $record->id)->update(['is_used' => 1]);
-            DB::table('users')->where('email', $email)->update(['is_verified' => 1]);
+            $otpUpdate = ['is_used' => 1];
+            if (Schema::hasColumn('otp_codes', 'updated_at')) {
+                $otpUpdate['updated_at'] = now();
+            }
+            DB::table('otp_codes')->where('id', $record->id)->update($otpUpdate);
+
+            $userUpdate = ['is_verified' => 1];
+            if (Schema::hasColumn('users', 'updated_at')) {
+                $userUpdate['updated_at'] = now();
+            }
+            DB::table('users')->where('email', $email)->update($userUpdate);
 
             return response()->json([
                 'success' => true,
@@ -366,13 +352,20 @@ class LegacyMobileApiController extends Controller
 
         $otp = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         
-        DB::table('otp_codes')->insert([
+        $otpPayload = [
             'user_id' => $user->id,
             'email' => $email,
             'otp_code' => $otp,
             'expires_at' => now()->addMinutes(10),
             'is_used' => 0,
-        ]);
+        ];
+        if (Schema::hasColumn('otp_codes', 'created_at')) {
+            $otpPayload['created_at'] = now();
+        }
+        if (Schema::hasColumn('otp_codes', 'updated_at')) {
+            $otpPayload['updated_at'] = now();
+        }
+        DB::table('otp_codes')->insert($otpPayload);
 
         $this->sendOtpEmail($email, $user->name ?? 'User', $otp);
 
@@ -637,15 +630,8 @@ class LegacyMobileApiController extends Controller
             if (Schema::hasTable('notifications')) {
                 $requesterName = (string) ($user->name ?? 'Requester');
 
-                // 1. Broadcast notification to all Admin users
-                $adminUsers = DB::table('users')->where(function ($q) {
-                    if (Schema::hasColumn('users', 'role')) {
-                        $q->where('role', 'admin');
-                    }
-                    $q->orWhere('email', 'admin@nupost.com')
-                      ->orWhere('email', 'like', '%admin%')
-                      ->orWhere('name', 'like', '%admin%');
-                })->get();
+                // 1. Broadcast notification to all Admin users (purely role-based)
+                $adminUsers = DB::table('users')->where('role', 'admin')->get();
 
                 foreach ($adminUsers as $admin) {
                     $notifPayload = [
@@ -859,15 +845,8 @@ class LegacyMobileApiController extends Controller
             if (Schema::hasTable('notifications')) {
                 $requesterName = (string) ($user->name ?? 'Requester');
 
-                // Broadcast re-submission notification to all Admin users
-                $adminUsers = DB::table('users')->where(function ($q) {
-                    if (Schema::hasColumn('users', 'role')) {
-                        $q->where('role', 'admin');
-                    }
-                    $q->orWhere('email', 'admin@nupost.com')
-                      ->orWhere('email', 'like', '%admin%')
-                      ->orWhere('name', 'like', '%admin%');
-                })->get();
+                // Broadcast re-submission notification to all Admin users (purely role-based)
+                $adminUsers = DB::table('users')->where('role', 'admin')->get();
 
                 foreach ($adminUsers as $admin) {
                     $notifPayload = [
@@ -1799,7 +1778,7 @@ class LegacyMobileApiController extends Controller
             $id = (int) $request->input('request_id', 0);
             $newStatus = trim((string) $request->input('status', ''));
             $note = trim((string) $request->input('note', ''));
-            $adminActor = trim((string) $request->input('admin_name', 'admin@nupost.com'));
+            $adminActor = trim((string) $request->input('admin_name', 'Admin'));
 
             $allowed = ['Pending Review', 'Under Review', 'Approved', 'Posted', 'Rejected'];
             if ($id <= 0 || !in_array($newStatus, $allowed, true)) {

@@ -47,6 +47,7 @@ class RegisterController extends Controller
         $user = User::create([
             'name'       => $name,
             'email'      => $email,
+            'role'       => 'requestor',
             'password'   => Hash::make($password),
             'is_verified'=> false,
         ]);
