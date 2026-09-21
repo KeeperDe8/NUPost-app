@@ -95,7 +95,7 @@ class RequestController extends Controller
             $media_file = implode(',', $uploaded);
         }
 
-        PostRequest::create([
+        $newReq = PostRequest::create([
             'title'          => $title,
             'requester'      => $user_name,
             'category'       => $category,
@@ -107,6 +107,34 @@ class RequestController extends Controller
             'preferred_date' => $post_date ?: null,
             'media_file'     => $media_file,
         ]);
+
+        if (Schema::hasTable('notifications')) {
+            $adminUsers = \App\Models\User::where(function ($q) {
+                if (Schema::hasColumn('users', 'role')) {
+                    $q->where('role', 'admin');
+                }
+                $q->orWhere('email', 'admin@nupost.com')
+                  ->orWhere('email', 'like', '%admin%')
+                  ->orWhere('name', 'like', '%admin%');
+            })->get();
+
+            foreach ($adminUsers as $admin) {
+                $payload = [
+                    'user_id' => $admin->id,
+                    'title'   => 'New Posting Request 📋',
+                    'message' => "New request \"$title\" submitted by $user_name ($priority priority).",
+                    'type'    => 'status_update',
+                    'is_read' => false,
+                ];
+                if (Schema::hasColumn('notifications', 'request_id')) {
+                    $payload['request_id'] = (int) $newReq->id;
+                }
+                if (Schema::hasColumn('notifications', 'request_status')) {
+                    $payload['request_status'] = 'Pending Review';
+                }
+                \App\Models\Notification::create($payload);
+            }
+        }
 
         return back()->with('success', 'Request submitted successfully!');
     }

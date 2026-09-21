@@ -60,14 +60,21 @@ class _RequestsScreenState extends State<RequestsScreen>
       if (!_tabController.indexIsChanging) _loadRequests();
     });
     _loadRequests();
+    AppMemoryCache.requestsRevision.addListener(_onRequestsChanged);
   }
 
   @override
   void dispose() {
+    AppMemoryCache.requestsRevision.removeListener(_onRequestsChanged);
     _tabController.dispose();
     _staggerController.dispose();
     _entryController.dispose();
     super.dispose();
+  }
+
+  void _onRequestsChanged() {
+    if (!mounted) return;
+    _loadRequests();
   }
 
   void _replayStagger() {

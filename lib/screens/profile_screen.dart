@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../services/app_memory_cache.dart';
+import '../services/network_queue_manager.dart';
 import '../widgets/skeleton_loader.dart';
 import 'login_screen.dart';
 import 'edit_profile_screen.dart';
@@ -61,6 +62,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
+    _name = SessionStore.name ?? '';
+    _role = SessionStore.role ?? 'Requestor';
+    _email = SessionStore.email ?? '';
+
     _entryCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 650),
@@ -96,8 +101,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       final data = (result['data'] as Map<String, dynamic>?) ?? {};
       final stats = (data['stats'] as Map<String, dynamic>?) ?? {};
       setState(() {
-        _name = (data['name'] ?? SessionStore.name ?? '').toString();
-        _role = (data['role'] ?? 'Requestor').toString();
+        final serverName = (data['name'] ?? SessionStore.name ?? '').toString();
+        _name = serverName;
+        if (serverName.isNotEmpty) {
+          SessionStore.name = serverName;
+        }
+        _role = (data['role'] ?? SessionStore.role ?? 'Requestor').toString();
         _organization = (data['organization'] ?? '').toString();
         _email = (data['email'] ?? SessionStore.email ?? '').toString();
         _contact = (data['phone'] ?? '').toString();
@@ -142,10 +151,12 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              SessionStore.clear();
+              await SessionStore.clear();
+              await NetworkQueueManager.instance.clearCache();
               AppMemoryCache.clear();
+              if (!context.mounted) return;
               Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (_) => false,

@@ -120,4 +120,16 @@ class NetworkQueueManager {
   Map<String, dynamic>? getSyncCached(String uri) {
     return _memCache[uri];
   }
+
+  /// Completely flushes in-memory and on-disk response caches (on logout or user switch).
+  Future<void> clearCache() async {
+    _memCache.clear();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys().where((k) => k.startsWith('nupost_cache_')).toList();
+      for (final key in keys) {
+        await prefs.remove(key);
+      }
+    } catch (_) {}
+  }
 }

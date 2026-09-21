@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import '../main_shell.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../services/app_memory_cache.dart';
@@ -504,7 +505,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       });
       _successController.forward();
 
-      await Future.delayed(const Duration(milliseconds: 1800));
+      await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
 
       // Reset form
@@ -526,6 +527,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       });
       _successController.reset();
       AppSnackbar.show(context, 'Request submitted successfully.', isSuccess: true);
+      
+      // Auto-navigate back to Home dashboard
+      MainShell.switchTo(context, 0);
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.show(

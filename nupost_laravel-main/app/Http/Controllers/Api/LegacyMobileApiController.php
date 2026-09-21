@@ -99,17 +99,18 @@ class LegacyMobileApiController extends Controller
         if ($email === 'admin@nupost.com' && $password === 'admin123') {
             $adminUser = DB::table('users')->where('email', 'admin@nupost.com')->first();
             $adminId = $adminUser ? (int) $adminUser->id : 1;
+            $adminName = !empty($adminUser?->name) ? (string) $adminUser->name : 'System Admin';
             return response()->json([
                 'success' => true,
                 'id' => $adminId,
                 'user_id' => $adminId,
-                'name' => 'System Admin',
+                'name' => $adminName,
                 'email' => 'admin@nupost.com',
                 'role' => 'admin',
                 'data' => [
                     'id' => $adminId,
                     'user_id' => $adminId,
-                    'name' => 'System Admin',
+                    'name' => $adminName,
                     'email' => 'admin@nupost.com',
                     'role' => 'admin',
                 ],
@@ -599,6 +600,9 @@ class LegacyMobileApiController extends Controller
                 'preferred_date' => $preferredDate !== '' ? $preferredDate : null,
             ];
 
+            if (Schema::hasColumn($table, 'user_id')) {
+                $payload['user_id'] = $userId;
+            }
             if (Schema::hasColumn($table, 'created_at')) {
                 $payload['created_at'] = now();
             }
@@ -623,6 +627,61 @@ class LegacyMobileApiController extends Controller
                     $act['updated_at'] = now();
                 }
                 DB::table('request_activity')->insert($act);
+            }
+
+            if (Schema::hasTable('notifications')) {
+                $requesterName = (string) ($user->name ?? 'Requester');
+
+                // 1. Broadcast notification to all Admin users
+                $adminUsers = DB::table('users')->where(function ($q) {
+                    if (Schema::hasColumn('users', 'role')) {
+                        $q->where('role', 'admin');
+                    }
+                    $q->orWhere('email', 'admin@nupost.com')
+                      ->orWhere('email', 'like', '%admin%')
+                      ->orWhere('name', 'like', '%admin%');
+                })->get();
+
+                foreach ($adminUsers as $admin) {
+                    $notifPayload = [
+                        'user_id' => (int) $admin->id,
+                        'title' => 'New Posting Request 📋',
+                        'message' => "New request \"$title\" ($reqCode) submitted by $requesterName ($priority priority).",
+                        'type' => 'status_update',
+                        'is_read' => 0,
+                        'created_at' => now(),
+                    ];
+                    if (Schema::hasColumn('notifications', 'updated_at')) {
+                        $notifPayload['updated_at'] = now();
+                    }
+                    if (Schema::hasColumn('notifications', 'request_id')) {
+                        $notifPayload['request_id'] = $newId;
+                    }
+                    if (Schema::hasColumn('notifications', 'request_status')) {
+                        $notifPayload['request_status'] = 'Pending Review';
+                    }
+                    DB::table('notifications')->insert($notifPayload);
+                }
+
+                // 2. Acknowledge notification for the Requester
+                $userNotifPayload = [
+                    'user_id' => $userId,
+                    'title' => 'Request Submitted 📋',
+                    'message' => "Your request \"$title\" ($reqCode) has been received and is pending review.",
+                    'type' => 'status_update',
+                    'is_read' => 0,
+                    'created_at' => now(),
+                ];
+                if (Schema::hasColumn('notifications', 'updated_at')) {
+                    $userNotifPayload['updated_at'] = now();
+                }
+                if (Schema::hasColumn('notifications', 'request_id')) {
+                    $userNotifPayload['request_id'] = $newId;
+                }
+                if (Schema::hasColumn('notifications', 'request_status')) {
+                    $userNotifPayload['request_status'] = 'Pending Review';
+                }
+                DB::table('notifications')->insert($userNotifPayload);
             }
 
             return response()->json([
@@ -763,6 +822,9 @@ class LegacyMobileApiController extends Controller
                 'preferred_date' => $preferredDate !== '' ? $preferredDate : null,
             ];
 
+            if (Schema::hasColumn($table, 'user_id') && $userId > 0) {
+                $payload['user_id'] = $userId;
+            }
             if (Schema::hasColumn($table, 'updated_at')) {
                 $payload['updated_at'] = now();
             }
@@ -783,6 +845,41 @@ class LegacyMobileApiController extends Controller
             }
 
             $reqCode = (string) ($existingReq->request_id ?? ('REQ-' . str_pad((string) $requestId, 5, '0', STR_PAD_LEFT)));
+
+            if (Schema::hasTable('notifications')) {
+                $requesterName = (string) ($user->name ?? 'Requester');
+
+                // Broadcast re-submission notification to all Admin users
+                $adminUsers = DB::table('users')->where(function ($q) {
+                    if (Schema::hasColumn('users', 'role')) {
+                        $q->where('role', 'admin');
+                    }
+                    $q->orWhere('email', 'admin@nupost.com')
+                      ->orWhere('email', 'like', '%admin%')
+                      ->orWhere('name', 'like', '%admin%');
+                })->get();
+
+                foreach ($adminUsers as $admin) {
+                    $notifPayload = [
+                        'user_id' => (int) $admin->id,
+                        'title' => 'Request Re-submitted 🔄',
+                        'message' => "Request \"$title\" ($reqCode) has been updated and re-submitted by $requesterName.",
+                        'type' => 'status_update',
+                        'is_read' => 0,
+                        'created_at' => now(),
+                    ];
+                    if (Schema::hasColumn('notifications', 'updated_at')) {
+                        $notifPayload['updated_at'] = now();
+                    }
+                    if (Schema::hasColumn('notifications', 'request_id')) {
+                        $notifPayload['request_id'] = $requestId;
+                    }
+                    if (Schema::hasColumn('notifications', 'request_status')) {
+                        $notifPayload['request_status'] = 'Pending Review';
+                    }
+                    DB::table('notifications')->insert($notifPayload);
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -1748,13 +1845,22 @@ class LegacyMobileApiController extends Controller
                 }
             }
 
-            // Notify user
-            $user = DB::table('users')->where('name', $req->requester)->first();
-            if ($user) {
+            // Notify requester
+            $targetUser = null;
+            if (isset($req->user_id) && (int) $req->user_id > 0) {
+                $targetUser = DB::table('users')->where('id', (int) $req->user_id)->first();
+            }
+            if (!$targetUser && !empty($req->requester)) {
+                $rName = trim((string) $req->requester);
+                $targetUser = DB::table('users')->where('name', $rName)->first()
+                    ?? DB::table('users')->where('name', 'like', $rName)->first();
+            }
+
+            if ($targetUser) {
                 $notifData = $this->getNotifDataForStatus($newStatus, (string)$req->title, $note);
                 if (Schema::hasTable('notifications')) {
                     $payload = [
-                        'user_id' => $user->id,
+                        'user_id' => $targetUser->id,
                         'title' => $notifData['title'],
                         'message' => $notifData['message'],
                         'type' => $notifData['type'],

@@ -60,12 +60,19 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     _loadStats();
+    AppMemoryCache.requestsRevision.addListener(_onRequestsChanged);
   }
 
   @override
   void dispose() {
+    AppMemoryCache.requestsRevision.removeListener(_onRequestsChanged);
     _entryController.dispose();
     super.dispose();
+  }
+
+  void _onRequestsChanged() {
+    if (!mounted) return;
+    _loadStats();
   }
 
   Future<void> _loadStats() async {

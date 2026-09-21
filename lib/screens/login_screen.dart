@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../services/api_service.dart';
 import '../services/session_store.dart';
+import '../services/network_queue_manager.dart';
+import '../services/app_memory_cache.dart';
 import '../widgets/app_snackbar.dart';
 import '../main_shell.dart';
 import 'otp_screen.dart';
@@ -131,6 +133,10 @@ class _LoginScreenState extends State<LoginScreen>
       final name = (data['name'] ?? result['name'] ?? 'User').toString();
       final userEmail = (data['email'] ?? result['email'] ?? email).toString();
       final userRole = (data['role'] ?? result['role'] ?? '').toString();
+
+      // Clear any cached responses from previous user sessions
+      await NetworkQueueManager.instance.clearCache();
+      AppMemoryCache.clear();
 
       SessionStore.setUser(
         id: userId,

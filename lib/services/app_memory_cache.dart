@@ -1,9 +1,15 @@
+import 'package:flutter/foundation.dart';
+
 /// In-memory session cache for instant (0ms) screen transitions.
 ///
 /// Data in this cache persists in RAM while the app process is alive.
 /// When the user closes/swipes away the app from recent apps (killing the process),
 /// this memory is cleared so that the skeleton loader shows again on the next cold start.
 class AppMemoryCache {
+  // ── Live Change Notifiers ──────────────────────────────────────────────────
+  static final ValueNotifier<int> requestsRevision = ValueNotifier<int>(0);
+  static final ValueNotifier<int> notificationsRevision = ValueNotifier<int>(0);
+
   // ── Requests Cache ────────────────────────────────────────────────────────
   static List<Map<String, dynamic>>? requests;
   static bool get hasRequests => requests != null;
@@ -35,6 +41,7 @@ class AppMemoryCache {
     homeRecentRequests = null;
     homeStats = null;
     calendarPosts = null;
+    requestsRevision.value++;
   }
 
   static void invalidateMessages() {
@@ -43,6 +50,7 @@ class AppMemoryCache {
 
   static void invalidateNotifications() {
     notifications = null;
+    notificationsRevision.value++;
   }
 
   // ── Complete Purge (On Logout) ────────────────────────────────────────────

@@ -112,7 +112,15 @@ class RequestManagementController extends Controller
         }
 
         // Send notification to requestor
-        $user = User::where('name', $req->requester)->first();
+        $user = null;
+        if (!empty($req->user_id) && (int) $req->user_id > 0) {
+            $user = User::find((int) $req->user_id);
+        }
+        if (!$user && !empty($req->requester)) {
+            $rName = trim((string) $req->requester);
+            $user = User::where('name', $rName)->first()
+                ?? User::where('name', 'like', $rName)->first();
+        }
         if ($user) {
             $notif_data = $this->getNotifData($new_status, $req->title, $note);
             $notificationPayload = [
