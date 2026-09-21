@@ -14,11 +14,10 @@ class SessionStore {
   static bool get isLoggedIn => userId != null && (userId ?? 0) > 0;
   static bool get isAdmin {
     final r = (role ?? '').toLowerCase().trim();
-    return r == 'admin' ||
-        r == 'administrator' ||
-        r == 'marketing' ||
-        r == 'marketing staff';
+    return r == 'admin';
   }
+
+  static bool get isRequestor => !isAdmin;
 
   /// Loads saved user session from local storage.
   /// Returns true if a valid user session was restored.
@@ -34,9 +33,8 @@ class SessionStore {
         userId = id;
         name = storedName ?? 'User';
         email = storedEmail;
-        role = (storedRole == null || storedRole.isEmpty || storedRole == 'staff')
-            ? 'requestor'
-            : storedRole;
+        final r = (storedRole ?? '').toLowerCase().trim();
+        role = (r == 'admin') ? 'admin' : 'requestor';
         return true;
       }
     } catch (_) {}
@@ -53,12 +51,7 @@ class SessionStore {
     name = userName;
     email = userEmail;
     final r = (userRole ?? '').toLowerCase().trim();
-    if (r.isNotEmpty) {
-      role = (r == 'staff') ? 'requestor' : r;
-    } else {
-      final isAdm = userEmail.toLowerCase().contains('admin') || userName.toLowerCase().contains('admin');
-      role = isAdm ? 'admin' : 'requestor';
-    }
+    role = (r == 'admin') ? 'admin' : 'requestor';
 
     _persistSession();
   }

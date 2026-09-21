@@ -44,13 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   String get _displayRole {
     final normalized = _role.trim().toLowerCase();
-    if (normalized.isEmpty ||
-        normalized == 'staff' ||
-        normalized == 'requester' ||
-        normalized == 'requestor') {
-      return 'Requestor';
-    }
-    return _role.trim();
+    return (normalized == 'admin') ? 'Admin' : 'Requestor';
   }
 
   String get _profileSubtitle {

@@ -48,7 +48,7 @@ Route::middleware('guest.nupost')->group(function () {
 
 Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
-// Requestor Routes (Students/Staff)
+// Requestor Routes
 Route::middleware('auth.nupost:requestor')->prefix('requestor')->name('requestor.')->group(function () {
     Route::get('/dashboard',          [DashboardController::class,    'index'])->name('dashboard');
     Route::get('/requests',           [RequestController::class,      'index'])->name('requests');

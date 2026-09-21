@@ -118,7 +118,7 @@ class LegacyMobileApiController extends Controller
         }
 
         $rawRole = strtolower(trim((string) ($user->role ?? 'requestor')));
-        $userRole = ($rawRole === 'staff' || $rawRole === '') ? 'requestor' : $rawRole;
+        $userRole = ($rawRole === 'admin') ? 'admin' : 'requestor';
         $uId = (int) $user->id;
 
         if ($userRole !== 'admin' && isset($user->is_verified) && (int) $user->is_verified === 0) {
@@ -424,7 +424,7 @@ class LegacyMobileApiController extends Controller
                 'email' => (string) ($user->email ?? ''),
                 'phone' => (string) ($user->phone ?? ''),
                 'organization' => (string) ($user->organization ?? ''),
-                'role' => (strtolower(trim((string) ($user->role ?? ''))) === 'staff' || empty($user->role)) ? 'requestor' : (string) $user->role,
+                'role' => (strtolower(trim((string) ($user->role ?? ''))) === 'admin') ? 'admin' : 'requestor',
                 'public_profile' => (int) ($user->public_profile ?? 0),
                 'public_calendar' => (int) ($user->public_calendar ?? 0),
                 'stats' => [

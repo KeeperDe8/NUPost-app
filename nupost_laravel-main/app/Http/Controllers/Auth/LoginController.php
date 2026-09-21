@@ -55,9 +55,9 @@ class LoginController extends Controller
                 return redirect()->route('admin.dashboard');
             }
 
-            $reqRole = ($role === 'staff' || $role === '') ? 'requestor' : $role;
+            // Two roles only: admin and requestor
             session([
-                'role'    => $reqRole,
+                'role'    => 'requestor',
                 'user_id' => $user->id,
                 'name'    => $user->name,
                 'email'   => $user->email,
