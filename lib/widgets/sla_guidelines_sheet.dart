@@ -36,7 +36,6 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
       'turnaround': 'Up to 24 hours',
       'badgeColor': Color(0xFF05C46B),
       'icon': Icons.fact_check_outlined,
-      'description': 'Review and validation of ready marketing and informational materials.',
     },
     {
       'title': 'Posting with Ready-Made PubMat',
@@ -44,7 +43,7 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
       'badgeColor': Color(0xFF2B5CE6),
       'icon': Icons.image_outlined,
       'note': 'Caption must also be provided upon request submission.',
-      'description': 'Immediate scheduling of completed pubmats with complete post captions.',
+      'isAlertNote': true,
     },
     {
       'title': 'Template-Based PubMat',
@@ -52,35 +51,33 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
       'badgeColor': Color(0xFF00A8FF),
       'icon': Icons.dashboard_customize_outlined,
       'note': 'e.g. announcements, congratulatory, news articles, partnerships.',
-      'description': 'Design generation using official NU Lipa pre-approved templates.',
+      'isAlertNote': true,
     },
     {
       'title': 'Standard PubMat',
       'turnaround': '2–4 working days',
       'badgeColor': Color(0xFFF59E0B),
       'icon': Icons.brush_outlined,
-      'description': 'Basic, non-templated promotional material created for a specific institutional event.',
+      'note': 'Basic, non-templated promotional material created for a specific event.',
+      'isAlertNote': false,
     },
     {
       'title': 'Multiple Collaterals / Tarpaulins',
       'turnaround': '5–10 working days',
       'badgeColor': Color(0xFFFF6B6B),
       'icon': Icons.layers_outlined,
-      'description': 'Tarpaulins, print collateral packages, badges, brochures, and composite signage.',
     },
     {
       'title': 'New Campaign / Creative Concept',
       'turnaround': '10–20 working days',
       'badgeColor': Color(0xFF8854D0),
       'icon': Icons.lightbulb_outline_rounded,
-      'description': 'Comprehensive visual branding, campaign art direction, and theme conceptualization.',
     },
     {
       'title': 'Event Documentation',
       'turnaround': '1 month prior to event',
       'badgeColor': Color(0xFFFF3838),
       'icon': Icons.camera_alt_outlined,
-      'description': 'On-site coverage, photo/video documentation booking, and media team deployment.',
     },
   ];
 
@@ -230,21 +227,23 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                     final badgeColor = item['badgeColor'] as Color;
                     final icon = item['icon'] as IconData;
                     final note = item['note'] as String?;
-                    final desc = item['description'] as String;
+                    final isAlertNote = (item['isAlertNote'] as bool?) ?? false;
 
                     return Container(
-                      margin: const EdgeInsets.only(bottom: 11),
-                      padding: const EdgeInsets.all(13),
+                      margin: const EdgeInsets.only(bottom: 9),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(15),
                         border: Border.all(
                           color: const Color(0xFFE2E8F0).withValues(alpha: 0.8),
                           width: 1.1,
                         ),
                       ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: note != null
+                            ? CrossAxisAlignment.start
+                            : CrossAxisAlignment.center,
                         children: [
                           Container(
                             width: 36,
@@ -292,27 +291,18 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                                   ],
                                 ),
                                 if (note != null) ...[
-                                  const SizedBox(height: 3),
+                                  const SizedBox(height: 3.5),
                                   Text(
                                     note,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'DM Sans',
                                       fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFFE11D48),
+                                      fontWeight: isAlertNote ? FontWeight.w600 : FontWeight.w500,
+                                      color: isAlertNote ? const Color(0xFFE11D48) : const Color(0xFF64748B),
+                                      height: 1.25,
                                     ),
                                   ),
                                 ],
-                                const SizedBox(height: 4),
-                                Text(
-                                  desc,
-                                  style: const TextStyle(
-                                    fontFamily: 'DM Sans',
-                                    fontSize: 11.5,
-                                    color: Color(0xFF64748B),
-                                    height: 1.3,
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -320,35 +310,6 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                       ),
                     );
                   }),
-
-                  // ── Official Note / Callout ─────────────────────────────────
-                  Container(
-                    margin: const EdgeInsets.only(top: 4, bottom: 8),
-                    padding: const EdgeInsets.all(13),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Icon(Icons.info_outline_rounded, color: Color(0xFF1D4ED8), size: 18),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Standard PubMat refers to basic, non-templated promotional material created for a specific event. It involves straightforward layout and does not include full campaign visual development.',
-                            style: TextStyle(
-                              fontFamily: 'DM Sans',
-                              fontSize: 11.5,
-                              color: Color(0xFF1E40AF),
-                              height: 1.38,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
