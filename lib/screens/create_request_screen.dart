@@ -54,31 +54,53 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   List<PlatformFile> _mediaFiles = [];
 
   final List<String> _categories = [
-    'Checking of Materials',
-    'Ready-Made PubMat',
-    'Template-Based PubMat',
-    'Standard PubMat',
-    'Tarpaulin / Collaterals',
-    'New Campaign Concept',
-    'Event Documentation',
-    'General Announcement',
+    'Event',
+    'Announcement',
+    'News',
+    'Achievement',
+    'Promotion',
   ];
 
   static Map<String, dynamic> getSlaInfo(String? category) {
     switch (category) {
-      case 'Checking of Materials':
+      case 'Event':
         return {
-          'turnaround': 'Up to 24 hours',
-          'minDays': 1,
-          'note': 'Review of ready materials (min. 24h lead time)',
+          'turnaround': '2–4 working days',
+          'minDays': 3,
+          'note': 'Standard PubMat (2–4 days). Event coverage requires 30 days notice.',
         };
+      case 'Promotion':
+        return {
+          'turnaround': '2–4 working days',
+          'minDays': 3,
+          'note': 'Campaign & promotional pubmat (min. 3 days lead time)',
+        };
+      case 'Announcement':
+        return {
+          'turnaround': 'Up to 48 hours',
+          'minDays': 2,
+          'note': 'Template-based announcement (min. 48h lead time)',
+        };
+      case 'News':
+        return {
+          'turnaround': '24–48 hours',
+          'minDays': 1,
+          'note': 'News, articles, & updates (min. 24h lead time)',
+        };
+      case 'Achievement':
+        return {
+          'turnaround': 'Up to 48 hours',
+          'minDays': 2,
+          'requiresMedia': true,
+          'note': 'Recognition pubmat (requires photo/certificate, min. 48h lead time)',
+        };
+      // Fallback mappings for legacy/SLA classifications
+      case 'Checking of Materials':
       case 'Ready-Made PubMat':
         return {
           'turnaround': 'Up to 24 hours',
           'minDays': 1,
-          'requiresMedia': true,
-          'requiresCaption': true,
-          'note': 'Posting ready pubmats (requires caption & image/media)',
+          'note': 'Review of ready materials (min. 24h lead time)',
         };
       case 'Template-Based PubMat':
         return {
@@ -410,7 +432,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
     // 4. Category & Priority
     if (_selectedCategory == null || _selectedCategory!.isEmpty) {
-      errors.add('Please select a Project Classification.');
+      errors.add('Please select a Category.');
     }
     if (_selectedPriority == null || _selectedPriority!.isEmpty) {
       errors.add('Please select a Priority level.');
@@ -426,19 +448,35 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       final diffDays = selected.difference(today).inDays;
 
       if (diffDays < 1) {
-        errors.add('Preferred date cannot be today or in the past. Marketing requires at least 24 hours advance notice.');
+        errors.add('Preferred date cannot be today or in the past. All requests require at least 24 hours advance notice.');
       } else if (_selectedCategory != null) {
         final sla = getSlaInfo(_selectedCategory);
         final minDays = (sla['minDays'] as int?) ?? 1;
         if (diffDays < minDays) {
           final earliest = today.add(Duration(days: minDays));
           final earliestStr = '${earliest.month}/${earliest.day}/${earliest.year}';
-          errors.add('$_selectedCategory requires at least $minDays days advance notice under the Creative SLA (Earliest date: $earliestStr).');
+          errors.add('$_selectedCategory requests require at least $minDays day${minDays == 1 ? '' : 's'} advance notice under SLA guidelines (Earliest date: $earliestStr).');
         }
       }
     }
 
-    // 6. Ready-Made PubMat Requirement
+    // 6. Category-specific conditions
+    if (_selectedCategory == 'Achievement') {
+      final hasMedia = _mediaFiles.isNotEmpty ||
+          (widget.isEditing &&
+              widget.initialData != null &&
+              widget.initialData!['media_file'] != null &&
+              widget.initialData!['media_file'].toString().trim().isNotEmpty);
+      if (!hasMedia) {
+        errors.add('Achievement requests require at least one attached photo, award, or certificate of the achiever.');
+      }
+    }
+
+    if (_selectedCategory == 'Event' && desc.length < 25) {
+      errors.add('Event requests require detailed information in Description (e.g. event date/time, venue, target participants, and program flow).');
+    }
+
+    // Fallback condition for ready-made pubmat if legacy category is used
     if (_selectedCategory == 'Ready-Made PubMat') {
       final hasMedia = _mediaFiles.isNotEmpty ||
           (widget.isEditing &&
@@ -790,8 +828,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   }
 
   Widget _buildSlaHint() {
+    if (_selectedCategory == null) return const SizedBox.shrink();
     final sla = getSlaInfo(_selectedCategory);
-    final turnaround = (sla['turnaround'] ?? '2-4 days') as String;
+    final turnaround = (sla['turnaround'] ?? '2–4 days') as String;
     final note = (sla['note'] ?? '') as String;
     final minDays = (sla['minDays'] ?? 1) as int;
 
@@ -827,7 +866,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           Expanded(
             child: Text(
               isTooSoon
-                  ? 'SLA Notice: $_selectedCategory requires at least $minDays days lead time. Selected date is too soon.'
+                  ? 'SLA Notice: $_selectedCategory requires at least $minDays day${minDays == 1 ? '' : 's'} advance notice. Selected date is too soon.'
                   : 'SLA Turnaround: $turnaround • $note',
               style: TextStyle(
                 fontFamily: 'DM Sans',
@@ -953,7 +992,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _fieldLabel('Project Classification *'),
+                                    _fieldLabel('Category *'),
                                     _buildDropdown(
                                       value: _selectedCategory,
                                       hint: 'Select',
