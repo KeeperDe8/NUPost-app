@@ -10,6 +10,7 @@ import 'account_security_screen.dart';
 import 'notification_settings_screen.dart';
 import 'help_center_screen.dart';
 import 'terms_guidelines_screen.dart';
+import '../widgets/sla_guidelines_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   String _contact = '';
   int _totalRequests = 0, _approved = 0, _pending = 0;
   bool _isLoading = false;
+  bool _showSlaNotice = true;
 
   late final AnimationController _entryCtrl;
   late final Animation<double> _entryFade;
@@ -109,6 +111,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         _pending = (stats['pending'] as num?)?.toInt() ?? 0;
         _isLoading = false;
       });
+      final slaSetting = await SessionStore.getPermanentSlaNotice();
+      if (mounted) setState(() => _showSlaNotice = slaSetting);
     } catch (_) {
       setState(() => _isLoading = false);
     }
@@ -150,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               await SessionStore.clear();
               await NetworkQueueManager.instance.clearCache();
               AppMemoryCache.clear();
-              if (!context.mounted) return;
+              if (!mounted) return;
               Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (_) => false,
@@ -489,6 +493,25 @@ class _ProfileScreenState extends State<ProfileScreen>
                               },
                             ),
                             _MenuItem(
+                              icon: Icons.schedule_rounded,
+                              label: 'SLA Notice on Request',
+                              trailing: Switch.adaptive(
+                                value: _showSlaNotice,
+                                activeColor: const Color(0xFF002366),
+                                onChanged: (val) async {
+                                  setState(() => _showSlaNotice = val);
+                                  await SessionStore.setPermanentSlaNotice(val);
+                                  if (val) SessionStore.sessionSlaDismissed = false;
+                                },
+                              ),
+                              onTap: () async {
+                                final newVal = !_showSlaNotice;
+                                setState(() => _showSlaNotice = newVal);
+                                await SessionStore.setPermanentSlaNotice(newVal);
+                                if (newVal) SessionStore.sessionSlaDismissed = false;
+                              },
+                            ),
+                            _MenuItem(
                               icon: Icons.notifications_outlined,
                               label: 'Notification Settings',
                               onTap: () {
@@ -530,6 +553,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: _MenuCard(
                           items: [
+                            _MenuItem(
+                              icon: Icons.fact_check_outlined,
+                              label: 'Creative SLA Guidelines',
+                              onTap: () {
+                                SlaGuidelinesSheet.show(
+                                  context,
+                                  isReferenceMode: true,
+                                );
+                              },
+                            ),
                             _MenuItem(
                               icon: Icons.help_outline_rounded,
                               label: 'Help Center',
@@ -872,11 +905,12 @@ class _MenuCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 13,
-                      color: Color(0xFF9AA3B2),
-                    ),
+                    item.trailing ??
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 13,
+                          color: Color(0xFF9AA3B2),
+                        ),
                   ],
                 ),
               ),
@@ -898,9 +932,11 @@ class _MenuItem {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Widget? trailing;
   const _MenuItem({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.trailing,
   });
 }

@@ -82,5 +82,38 @@ class SessionStore {
       await prefs.remove(_keyRole);
     } catch (_) {}
   }
+
+  // ── SLA Notice Settings ───────────────────────────────────────────────────
+  static const _keyShowSlaNotice = 'nupost_show_sla_notice';
+  static bool sessionSlaDismissed = false;
+
+  /// Returns whether the SLA notice should pop up on new request creation.
+  static Future<bool> shouldShowSlaNotice() async {
+    if (sessionSlaDismissed) return false;
+    return getPermanentSlaNotice();
+  }
+
+  /// Sets whether the SLA notice is enabled permanently.
+  static Future<void> setPermanentSlaNotice(bool show) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyShowSlaNotice, show);
+    } catch (_) {}
+  }
+
+  /// Gets the permanent SLA notice toggle state (default: true).
+  static Future<bool> getPermanentSlaNotice() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_keyShowSlaNotice) ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Temporarily dismisses the notice for the current active app session.
+  static void dismissSlaForSession() {
+    sessionSlaDismissed = true;
+  }
 }
 

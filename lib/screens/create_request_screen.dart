@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../services/app_memory_cache.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/sla_guidelines_sheet.dart';
 
 class CreateRequestScreen extends StatefulWidget {
   final Map<String, dynamic>? initialData;
@@ -53,12 +54,73 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   List<PlatformFile> _mediaFiles = [];
 
   final List<String> _categories = [
-    'Event',
-    'Announcement',
-    'News',
-    'Achievement',
-    'Promotion',
+    'Checking of Materials',
+    'Ready-Made PubMat',
+    'Template-Based PubMat',
+    'Standard PubMat',
+    'Tarpaulin / Collaterals',
+    'New Campaign Concept',
+    'Event Documentation',
+    'General Announcement',
   ];
+
+  static Map<String, dynamic> getSlaInfo(String? category) {
+    switch (category) {
+      case 'Checking of Materials':
+        return {
+          'turnaround': 'Up to 24 hours',
+          'minDays': 1,
+          'note': 'Review of ready materials (min. 24h lead time)',
+        };
+      case 'Ready-Made PubMat':
+        return {
+          'turnaround': 'Up to 24 hours',
+          'minDays': 1,
+          'requiresMedia': true,
+          'requiresCaption': true,
+          'note': 'Posting ready pubmats (requires caption & image/media)',
+        };
+      case 'Template-Based PubMat':
+        return {
+          'turnaround': 'Up to 48 hours',
+          'minDays': 2,
+          'note': 'Announcements, news, articles (min. 48h lead time)',
+        };
+      case 'Standard PubMat':
+        return {
+          'turnaround': '2–4 working days',
+          'minDays': 3,
+          'note': 'Custom event promotional graphic (min. 3 days lead time)',
+        };
+      case 'Tarpaulin / Collaterals':
+      case 'Multiple Collateral Materials / Tarpaulins':
+        return {
+          'turnaround': '5–10 working days',
+          'minDays': 5,
+          'note': 'Tarpaulins & print collaterals (min. 5 working days)',
+        };
+      case 'New Campaign Concept':
+      case 'New Campaign / Creative Concept':
+        return {
+          'turnaround': '10–20 working days',
+          'minDays': 10,
+          'note': 'Full campaign art direction & branding (min. 10 days)',
+        };
+      case 'Event Documentation':
+        return {
+          'turnaround': '1 month prior to event',
+          'minDays': 30,
+          'note': 'Booking media team coverage (min. 30 days advance notice)',
+        };
+      default:
+        return {
+          'turnaround': '2–4 working days',
+          'minDays': 1,
+          'note': 'Marketing review requires at least 24h lead time',
+        };
+    }
+  }
+
   final List<String> _priorities = ['Low', 'Medium', 'High', 'Urgent'];
 
   final Map<String, IconData> _platformIcons = {
@@ -127,7 +189,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       if (_categories.contains(cat)) {
         _selectedCategory = cat;
       } else if (cat.isNotEmpty) {
-        _selectedCategory = _categories.first;
+        _categories.add(cat);
+        _selectedCategory = cat;
       }
 
       final prio = (init['priority'] ?? '').toString();
@@ -321,12 +384,77 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         .map((e) => e.key)
         .toList();
 
-    if (_titleController.text.trim().isEmpty ||
-        _descriptionController.text.trim().isEmpty ||
-        _selectedCategory == null ||
-        _selectedPriority == null ||
-        _selectedDate == null) {
-      AppSnackbar.show(context, 'Please fill all required fields.', isError: true);
+    // ── Guardrail Validation List ───────────────────────────────────────────
+    final List<String> errors = [];
+
+    // 1. Title validation
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      errors.add('Request Title is required.');
+    } else if (title.length < 5) {
+      errors.add('Request Title must be at least 5 characters long.');
+    }
+
+    // 2. Description validation
+    final desc = _descriptionController.text.trim();
+    if (desc.isEmpty) {
+      errors.add('Description is required.');
+    } else if (desc.length < 15) {
+      errors.add('Description must be at least 15 characters long to provide sufficient detail for marketing review.');
+    }
+
+    // 3. Platform validation
+    if (platforms.isEmpty) {
+      errors.add('Please select at least one target platform (Facebook or LinkedIn).');
+    }
+
+    // 4. Category & Priority
+    if (_selectedCategory == null || _selectedCategory!.isEmpty) {
+      errors.add('Please select a Project Classification.');
+    }
+    if (_selectedPriority == null || _selectedPriority!.isEmpty) {
+      errors.add('Please select a Priority level.');
+    }
+
+    // 5. Date & SLA Lead Time Validation
+    if (_selectedDate == null) {
+      errors.add('Please select a preferred posting date.');
+    } else {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final selected = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+      final diffDays = selected.difference(today).inDays;
+
+      if (diffDays < 1) {
+        errors.add('Preferred date cannot be today or in the past. Marketing requires at least 24 hours advance notice.');
+      } else if (_selectedCategory != null) {
+        final sla = getSlaInfo(_selectedCategory);
+        final minDays = (sla['minDays'] as int?) ?? 1;
+        if (diffDays < minDays) {
+          final earliest = today.add(Duration(days: minDays));
+          final earliestStr = '${earliest.month}/${earliest.day}/${earliest.year}';
+          errors.add('$_selectedCategory requires at least $minDays days advance notice under the Creative SLA (Earliest date: $earliestStr).');
+        }
+      }
+    }
+
+    // 6. Ready-Made PubMat Requirement
+    if (_selectedCategory == 'Ready-Made PubMat') {
+      final hasMedia = _mediaFiles.isNotEmpty ||
+          (widget.isEditing &&
+              widget.initialData != null &&
+              widget.initialData!['media_file'] != null &&
+              widget.initialData!['media_file'].toString().trim().isNotEmpty);
+      if (!hasMedia) {
+        errors.add('Ready-Made PubMat requests require at least one attached pubmat image or document.');
+      }
+      if (_captionController.text.trim().isEmpty) {
+        errors.add('Ready-Made PubMat requests require a complete caption to be provided.');
+      }
+    }
+
+    if (errors.isNotEmpty) {
+      _showValidationErrorsDialog(errors);
       return;
     }
 
@@ -542,6 +670,178 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     }
   }
 
+  void _showValidationErrorsDialog(List<String> errors) {
+    showDialog(
+      context: context,
+      useRootNavigator: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 10),
+        contentPadding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+        actionsPadding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+        title: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                color: Color(0xFFE11D48),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Action Required',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Please resolve the following requirements before submitting your request:',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 13,
+                  color: Color(0xFF64748B),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 14),
+              ...errors.map((err) => Container(
+                margin: const EdgeInsets.only(bottom: 9),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Icon(
+                        Icons.cancel_rounded,
+                        size: 15,
+                        color: Color(0xFFE11D48),
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Text(
+                        err,
+                        style: const TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+            ],
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF002366),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Fix Issues & Edit',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlaHint() {
+    final sla = getSlaInfo(_selectedCategory);
+    final turnaround = (sla['turnaround'] ?? '2-4 days') as String;
+    final note = (sla['note'] ?? '') as String;
+    final minDays = (sla['minDays'] ?? 1) as int;
+
+    bool isTooSoon = false;
+    if (_selectedDate != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final sel = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+      final diff = sel.difference(today).inDays;
+      if (diff < minDays) {
+        isTooSoon = true;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8.5),
+      decoration: BoxDecoration(
+        color: isTooSoon ? const Color(0xFFFFF1F2) : const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isTooSoon ? const Color(0xFFFECDD3) : const Color(0xFFBBF7D0),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isTooSoon ? Icons.warning_amber_rounded : Icons.verified_outlined,
+            size: 16,
+            color: isTooSoon ? const Color(0xFFE11D48) : const Color(0xFF16A34A),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isTooSoon
+                  ? 'SLA Notice: $_selectedCategory requires at least $minDays days lead time. Selected date is too soon.'
+                  : 'SLA Turnaround: $turnaround • $note',
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: isTooSoon ? const Color(0xFFBE123C) : const Color(0xFF15803D),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _buildFallbackCaption({
     required String title,
     required String category,
@@ -653,7 +953,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _fieldLabel('Category *'),
+                                    _fieldLabel('Project Classification *'),
                                     _buildDropdown(
                                       value: _selectedCategory,
                                       hint: 'Select',
@@ -684,8 +984,36 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                               ),
                             ],
                           ),
+                          if (_selectedCategory != null) ...[
+                            const SizedBox(height: 10),
+                            _buildSlaHint(),
+                          ],
                           const SizedBox(height: 16),
-                          _fieldLabel('Preferred Posting Date *'),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _fieldLabel('Preferred Posting Date *'),
+                              GestureDetector(
+                                onTap: () => SlaGuidelinesSheet.show(context, isReferenceMode: true),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF2B5CE6)),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'SLA Guide',
+                                      style: TextStyle(
+                                        fontFamily: 'DM Sans',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF2B5CE6),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                           _buildDatePicker(),
                           _buildDateVolumePanel(),
                         ],

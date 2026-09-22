@@ -11,6 +11,7 @@ import 'screens/messages_screen.dart';
 import 'screens/post_calendar_screen.dart';
 import 'services/session_store.dart';
 import 'widgets/floating_message_button.dart';
+import 'widgets/sla_guidelines_sheet.dart';
 
 class MainShell extends StatefulWidget {
   final int initialIndex;
@@ -45,7 +46,15 @@ class _MainShellState extends State<MainShell> {
     super.dispose();
   }
 
-  void setIndex(int i) {
+  void setIndex(int i) async {
+    if (i == 2 && !SessionStore.isAdmin) {
+      final shouldShow = await SessionStore.shouldShowSlaNotice();
+      if (shouldShow && mounted) {
+        final proceed = await SlaGuidelinesSheet.show(context);
+        if (proceed != true) return;
+      }
+    }
+
     if (_shellNavKey.currentState?.canPop() == true) {
       _shellNavKey.currentState!.popUntil((route) => route.isFirst);
     }
