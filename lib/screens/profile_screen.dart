@@ -443,33 +443,34 @@ class _ProfileScreenState extends State<ProfileScreen>
                     else ...[
                       const SizedBox(height: 16),
 
-                      // ── STAT CARDS ────────────────────────────────────────────
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            _StatCard(
-                              value: '$_totalRequests',
-                              label: SessionStore.isAdmin ? 'Total' : 'Total',
-                              color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
-                            ),
-                            const SizedBox(width: 10),
-                            _StatCard(
-                              value: '$_approved',
-                              label: SessionStore.isAdmin ? 'Approved' : 'Approved',
-                              color: const Color(0xFF05C46B),
-                            ),
-                            const SizedBox(width: 10),
-                            _StatCard(
-                              value: '$_pending',
-                              label: SessionStore.isAdmin ? 'Pending' : 'Pending',
-                              color: const Color(0xFFF59E0B),
-                            ),
-                          ],
+                      // ── STAT CARDS (Requesters only) ─────────────────────────
+                      if (!SessionStore.isAdmin) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              _StatCard(
+                                value: '$_totalRequests',
+                                label: 'Total',
+                                color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
+                              ),
+                              const SizedBox(width: 10),
+                              _StatCard(
+                                value: '$_approved',
+                                label: 'Approved',
+                                color: const Color(0xFF05C46B),
+                              ),
+                              const SizedBox(width: 10),
+                              _StatCard(
+                                value: '$_pending',
+                                label: 'Pending',
+                                color: const Color(0xFFF59E0B),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
+                      ],
 
                       // ── CONTACT CARD ──────────────────────────────────────────
                       Padding(
@@ -516,25 +517,26 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 if (mounted) setState(() {});
                               },
                             ),
-                            _MenuItem(
-                              icon: Icons.schedule_rounded,
-                              label: 'SLA Notice on Request',
-                              trailing: Switch.adaptive(
-                                value: _showSlaNotice,
-                                activeColor: const Color(0xFF002366),
-                                onChanged: (val) async {
-                                  setState(() => _showSlaNotice = val);
-                                  await SessionStore.setPermanentSlaNotice(val);
-                                  if (val) SessionStore.sessionSlaDismissed = false;
+                            if (!SessionStore.isAdmin)
+                              _MenuItem(
+                                icon: Icons.schedule_rounded,
+                                label: 'SLA Notice on Request',
+                                trailing: Switch.adaptive(
+                                  value: _showSlaNotice,
+                                  activeColor: const Color(0xFF002366),
+                                  onChanged: (val) async {
+                                    setState(() => _showSlaNotice = val);
+                                    await SessionStore.setPermanentSlaNotice(val);
+                                    if (val) SessionStore.sessionSlaDismissed = false;
+                                  },
+                                ),
+                                onTap: () async {
+                                  final newVal = !_showSlaNotice;
+                                  setState(() => _showSlaNotice = newVal);
+                                  await SessionStore.setPermanentSlaNotice(newVal);
+                                  if (newVal) SessionStore.sessionSlaDismissed = false;
                                 },
                               ),
-                              onTap: () async {
-                                final newVal = !_showSlaNotice;
-                                setState(() => _showSlaNotice = newVal);
-                                await SessionStore.setPermanentSlaNotice(newVal);
-                                if (newVal) SessionStore.sessionSlaDismissed = false;
-                              },
-                            ),
                             _MenuItem(
                               icon: Icons.notifications_outlined,
                               label: 'Notification Settings',

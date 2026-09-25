@@ -266,8 +266,9 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   // ── BUILD ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.pageBg,
+      backgroundColor: isDark ? const Color(0xFF0A0F1D) : AppColors.pageBg,
       body: GestureDetector(
         onTap: _clearSelection,
         behavior: HitTestBehavior.translucent,
@@ -277,7 +278,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
             children: [
               Column(
                 children: [
-                  _buildHeader(),
+                  _buildHeader(isDark),
                   Expanded(
                     child: _isLoading && _posts.isEmpty
                         ? const CalendarSkeleton()
@@ -294,7 +295,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                             if (_isPublicCalendar && !SessionStore.isAdmin) _buildPublicBanner(),
 
                             // Calendar card
-                            _buildCalendarCard(),
+                            _buildCalendarCard(isDark),
 
                             // Error
                             if (_loadError != null) _buildErrorBanner(),
@@ -303,7 +304,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
 
                             // Selected date panel
                             if (_selectedDate != null)
-                              _buildSelectedDatePanel(),
+                              _buildSelectedDatePanel(isDark),
 
                             // Upcoming header
                             AnimatedCrossFade(
@@ -328,7 +329,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                             ),
                             const SizedBox(height: 10),
 
-                            _buildUpcomingList(),
+                            _buildUpcomingList(isDark),
                           ],
                         ),
                       ),
@@ -344,16 +345,21 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   }
 
   // ── Header ────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0x0F000000), width: 1)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x0F000000),
+            width: 1,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? const Color(0x30000000) : const Color(0x07001540),
             blurRadius: 10,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -371,13 +377,13 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: const Color(0xFF002366).withOpacity(0.07),
+                color: isDark ? const Color(0xFF1E2B45) : const Color(0xFF002366).withOpacity(0.07),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back_ios_new_rounded,
                 size: 16,
-                color: Color(0xFF002366),
+                color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF002366),
               ),
             ),
           ),
@@ -388,13 +394,13 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
               children: [
                 Row(
                   children: [
-                    const Text(
+                    Text(
                       'Post Calendar',
                       style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontWeight: FontWeight.w900,
                         fontSize: 20,
-                        color: Color(0xFF002366),
+                        color: isDark ? Colors.white : const Color(0xFF002366),
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -553,37 +559,39 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   }
 
   // ── Calendar card ─────────────────────────────────────────────────────────
-  Widget _buildCalendarCard() {
+  Widget _buildCalendarCard(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x08001540),
+            color: isDark ? const Color(0x30000000) : const Color(0x08001540),
             blurRadius: 14,
-            offset: Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildMonthNav(),
+          _buildMonthNav(isDark),
           const SizedBox(height: 14),
-          _buildToggle(),
+          _buildToggle(isDark),
           const SizedBox(height: 14),
-          _buildCalendarGrid(),
+          _buildCalendarGrid(isDark),
           const SizedBox(height: 14),
-          _buildLegend(),
+          _buildLegend(isDark),
         ],
       ),
     );
   }
 
   // ── Month nav ─────────────────────────────────────────────────────────────
-  Widget _buildMonthNav() {
+  Widget _buildMonthNav(bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -593,12 +601,12 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF002366).withOpacity(0.07),
+              color: isDark ? const Color(0xFF1E2B45) : const Color(0xFF002366).withOpacity(0.07),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.chevron_left_rounded,
-              color: Color(0xFF002366),
+              color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF002366),
               size: 22,
             ),
           ),
@@ -607,11 +615,11 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
           children: [
             Text(
               _monthLabel(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
-                color: Color(0xFF080F1E),
+                color: isDark ? Colors.white : const Color(0xFF080F1E),
                 letterSpacing: -0.3,
               ),
             ),
@@ -621,8 +629,8 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
               width: _isCurrentMonth ? 5 : 0,
               height: _isCurrentMonth ? 5 : 0,
               margin: EdgeInsets.only(top: _isCurrentMonth ? 3 : 0),
-              decoration: const BoxDecoration(
-                color: Color(0xFF002366),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF3B82F6) : const Color(0xFF002366),
                 shape: BoxShape.circle,
               ),
             ),
@@ -634,12 +642,12 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF002366).withOpacity(0.07),
+              color: isDark ? const Color(0xFF1E2B45) : const Color(0xFF002366).withOpacity(0.07),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.chevron_right_rounded,
-              color: Color(0xFF002366),
+              color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF002366),
               size: 22,
             ),
           ),
@@ -649,11 +657,11 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   }
 
   // ── Toggle ────────────────────────────────────────────────────────────────
-  Widget _buildToggle() {
+  Widget _buildToggle(bool isDark) {
     return Container(
       height: 38,
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F4FB),
+        color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFF1F4FB),
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(3),
@@ -675,7 +683,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   }
 
   // ── Calendar grid ─────────────────────────────────────────────────────────
-  Widget _buildCalendarGrid() {
+  Widget _buildCalendarGrid(bool isDark) {
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     final firstDay = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
     final startOffset = firstDay.weekday % 7;
@@ -785,7 +793,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                           border: Border.all(
                             color: isSelected
                                 ? const Color(0xFF2B5CE6).withOpacity(0.5)
-                                : const Color(0x08000000),
+                                : (isDark ? const Color(0xFF1E2B45) : const Color(0x08000000)),
                             width: isSelected ? 1.5 : 1,
                           ),
                           borderRadius: (isToday || isSelected)
@@ -803,7 +811,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                                 height: 24,
                                 decoration: isToday
                                     ? BoxDecoration(
-                                        color: const Color(0xFF002366),
+                                        color: isDark ? const Color(0xFF3B82F6) : const Color(0xFF002366),
                                         borderRadius: BorderRadius.circular(8),
                                       )
                                     : null,
@@ -818,7 +826,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                                     fontSize: 11.5,
                                     color: isToday
                                         ? Colors.white
-                                        : const Color(0xFF080F1E),
+                                        : (isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E)),
                                   ),
                                 ),
                               ),
@@ -881,11 +889,16 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   }
 
   // ── Legend ────────────────────────────────────────────────────────────────
-  Widget _buildLegend() {
+  Widget _buildLegend(bool isDark) {
     return Container(
       padding: const EdgeInsets.only(top: 14),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0x0A000000), width: 1)),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x0A000000),
+            width: 1,
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -950,7 +963,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   }
 
   // ── Selected date panel ───────────────────────────────────────────────────
-  Widget _buildSelectedDatePanel() {
+  Widget _buildSelectedDatePanel(bool isDark) {
     if (_selectedDate == null) return const SizedBox.shrink();
 
     const months = [
@@ -976,9 +989,9 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
         child: Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F5FF),
+            color: isDark ? const Color(0xFF131D31) : const Color(0xFFF0F5FF),
             border: Border.all(
-              color: const Color(0xFF2B5CE6).withOpacity(0.2),
+              color: isDark ? const Color(0xFF3B82F6).withOpacity(0.3) : const Color(0xFF2B5CE6).withOpacity(0.2),
               width: 1.5,
             ),
             borderRadius: BorderRadius.circular(18),
@@ -1041,11 +1054,11 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                       dayPosts.isEmpty
                           ? 'No posts this day'
                           : '${dayPosts.length} post${dayPosts.length > 1 ? 's' : ''} scheduled',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontWeight: FontWeight.w800,
                         fontSize: 13.5,
-                        color: Color(0xFF080F1E),
+                        color: isDark ? Colors.white : const Color(0xFF080F1E),
                         letterSpacing: -0.1,
                       ),
                     ),
@@ -1054,10 +1067,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                       dayPosts.isEmpty
                           ? 'Tap a different date to check'
                           : dayPosts.map((p) => p.label).take(2).join(' · '),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontSize: 12,
-                        color: Color(0xFF3D4A63),
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF3D4A63),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1072,13 +1085,13 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2B5CE6).withOpacity(0.1),
+                    color: isDark ? const Color(0xFF1E2B45) : const Color(0xFF2B5CE6).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.close_rounded,
                     size: 15,
-                    color: Color(0xFF2B5CE6),
+                    color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF2B5CE6),
                   ),
                 ),
               ),
@@ -1090,7 +1103,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   }
 
   // ── Upcoming list ─────────────────────────────────────────────────────────
-  Widget _buildUpcomingList() {
+  Widget _buildUpcomingList(bool isDark) {
     final now = DateTime.now();
     final limit = now.add(const Duration(days: 7));
 
@@ -1125,14 +1138,14 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
     if (upcoming.isEmpty) {
       return Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF131D31) : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0x0E000000)),
-          boxShadow: const [
+          border: Border.all(color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000)),
+          boxShadow: [
             BoxShadow(
-              color: Color(0x06001540),
+              color: isDark ? const Color(0x30000000) : const Color(0x06001540),
               blurRadius: 10,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -1143,13 +1156,13 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
               width: 54,
               height: 54,
               decoration: BoxDecoration(
-                color: const Color(0xFF9AA3B2).withOpacity(0.08),
+                color: isDark ? const Color(0xFF1E2B45) : const Color(0xFF9AA3B2).withOpacity(0.08),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.event_available_rounded,
                 size: 28,
-                color: Color(0xFF9AA3B2),
+                color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
               ),
             ),
             const SizedBox(height: 12),
@@ -1158,10 +1171,10 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                   ? 'No posts scheduled on ${_selectedDate!.month}/${_selectedDate!.day}'
                   : 'No posts scheduled for the next 7 days',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 13,
-                color: Color(0xFF9AA3B2),
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
               ),
             ),
           ],
@@ -1171,14 +1184,14 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x06001540),
+            color: isDark ? const Color(0x30000000) : const Color(0x06001540),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1189,7 +1202,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
         separatorBuilder: (_, __) => Container(
           height: 1,
           margin: const EdgeInsets.symmetric(horizontal: 16),
-          color: const Color(0x08000000),
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x08000000),
         ),
         itemBuilder: (_, i) {
           final post = upcoming[i];
@@ -1285,6 +1298,7 @@ class _UpcomingPostItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
@@ -1305,11 +1319,11 @@ class _UpcomingPostItem extends StatelessWidget {
               children: [
                 Text(
                   post.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w700,
                     fontSize: 13.5,
-                    color: Color(0xFF080F1E),
+                    color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
                     letterSpacing: -0.1,
                   ),
                   maxLines: 1,
