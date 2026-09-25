@@ -211,6 +211,73 @@ class AppTheme {
     );
   }
 
+  static ThemeData get dark {
+    const bg = Color(0xFF090D16);
+    const surface = Color(0xFF131D31);
+    const border = Color(0xFF1E2B45);
+
+    final scheme = ColorScheme.dark(
+      primary: const Color(0xFF3B6EF5),
+      secondary: const Color(0xFFF59E0B),
+      surface: surface,
+      onPrimary: Colors.white,
+      onSurface: const Color(0xFFF1F5F9),
+    );
+
+    return ThemeData(
+      brightness: Brightness.dark,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: bg,
+      cardColor: surface,
+      dividerColor: border,
+      textTheme: GoogleFonts.dmSansTextTheme(ThemeData.dark().textTheme).apply(
+        bodyColor: const Color(0xFFF1F5F9),
+        displayColor: Colors.white,
+      ),
+      useMaterial3: true,
+      cardTheme: CardThemeData(
+        color: surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: const BorderSide(color: border),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF1D4ED8),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          textStyle: GoogleFonts.dmSans(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
+        ),
+      ),
+      extensions: const [GlassColors.defaults],
+    );
+  }
+
   static ThemeData get chatDark => ThemeData.dark(useMaterial3: true).copyWith(
     scaffoldBackgroundColor: ChatColors.bg,
     textTheme: GoogleFonts.dmSansTextTheme(ThemeData.dark().textTheme),

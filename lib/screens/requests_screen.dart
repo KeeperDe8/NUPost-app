@@ -87,9 +87,14 @@ class _RequestsScreenState extends State<RequestsScreen>
       final id = (row['id'] as num?)?.toInt() ?? 0;
       final reqNo = (row['request_id'] ?? '').toString();
       final createdAt = (row['created_at'] ?? '').toString();
+      final displayNo = AppMemoryCache.getDisplayRequestNumber(
+        id: id,
+        rawNumber: reqNo,
+        isAdmin: SessionStore.isAdmin,
+      );
       return _RequestPreview(
         id: id,
-        number: reqNo.isEmpty ? 'REQ-$id' : reqNo,
+        number: displayNo,
         title: (row['title'] ?? '').toString(),
         status: (row['status'] ?? 'Pending').toString(),
         submittedAt: createdAt.isEmpty
@@ -123,6 +128,7 @@ class _RequestsScreenState extends State<RequestsScreen>
           userId: userId!,
           status: status,
         );
+        AppMemoryCache.updateUserRequestSequence(rows);
       }
       final mapped = _mapRowsToPreviews(rows);
       if (_tabController.index == 0) {

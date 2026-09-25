@@ -104,6 +104,9 @@ class _HomeScreenState extends State<HomeScreen>
           _postedCount = (stats['posted'] as num?)?.toInt() ?? 0;
         }
         if (requests.isNotEmpty) {
+          if (!SessionStore.isAdmin) {
+            AppMemoryCache.updateUserRequestSequence(requests);
+          }
           final top3 = requests.take(3).toList();
           AppMemoryCache.homeRecentRequests = top3;
           _recentRequests = top3;
@@ -670,7 +673,13 @@ class _HomeScreenState extends State<HomeScreen>
       child: Column(
         children: _recentRequests.map((req) {
           final id = (req['id'] as num?)?.toInt() ?? 0;
-          final reqNo = (req['request_id'] ?? '').toString();
+          final rawReqNo = (req['request_id'] ?? '').toString();
+          final fallbackNo = rawReqNo.isEmpty ? 'REQ-$id' : rawReqNo;
+          final reqNo = AppMemoryCache.getDisplayRequestNumber(
+            id: id,
+            rawNumber: fallbackNo,
+            isAdmin: SessionStore.isAdmin,
+          );
           final title = (req['title'] ?? '').toString();
           final status = (req['status'] ?? 'Pending').toString();
           final dt = (req['created_at'] ?? '').toString();
@@ -688,10 +697,10 @@ class _HomeScreenState extends State<HomeScreen>
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: GestureDetector(
-              onTap: () => _openRequestDetails(id, reqNo.isEmpty ? 'REQ-$id' : reqNo, title, status),
+              onTap: () => _openRequestDetails(id, reqNo, title, status),
               child: _HomeRequestCard(
                 id: id,
-                number: reqNo.isEmpty ? 'REQ-$id' : reqNo,
+                number: reqNo,
                 title: title,
                 status: status,
                 submittedAt: dt,

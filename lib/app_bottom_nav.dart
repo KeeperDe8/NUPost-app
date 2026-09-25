@@ -41,23 +41,33 @@ class AppBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAdmin = SessionStore.isAdmin;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final navBg = isDark ? const Color(0xFF0F172A) : Colors.white;
 
     return Material(
-      color: Colors.white,
+      color: navBg,
       elevation: 12,
       child: SafeArea(
         top: false,
         child: Container(
           height: 62,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: navBg,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(24),
               topRight: Radius.circular(24),
             ),
+            border: Border(
+              top: BorderSide(
+                color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+                width: 1,
+              ),
+            ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF001540).withOpacity(0.08),
+                color: isDark
+                    ? const Color(0x55000000)
+                    : const Color(0xFF001540).withOpacity(0.08),
                 blurRadius: 16,
                 offset: const Offset(0, -4),
               ),
@@ -158,7 +168,10 @@ class _NavItemState extends State<_NavItem>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.isActive ? _activeColor : _inactiveColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = isDark ? const Color(0xFFFBBF24) : _activeColor;
+    final inactiveColor = isDark ? const Color(0xFF64748B) : _inactiveColor;
+    final color = widget.isActive ? activeColor : inactiveColor;
 
     return Expanded(
       child: InkWell(
@@ -179,7 +192,9 @@ class _NavItemState extends State<_NavItem>
                   height: 24,
                   decoration: BoxDecoration(
                     color: widget.isActive
-                        ? const Color(0xFF002366).withOpacity(0.09)
+                        ? (isDark
+                            ? const Color(0x33FBBF24)
+                            : const Color(0xFF002366).withOpacity(0.09))
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -207,8 +222,8 @@ class _NavItemState extends State<_NavItem>
                   duration: const Duration(milliseconds: 200),
                   width: widget.isActive ? 4 : 0,
                   height: widget.isActive ? 4 : 0,
-                  decoration: const BoxDecoration(
-                    color: _activeColor,
+                  decoration: BoxDecoration(
+                    color: activeColor,
                     shape: BoxShape.circle,
                   ),
                 ),

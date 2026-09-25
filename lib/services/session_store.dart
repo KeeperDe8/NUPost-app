@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SessionStore {
@@ -10,6 +11,9 @@ class SessionStore {
   static const _keyName = 'nupost_user_name';
   static const _keyEmail = 'nupost_user_email';
   static const _keyRole = 'nupost_user_role';
+  static const _keyDarkMode = 'nupost_dark_mode';
+
+  static final isDarkModeNotifier = ValueNotifier<bool>(false);
 
   static bool get isLoggedIn => userId != null && (userId ?? 0) > 0;
   static bool get isAdmin {
@@ -19,11 +23,12 @@ class SessionStore {
 
   static bool get isRequestor => !isAdmin;
 
-  /// Loads saved user session from local storage.
+  /// Loads saved user session and dark mode preference from local storage.
   /// Returns true if a valid user session was restored.
   static Future<bool> loadSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      isDarkModeNotifier.value = prefs.getBool(_keyDarkMode) ?? false;
       final id = prefs.getInt(_keyUserId);
       final storedEmail = prefs.getString(_keyEmail);
       final storedName = prefs.getString(_keyName);
@@ -39,6 +44,14 @@ class SessionStore {
       }
     } catch (_) {}
     return false;
+  }
+
+  static Future<void> setDarkMode(bool isDark) async {
+    isDarkModeNotifier.value = isDark;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyDarkMode, isDark);
+    } catch (_) {}
   }
 
   static void setUser({

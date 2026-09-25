@@ -177,9 +177,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFE9EDF6),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           FadeTransition(
@@ -270,16 +271,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                             right: 20,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: isDark ? const Color(0xFF131D31) : Colors.white,
                                 borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
-                                  color: const Color(0x0E000000),
+                                  color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
                                 ),
-                                boxShadow: const [
+                                boxShadow: [
                                   BoxShadow(
-                                    color: Color(0x12001540),
+                                    color: isDark ? const Color(0x40000000) : const Color(0x12001540),
                                     blurRadius: 16,
-                                    offset: Offset(0, 7),
+                                    offset: const Offset(0, 7),
                                   ),
                                 ],
                               ),
@@ -331,21 +332,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                                       children: [
                                         Text(
                                           _name.isEmpty ? 'NUPost User' : _name,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontFamily: 'DM Sans',
                                             fontWeight: FontWeight.w800,
                                             fontSize: 17.5,
-                                            color: Color(0xFF080F1E),
+                                            color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
                                             letterSpacing: -0.3,
                                           ),
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
                                           _profileSubtitle,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontFamily: 'DM Sans',
                                             fontSize: 13,
-                                            color: Color(0xFF9AA3B2),
+                                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
                                           ),
                                         ),
                                         const SizedBox(height: 8),
@@ -355,23 +356,29 @@ class _ProfileScreenState extends State<ProfileScreen>
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFFFFBEB),
+                                            color: SessionStore.isAdmin
+                                                ? (isDark ? const Color(0x331D4ED8) : const Color(0xFFEFF6FF))
+                                                : (isDark ? const Color(0x33F59E0B) : const Color(0xFFFFFBEB)),
                                             border: Border.all(
-                                              color: const Color(
-                                                0xFFF59E0B,
-                                              ).withOpacity(0.28),
+                                              color: SessionStore.isAdmin
+                                                  ? (isDark ? const Color(0xFF3B82F6) : const Color(0xFF3B82F6).withOpacity(0.35))
+                                                  : (isDark ? const Color(0xFFF59E0B) : const Color(0xFFF59E0B).withOpacity(0.28)),
                                             ),
                                             borderRadius: BorderRadius.circular(
                                               10,
                                             ),
                                           ),
-                                          child: const Text(
-                                            '✦ Verified Requestor',
+                                          child: Text(
+                                            SessionStore.isAdmin
+                                                ? '✦ System Administrator'
+                                                : '✦ Verified Requestor',
                                             style: TextStyle(
                                               fontFamily: 'DM Sans',
                                               fontWeight: FontWeight.w800,
                                               fontSize: 10.5,
-                                              color: Color(0xFF92400E),
+                                              color: SessionStore.isAdmin
+                                                  ? (isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8))
+                                                  : (isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E)),
                                             ),
                                           ),
                                         ),
@@ -398,22 +405,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         vertical: 7,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF5F8FF),
+                                        color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFF5F8FF),
                                         border: Border.all(
-                                          color: const Color(
-                                            0xFF002366,
-                                          ).withOpacity(0.2),
+                                          color: isDark
+                                              ? const Color(0xFF3B82F6).withOpacity(0.4)
+                                              : const Color(0xFF002366).withOpacity(0.2),
                                           width: 1.2,
                                         ),
                                         borderRadius: BorderRadius.circular(11),
                                       ),
-                                      child: const Text(
+                                      child: Text(
                                         'Edit',
                                         style: TextStyle(
                                           fontFamily: 'DM Sans',
                                           fontWeight: FontWeight.w800,
                                           fontSize: 12,
-                                          color: Color(0xFF2B5CE6),
+                                          color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2B5CE6),
                                         ),
                                       ),
                                     ),
@@ -443,19 +450,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                           children: [
                             _StatCard(
                               value: '$_totalRequests',
-                              label: 'Total',
-                              color: const Color(0xFF002366),
+                              label: SessionStore.isAdmin ? 'Total' : 'Total',
+                              color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
                             ),
                             const SizedBox(width: 10),
                             _StatCard(
                               value: '$_approved',
-                              label: 'Approved',
+                              label: SessionStore.isAdmin ? 'Approved' : 'Approved',
                               color: const Color(0xFF05C46B),
                             ),
                             const SizedBox(width: 10),
                             _StatCard(
                               value: '$_pending',
-                              label: 'Pending',
+                              label: SessionStore.isAdmin ? 'Pending' : 'Pending',
                               color: const Color(0xFFF59E0B),
                             ),
                           ],
@@ -490,6 +497,23 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         const AccountSecurityScreen(),
                                   ),
                                 );
+                              },
+                            ),
+                            _MenuItem(
+                              icon: Icons.dark_mode_outlined,
+                              label: 'Dark Mode',
+                              trailing: Switch.adaptive(
+                                value: isDark,
+                                activeColor: const Color(0xFFF59E0B),
+                                onChanged: (val) async {
+                                  await SessionStore.setDarkMode(val);
+                                  if (mounted) setState(() {});
+                                },
+                              ),
+                              onTap: () async {
+                                final newVal = !isDark;
+                                await SessionStore.setDarkMode(newVal);
+                                if (mounted) setState(() {});
                               },
                             ),
                             _MenuItem(
@@ -665,16 +689,19 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildContactCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? const Color(0x40000000) : const Color(0x07001540),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -714,49 +741,54 @@ class _StatCard extends StatelessWidget {
     required this.color,
   });
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: Container(
-      height: 90,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x07001540),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Expanded(
+      child: Container(
+        height: 90,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF131D31) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: 'DM Sans',
-              fontWeight: FontWeight.w900,
-              fontSize: 26,
-              color: color,
-              letterSpacing: -1.0,
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? const Color(0x40000000) : const Color(0x07001540),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              fontFamily: 'DM Sans',
-              fontWeight: FontWeight.w700,
-              fontSize: 9.5,
-              color: Color(0xFF9AA3B2),
-              letterSpacing: 0.7,
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w900,
+                fontSize: 26,
+                color: color,
+                letterSpacing: -1.0,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 5),
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w700,
+                fontSize: 9.5,
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
+                letterSpacing: 0.7,
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _ContactRow extends StatelessWidget {
@@ -768,60 +800,72 @@ class _ContactRow extends StatelessWidget {
     required this.value,
   });
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: const Color(0xFF002366).withOpacity(0.07),
-            borderRadius: BorderRadius.circular(11),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF1E2B45)
+                  : const Color(0xFF002366).withOpacity(0.07),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
+            ),
           ),
-          child: Icon(icon, size: 18, color: const Color(0xFF002366)),
-        ),
-        const SizedBox(width: 13),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label.toUpperCase(),
-                style: const TextStyle(
-                  fontFamily: 'DM Sans',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 9.5,
-                  color: Color(0xFF9AA3B2),
-                  letterSpacing: 0.7,
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 9.5,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
+                    letterSpacing: 0.7,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontFamily: 'DM Sans',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13.5,
-                  color: Color(0xFF080F1E),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13.5,
+                    color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _Divider extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Container(
-    height: 1,
-    margin: const EdgeInsets.symmetric(horizontal: 18),
-    color: const Color(0x08000000),
-  );
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 1,
+      margin: const EdgeInsets.symmetric(horizontal: 18),
+      color: isDark ? const Color(0x1AFFFFFF) : const Color(0x08000000),
+    );
+  }
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -847,85 +891,92 @@ class _MenuCard extends StatelessWidget {
   final List<_MenuItem> items;
   const _MenuCard({required this.items});
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0x0E000000)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x07001540),
-          blurRadius: 10,
-          offset: Offset(0, 4),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
         ),
-      ],
-    ),
-    child: Column(
-      children: items.asMap().entries.map((e) {
-        final i = e.key;
-        final item = e.value;
-        return Column(
-          children: [
-            InkWell(
-              onTap: item.onTap,
-              borderRadius: i == 0
-                  ? const BorderRadius.vertical(top: Radius.circular(20))
-                  : i == items.length - 1
-                  ? const BorderRadius.vertical(bottom: Radius.circular(20))
-                  : BorderRadius.zero,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 16,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF9AA3B2).withOpacity(0.09),
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      child: Icon(
-                        item.icon,
-                        size: 18,
-                        color: const Color(0xFF3D4A63),
-                      ),
-                    ),
-                    const SizedBox(width: 13),
-                    Expanded(
-                      child: Text(
-                        item.label,
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.5,
-                          color: Color(0xFF080F1E),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? const Color(0x40000000) : const Color(0x07001540),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: items.asMap().entries.map((e) {
+          final i = e.key;
+          final item = e.value;
+          return Column(
+            children: [
+              InkWell(
+                onTap: item.onTap,
+                borderRadius: i == 0
+                    ? const BorderRadius.vertical(top: Radius.circular(20))
+                    : i == items.length - 1
+                    ? const BorderRadius.vertical(bottom: Radius.circular(20))
+                    : BorderRadius.zero,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 16,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E2B45)
+                              : const Color(0xFF9AA3B2).withOpacity(0.09),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Icon(
+                          item.icon,
+                          size: 18,
+                          color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
                         ),
                       ),
-                    ),
-                    item.trailing ??
-                        const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 13,
-                          color: Color(0xFF9AA3B2),
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Text(
+                          item.label,
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
+                          ),
                         ),
-                  ],
+                      ),
+                      item.trailing ??
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 13,
+                            color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
+                          ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            if (i < items.length - 1)
-              Container(
-                height: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 18),
-                color: const Color(0x08000000),
-              ),
-          ],
-        );
-      }).toList(),
-    ),
-  );
+              if (i < items.length - 1)
+                Container(
+                  height: 1,
+                  margin: const EdgeInsets.symmetric(horizontal: 18),
+                  color: isDark ? const Color(0x1AFFFFFF) : const Color(0x08000000),
+                ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
 }
 
 class _MenuItem {

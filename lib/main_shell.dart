@@ -12,6 +12,7 @@ import 'screens/post_calendar_screen.dart';
 import 'services/session_store.dart';
 import 'widgets/floating_message_button.dart';
 import 'widgets/sla_guidelines_sheet.dart';
+import 'services/in_app_notification_service.dart';
 
 class MainShell extends StatefulWidget {
   final int initialIndex;
@@ -38,10 +39,14 @@ class _MainShellState extends State<MainShell> {
     super.initState();
     _activatedTabs.add(widget.initialIndex);
     _indexNotifier = ValueNotifier<int>(widget.initialIndex);
+    if (SessionStore.isLoggedIn) {
+      InAppNotificationService.startListening();
+    }
   }
 
   @override
   void dispose() {
+    InAppNotificationService.stopListening();
     _indexNotifier.dispose();
     super.dispose();
   }

@@ -18,7 +18,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
   DateTime? _selectedDate;
   bool _isMonthView = true;
   final List<_CalendarPost> _posts = [];
-  bool _isPublicCalendar = false;
+  bool _isPublicCalendar = SessionStore.isAdmin;
   bool _isLoading = false;
   String? _loadError;
 
@@ -121,7 +121,7 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
     bool updateToggle = false,
     bool showLoading = true,
   }) async {
-    final publicView = forcePublicView ?? _isPublicCalendar;
+    final publicView = SessionStore.isAdmin ? true : (forcePublicView ?? _isPublicCalendar);
     if (showLoading && mounted) {
       setState(() {
         _isLoading = true;
@@ -290,8 +290,8 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Public banner
-                            if (_isPublicCalendar) _buildPublicBanner(),
+                            // Public banner (only relevant for requestor)
+                            if (_isPublicCalendar && !SessionStore.isAdmin) _buildPublicBanner(),
 
                             // Calendar card
                             _buildCalendarCard(),
@@ -312,14 +312,18 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                                   ? CrossFadeState.showFirst
                                   : CrossFadeState.showSecond,
                               firstChild: _SectionLabel(
-                                text: _isPublicCalendar
-                                    ? 'PUBLIC POSTS ON ${_selectedDate?.month}/${_selectedDate?.day}'
-                                    : 'YOUR POSTS ON ${_selectedDate?.month}/${_selectedDate?.day}',
+                                text: SessionStore.isAdmin
+                                    ? 'SCHEDULED POSTS ON ${_selectedDate?.month}/${_selectedDate?.day}'
+                                    : (_isPublicCalendar
+                                        ? 'PUBLIC POSTS ON ${_selectedDate?.month}/${_selectedDate?.day}'
+                                        : 'YOUR POSTS ON ${_selectedDate?.month}/${_selectedDate?.day}'),
                               ),
                               secondChild: _SectionLabel(
-                                text: _isPublicCalendar
-                                    ? 'UPCOMING PUBLIC POSTS'
-                                    : 'YOUR UPCOMING POSTS',
+                                text: SessionStore.isAdmin
+                                    ? 'ALL UPCOMING POSTS'
+                                    : (_isPublicCalendar
+                                        ? 'UPCOMING PUBLIC POSTS'
+                                        : 'YOUR UPCOMING POSTS'),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -407,9 +411,11 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
                     ],
                   ],
                 ),
-                const Text(
-                  'Schedule and track your posts',
-                  style: TextStyle(
+                Text(
+                  SessionStore.isAdmin
+                      ? 'Schedule and track all campus posts'
+                      : 'Schedule and track your posts',
+                  style: const TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 12,
                     color: Color(0xFF9AA3B2),
@@ -418,45 +424,46 @@ class _PostCalendarScreenState extends State<PostCalendarScreen>
               ],
             ),
           ),
-          // Public toggle
-          Row(
-            children: [
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: TextStyle(
-                  fontFamily: 'DM Sans',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                  color: _isPublicCalendar
-                      ? const Color(0xFF002366)
-                      : const Color(0xFF9AA3B2),
+          // Public toggle (Hidden for Admin because Admin sees all posts by default)
+          if (!SessionStore.isAdmin)
+            Row(
+              children: [
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: _isPublicCalendar
+                        ? const Color(0xFF002366)
+                        : const Color(0xFF9AA3B2),
+                  ),
+                  child: const Text('Public'),
                 ),
-                child: const Text('Public'),
-              ),
-              Transform.scale(
-                scale: 0.8,
-                child: Switch(
-                  value: _isPublicCalendar,
-                  onChanged: (val) async {
-                    try {
-                      await ApiService.updatePublicCalendar(
-                        userId: SessionStore.userId ?? 0,
-                        isPublic: val,
+                Transform.scale(
+                  scale: 0.8,
+                  child: Switch(
+                    value: _isPublicCalendar,
+                    onChanged: (val) async {
+                      try {
+                        await ApiService.updatePublicCalendar(
+                          userId: SessionStore.userId ?? 0,
+                          isPublic: val,
+                        );
+                      } catch (_) {}
+                      await _loadScheduledPosts(
+                        forcePublicView: val,
+                        updateToggle: true,
                       );
-                    } catch (_) {}
-                    await _loadScheduledPosts(
-                      forcePublicView: val,
-                      updateToggle: true,
-                    );
-                  },
-                  activeColor: const Color(0xFF002366),
-                  activeTrackColor: const Color(0xFF002366).withOpacity(0.3),
-                  inactiveThumbColor: const Color(0xFF9AA3B2),
-                  inactiveTrackColor: const Color(0xFFE9EDF6),
+                    },
+                    activeColor: const Color(0xFF002366),
+                    activeTrackColor: const Color(0xFF002366).withOpacity(0.3),
+                    inactiveThumbColor: const Color(0xFF9AA3B2),
+                    inactiveTrackColor: const Color(0xFFE9EDF6),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

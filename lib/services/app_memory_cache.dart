@@ -53,6 +53,39 @@ class AppMemoryCache {
     notificationsRevision.value++;
   }
 
+  // ── Requestor Sequence Map (Request #1, #2...) ───────────────────────────
+  static final Map<int, int> userRequestSequenceMap = {};
+
+  static void updateUserRequestSequence(List<Map<String, dynamic>> allUserRequests) {
+    final sorted = List<Map<String, dynamic>>.from(allUserRequests)
+      ..sort((a, b) {
+        final idA = (a['id'] as num?)?.toInt() ?? 0;
+        final idB = (b['id'] as num?)?.toInt() ?? 0;
+        return idA.compareTo(idB);
+      });
+    for (int i = 0; i < sorted.length; i++) {
+      final id = (sorted[i]['id'] as num?)?.toInt() ?? 0;
+      if (id > 0) {
+        userRequestSequenceMap[id] = i + 1; // 1-indexed
+      }
+    }
+  }
+
+  static String getDisplayRequestNumber({
+    required int id,
+    required String rawNumber,
+    required bool isAdmin,
+  }) {
+    if (isAdmin) {
+      return rawNumber.isEmpty ? 'REQ-$id' : rawNumber;
+    }
+    final seq = userRequestSequenceMap[id];
+    if (seq != null) {
+      return 'Request #$seq';
+    }
+    return rawNumber.isEmpty ? 'REQ-$id' : rawNumber;
+  }
+
   // ── Complete Purge (On Logout) ────────────────────────────────────────────
   static void clear() {
     requests = null;
@@ -64,5 +97,6 @@ class AppMemoryCache {
     calendarPosts = null;
     calendarMonth = null;
     calendarYear = null;
+    userRequestSequenceMap.clear();
   }
 }

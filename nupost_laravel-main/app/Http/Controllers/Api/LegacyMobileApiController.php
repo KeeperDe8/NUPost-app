@@ -400,21 +400,38 @@ class LegacyMobileApiController extends Controller
         $table = $this->requestsTable();
         $requester = (string) ($user->name ?? '');
 
-        $total = DB::table($table)->where('requester', $requester)->count();
-        $approved = DB::table($table)
-            ->where('requester', $requester)
-            ->where('status', 'Approved')
-            ->count();
-        $pending = DB::table($table)
-            ->where('requester', $requester)
-            ->where(function ($q) {
-                $q->where('status', 'Pending')
-                    ->orWhere('status', 'Pending Review')
-                    ->orWhere('status', 'Under Review')
-                    ->orWhereNull('status')
-                    ->orWhere('status', '');
-            })
-            ->count();
+        $isAdmin = (strtolower(trim((string) ($user->role ?? ''))) === 'admin');
+        if ($isAdmin) {
+            $total = DB::table($table)->count();
+            $approved = DB::table($table)
+                ->whereIn('status', ['Approved', 'Posted'])
+                ->count();
+            $pending = DB::table($table)
+                ->where(function ($q) {
+                    $q->where('status', 'Pending')
+                        ->orWhere('status', 'Pending Review')
+                        ->orWhere('status', 'Under Review')
+                        ->orWhereNull('status')
+                        ->orWhere('status', '');
+                })
+                ->count();
+        } else {
+            $total = DB::table($table)->where('requester', $requester)->count();
+            $approved = DB::table($table)
+                ->where('requester', $requester)
+                ->where('status', 'Approved')
+                ->count();
+            $pending = DB::table($table)
+                ->where('requester', $requester)
+                ->where(function ($q) {
+                    $q->where('status', 'Pending')
+                        ->orWhere('status', 'Pending Review')
+                        ->orWhere('status', 'Under Review')
+                        ->orWhereNull('status')
+                        ->orWhere('status', '');
+                })
+                ->count();
+        }
 
         return response()->json([
             'success' => true,
@@ -1389,15 +1406,25 @@ class LegacyMobileApiController extends Controller
         }
 
         if (Schema::hasTable('request_comments')) {
+            $selectCols = ['sender_name', 'message', 'created_at'];
+            if (Schema::hasColumn('request_comments', 'sender_role')) {
+                $selectCols[] = 'sender_role';
+            }
             $activities = $activities->merge(
                 DB::table('request_comments')
                     ->where('request_id', $requestId)
                     ->orderBy('created_at')
-                    ->get(['sender_name', 'message', 'created_at'])
+                    ->get($selectCols)
                     ->map(function ($c) {
+                        $role = strtolower(trim((string) ($c->sender_role ?? '')));
+                        $name = trim((string) ($c->sender_name ?? ''));
+                        if ($role === '') {
+                            $role = (stripos($name, 'admin') !== false) ? 'admin' : 'requestor';
+                        }
                         return [
-                            'actor' => (string) ($c->sender_name ?? ''),
-                            'action' => 'Internal note: ' . (string) ($c->message ?? ''),
+                            'actor' => $name !== '' ? $name : ($role === 'admin' ? 'System Admin' : 'Requestor'),
+                            'role' => $role,
+                            'action' => (string) ($c->message ?? ''),
                             'created_at' => (string) ($c->created_at ?? ''),
                         ];
                     })
@@ -1648,10 +1675,17 @@ class LegacyMobileApiController extends Controller
             ], 404);
         }
 
+        $userRole = strtolower(trim((string) ($user->role ?? 'requestor')));
+        $senderRole = ($userRole === 'admin') ? 'admin' : 'requestor';
+        $senderName = trim((string) ($user->name ?? ''));
+        if ($senderName === '') {
+            $senderName = ($senderRole === 'admin') ? 'System Admin' : 'Requestor';
+        }
+
         $payload = [
             'request_id' => $requestId,
-            'sender_role' => 'requestor',
-            'sender_name' => (string) ($user->name ?? ''),
+            'sender_role' => $senderRole,
+            'sender_name' => $senderName,
             'message' => $message,
             'created_at' => now(),
         ];
@@ -1665,8 +1699,8 @@ class LegacyMobileApiController extends Controller
         if (Schema::hasTable('request_activity')) {
             $activity = [
                 'request_id' => $requestId,
-                'actor' => (string) ($user->name ?? ''),
-                'action' => 'Requestor message: ' . $message,
+                'actor' => $senderName,
+                'action' => ($senderRole === 'admin' ? 'Admin note: ' : 'Requestor message: ') . $message,
                 'created_at' => now(),
             ];
 

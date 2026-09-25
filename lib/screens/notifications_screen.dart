@@ -128,23 +128,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     } catch (_) {}
   }
 
-  Future<void> _markSingleRead(_Notif notif) async {
-    final userId = SessionStore.userId;
-    if (userId == null || notif.isRead) return;
-    try {
-      await ApiService.markNotificationRead(
-        userId: userId,
-        notificationId: notif.id,
-      );
-      if (!mounted) return;
-      setState(() {
-        _notifications = _notifications
-            .map((n) => n.id == notif.id ? n.copyWith(isRead: true) : n)
-            .toList();
-        _unreadCount = (_unreadCount - 1).clamp(0, _notifications.length);
-      });
-    } catch (_) {}
-  }
 
   void _dismissNotif(int id) {
     setState(() {

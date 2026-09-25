@@ -11,12 +11,14 @@ class TrackingEvent {
   final String title;
   final String subtitle;
   final String timestamp;
+  final String? role; // 'admin', 'requestor', 'system'
 
   const TrackingEvent({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.timestamp,
+    this.role,
   });
 }
 
@@ -51,7 +53,9 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   late final Animation<double> _entryFade;
   late final Animation<Offset> _entrySlide;
 
+  // ignore: unused_field
   bool _isLoading = false;
+  // ignore: unused_field
   String? _errorMessage;
 
   String _dynamicTitle = '';
@@ -111,7 +115,6 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
       _isLoading = true;
       _errorMessage = null;
     });
-
     try {
       final res = await ApiService.fetchRequestDetails(requestId: widget.requestId!);
       final data = (res['data'] as Map<String, dynamic>?) ?? {};
@@ -125,9 +128,34 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
       String foundNote = '';
       for (final a in rawActs) {
         final actMap = a as Map<String, dynamic>;
-        final actStr = (actMap['action'] ?? '').toString();
+        var actStr = (actMap['action'] ?? '').toString();
+        var actor = (actMap['actor'] ?? '').toString().trim();
+        var role = (actMap['role'] ?? '').toString().toLowerCase().trim();
+
+        if (actor.isEmpty) {
+          actor = (role == 'admin') ? 'System Admin' : 'Requestor';
+        }
+
+        if (role.isEmpty) {
+          final lowerActor = actor.toLowerCase();
+          final lowerAct = actStr.toLowerCase();
+          if (lowerActor.contains('admin') || lowerAct.contains('admin note:')) {
+            role = 'admin';
+          } else if (lowerActor.contains('system')) {
+            role = 'system';
+          } else {
+            role = 'requestor';
+          }
+        }
+
+        // Clean up message prefixes for cleaner display
         if (actStr.startsWith('Internal note:')) {
           foundNote = actStr.substring('Internal note:'.length).trim();
+          actStr = foundNote;
+        } else if (actStr.startsWith('Admin note:')) {
+          actStr = actStr.substring('Admin note:'.length).trim();
+        } else if (actStr.startsWith('Requestor message:')) {
+          actStr = actStr.substring('Requestor message:'.length).trim();
         } else if (foundNote.isEmpty && actStr.toLowerCase().contains('rejected')) {
           final parts = actStr.split(':');
           if (parts.length > 1) {
@@ -137,9 +165,10 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
 
         eventsList.add(TrackingEvent(
           icon: _iconForAction(actStr),
-          title: (actMap['actor'] ?? 'System').toString(),
+          title: actor,
           subtitle: actStr,
           timestamp: (actMap['created_at'] ?? '').toString(),
+          role: role,
         ));
       }
 
@@ -937,7 +966,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     final current = _progressStep;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -964,113 +993,134 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: steps.asMap().entries.map((entry) {
-              final i = entry.key;
-              final label = entry.value;
-              final isDone = i <= current;
-              final isActive = i == current;
-              final isLast = i == steps.length - 1;
-
-              return Expanded(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          // Step circle
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: isActive ? 34 : 28,
-                            height: isActive ? 34 : 28,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stepWidth = constraints.maxWidth / steps.length;
+              return Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  // Connector track behind the circles
+                  Positioned(
+                    top: 15,
+                    left: stepWidth / 2,
+                    right: stepWidth / 2,
+                    child: Row(
+                      children: List.generate(steps.length - 1, (i) {
+                        final isPassed = i < current;
+                        return Expanded(
+                          child: Container(
+                            height: 2.5,
                             decoration: BoxDecoration(
-                              gradient: isDone
+                              borderRadius: BorderRadius.circular(2),
+                              gradient: isPassed
                                   ? const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
                                       colors: [
                                         Color(0xFF001540),
                                         Color(0xFF1A4FCC),
                                       ],
                                     )
                                   : null,
-                              color: isDone ? null : const Color(0xFFE9EDF6),
-                              shape: BoxShape.circle,
-                              boxShadow: isActive
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF001540,
-                                        ).withOpacity(0.3),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: Center(
-                              child: isDone
-                                  ? Icon(
-                                      isActive
-                                          ? Icons.radio_button_checked_rounded
-                                          : Icons.check_rounded,
-                                      color: Colors.white,
-                                      size: isActive ? 18 : 14,
-                                    )
-                                  : Text(
-                                      '${i + 1}',
-                                      style: const TextStyle(
-                                        fontFamily: 'DM Sans',
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 11,
-                                        color: Color(0xFF9AA3B2),
-                                      ),
-                                    ),
+                              color: isPassed ? null : const Color(0xFFE9EDF6),
                             ),
                           ),
-                          const SizedBox(height: 7),
-                          Text(
-                            label,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'DM Sans',
-                              fontWeight: isDone
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              fontSize: 9.5,
-                              color: isDone
-                                  ? const Color(0xFF080F1E)
-                                  : const Color(0xFF9AA3B2),
-                              letterSpacing: 0.1,
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      }),
                     ),
-                    // Connector line
-                    if (!isLast)
-                      Expanded(
-                        child: Container(
-                          height: 2.5,
-                          margin: const EdgeInsets.only(bottom: 22),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(2),
-                            gradient: i < current
-                                ? const LinearGradient(
-                                    colors: [
-                                      Color(0xFF001540),
-                                      Color(0xFF1A4FCC),
-                                    ],
-                                  )
-                                : null,
-                            color: i < current ? null : const Color(0xFFE9EDF6),
-                          ),
+                  ),
+                  // The 4 step nodes
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: steps.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final label = entry.value;
+                      final isDone = i <= current;
+                      final isActive = i == current;
+
+                      return Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Step circle
+                            SizedBox(
+                              width: 34,
+                              height: 34,
+                              child: Center(
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  width: isActive ? 34 : 28,
+                                  height: isActive ? 34 : 28,
+                                  decoration: BoxDecoration(
+                                    gradient: isDone
+                                        ? const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFF001540),
+                                              Color(0xFF1A4FCC),
+                                            ],
+                                          )
+                                        : null,
+                                    color: isDone ? null : const Color(0xFFE9EDF6),
+                                    shape: BoxShape.circle,
+                                    boxShadow: isActive
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF001540).withValues(alpha: 0.3),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Center(
+                                    child: isDone
+                                        ? Icon(
+                                            isActive
+                                                ? Icons.radio_button_checked_rounded
+                                                : Icons.check_rounded,
+                                            color: Colors.white,
+                                            size: isActive ? 18 : 14,
+                                          )
+                                        : Text(
+                                            '${i + 1}',
+                                            style: const TextStyle(
+                                              fontFamily: 'DM Sans',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 11,
+                                              color: Color(0xFF9AA3B2),
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 7),
+                            Text(
+                              label,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.visible,
+                              softWrap: false,
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontWeight: isDone
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                fontSize: 10,
+                                color: isDone
+                                    ? const Color(0xFF080F1E)
+                                    : const Color(0xFF9AA3B2),
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                  ],
-                ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               );
-            }).toList(),
+            },
           ),
         ],
       ),
@@ -1366,17 +1416,55 @@ class _TimelineItem extends StatelessWidget {
                                 Row(
                                   children: [
                                     Expanded(
-                                      child: Text(
-                                        event.title,
-                                        style: TextStyle(
-                                          fontFamily: 'DM Sans',
-                                          fontWeight: isFirst
-                                              ? FontWeight.w800
-                                              : FontWeight.w700,
-                                          fontSize: 14.5,
-                                          color: const Color(0xFF080F1E),
-                                          letterSpacing: -0.2,
-                                        ),
+                                      child: Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              event.title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontFamily: 'DM Sans',
+                                                fontWeight: isFirst
+                                                    ? FontWeight.w800
+                                                    : FontWeight.w700,
+                                                fontSize: 14.5,
+                                                color: const Color(0xFF080F1E),
+                                                letterSpacing: -0.2,
+                                              ),
+                                            ),
+                                          ),
+                                          if ((event.role ?? '').toLowerCase() == 'admin' ||
+                                              (event.role ?? '').toLowerCase() == 'requestor') ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 7,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: (event.role?.toLowerCase() == 'admin')
+                                                    ? const Color(0xFF002366)
+                                                    : const Color(0xFFEFF6FF),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                (event.role?.toLowerCase() == 'admin')
+                                                    ? 'ADMIN'
+                                                    : 'REQUESTOR',
+                                                style: TextStyle(
+                                                  fontFamily: 'DM Sans',
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 9,
+                                                  color: (event.role?.toLowerCase() == 'admin')
+                                                      ? const Color(0xFFFFD400)
+                                                      : const Color(0xFF2563EB),
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
                                     if (isFirst)
@@ -1386,7 +1474,7 @@ class _TimelineItem extends StatelessWidget {
                                           vertical: 3,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: _iconColor.withOpacity(0.1),
+                                          color: _iconColor.withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(
                                             99,
                                           ),
