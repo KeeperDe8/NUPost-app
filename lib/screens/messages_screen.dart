@@ -82,10 +82,12 @@ class _MessagesScreenState extends State<MessagesScreen>
       AppMemoryCache.messageThreads = rows.whereType<Map<String, dynamic>>().toList();
 
       // Calculate unread counts locally
+      final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
       final updatedThreads = <_ThreadItem>[];
       for (var t in fetchedThreads) {
         final lastReadId = await ChatReadStore.getLastReadId(t.requestId);
-        final isUnread = t.lastMessageId > lastReadId && t.lastSenderRole == 'admin';
+        final isUnread = t.lastMessageId > lastReadId &&
+            (isAdmin ? t.lastSenderRole != 'admin' : t.lastSenderRole == 'admin');
         updatedThreads.add(t.copyWith(unreadCount: isUnread ? 1 : 0));
       }
 
@@ -105,8 +107,11 @@ class _MessagesScreenState extends State<MessagesScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageBg = isDark ? const Color(0xFF090D16) : AppColors.pageBg;
+
     return Scaffold(
-      backgroundColor: AppColors.pageBg,
+      backgroundColor: pageBg,
       body: Stack(
         children: [
           FadeTransition(
@@ -114,54 +119,55 @@ class _MessagesScreenState extends State<MessagesScreen>
             child: SlideTransition(
               position: _entrySlide,
               child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: _isLoading
-                    ? ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
-                        itemCount: 5,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, __) => const MessageThreadSkeleton(),
-                      )
-                    : _error != null
-                    ? _buildError()
-                    : _threads.isEmpty
-                    ? _buildEmpty()
-                    : RefreshIndicator(
-                        onRefresh: _loadThreads,
-                        color: AppColors.primary,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
-                          itemCount: _threads.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 10),
-                          itemBuilder: (_, i) => _StaggerItem(
-                            controller: _staggerCtrl,
-                            index: i,
-                            total: _threads.length,
-                            child: _ThreadCard(
-                              item: _threads[i],
-                              onTap: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => MessageThreadScreen(
-                                      requestId: _threads[i].requestId,
-                                      requestCode: _threads[i].requestCode,
-                                      requestTitle: _threads[i].requestTitle,
-                                      requestStatus: _threads[i].requestStatus,
-                                    ),
-                                  ),
-                                );
-                                _loadThreads();
-                              },
+                children: [
+                  _buildHeader(isDark),
+                  Expanded(
+                    child: _isLoading
+                        ? ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
+                            itemCount: 5,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (_, __) => const MessageThreadSkeleton(),
+                          )
+                        : _error != null
+                        ? _buildError(isDark)
+                        : _threads.isEmpty
+                        ? _buildEmpty(isDark)
+                        : RefreshIndicator(
+                            onRefresh: _loadThreads,
+                            color: AppColors.accent,
+                            child: ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
+                              itemCount: _threads.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (_, i) => _StaggerItem(
+                                controller: _staggerCtrl,
+                                index: i,
+                                total: _threads.length,
+                                child: _ThreadCard(
+                                  item: _threads[i],
+                                  isDark: isDark,
+                                  onTap: () async {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => MessageThreadScreen(
+                                          requestId: _threads[i].requestId,
+                                          requestCode: _threads[i].requestCode,
+                                          requestTitle: _threads[i].requestTitle,
+                                          requestStatus: _threads[i].requestStatus,
+                                        ),
+                                      ),
+                                    );
+                                    _loadThreads(showLoading: false);
+                                  },
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                  ),
+                ],
               ),
-            ],
-          ),
             ),
           ),
         ],
@@ -170,17 +176,24 @@ class _MessagesScreenState extends State<MessagesScreen>
   }
 
   // ── Header ────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
+    final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
+
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0x0F000000), width: 1)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x0F000000),
+            width: 1,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? const Color(0x40000000) : const Color(0x07001540),
             blurRadius: 12,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -207,18 +220,20 @@ class _MessagesScreenState extends State<MessagesScreen>
               height: 42,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFF002366).withOpacity(0.07),
+                color: isDark
+                    ? const Color(0xFF1E2B45)
+                    : const Color(0xFF002366).withOpacity(0.07),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back_ios_new_rounded,
                 size: 16,
-                color: Color(0xFF002366),
+                color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
               ),
             ),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -228,17 +243,19 @@ class _MessagesScreenState extends State<MessagesScreen>
                     fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w900,
                     fontSize: 22,
-                    color: Color(0xFF002366),
+                    color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF002366),
                     letterSpacing: -0.4,
                   ),
                 ),
                 Text(
-                  'Request conversations with admin',
+                  isAdmin
+                      ? 'Conversations with requesters'
+                      : 'Request conversations with admin',
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w400,
                     fontSize: 12,
-                    color: Color(0xFF9AA3B2),
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
                   ),
                 ),
               ],
@@ -251,13 +268,15 @@ class _MessagesScreenState extends State<MessagesScreen>
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: const Color(0xFF002366).withOpacity(0.07),
+                color: isDark
+                    ? const Color(0xFF1E2B45)
+                    : const Color(0xFF002366).withOpacity(0.07),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.refresh_rounded,
                 size: 18,
-                color: Color(0xFF002366),
+                color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
               ),
             ),
           ),
@@ -267,7 +286,7 @@ class _MessagesScreenState extends State<MessagesScreen>
   }
 
   // ── Error ─────────────────────────────────────────────────────────────────
-  Widget _buildError() {
+  Widget _buildError(bool isDark) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -291,10 +310,10 @@ class _MessagesScreenState extends State<MessagesScreen>
             Text(
               _error ?? 'Something went wrong.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 14,
-                color: Color(0xFF3D4A63),
+                color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF3D4A63),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -330,7 +349,9 @@ class _MessagesScreenState extends State<MessagesScreen>
   }
 
   // ── Empty ─────────────────────────────────────────────────────────────────
-  Widget _buildEmpty() {
+  Widget _buildEmpty(bool isDark) {
+    final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 36),
@@ -341,34 +362,38 @@ class _MessagesScreenState extends State<MessagesScreen>
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFF9AA3B2).withOpacity(0.08),
+                color: isDark
+                    ? const Color(0xFF1E2B45).withOpacity(0.5)
+                    : const Color(0xFF9AA3B2).withOpacity(0.08),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.forum_rounded,
                 size: 34,
-                color: Color(0xFF9AA3B2),
+                color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF9AA3B2),
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'No conversations yet',
               style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w700,
                 fontSize: 16,
-                color: Color(0xFF3D4A63),
+                color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF3D4A63),
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'When admin replies to your requests, conversations will appear here.',
+            Text(
+              isAdmin
+                  ? 'When requestors send messages or comments, their conversation threads will appear here for you to reply.'
+                  : 'When admin replies to your requests, conversations will appear here.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w400,
                 fontSize: 13,
-                color: Color(0xFF9AA3B2),
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
                 height: 1.55,
               ),
             ),
@@ -382,8 +407,13 @@ class _MessagesScreenState extends State<MessagesScreen>
 // ── Thread Card ───────────────────────────────────────────────────────────────
 class _ThreadCard extends StatelessWidget {
   final _ThreadItem item;
+  final bool isDark;
   final VoidCallback onTap;
-  const _ThreadCard({required this.item, required this.onTap});
+  const _ThreadCard({
+    required this.item,
+    required this.isDark,
+    required this.onTap,
+  });
 
   String _formatTime(String raw) {
     if (raw.isEmpty) return '';
@@ -414,6 +444,20 @@ class _ThreadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasUnread = item.unreadCount > 0;
+    final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
+
+    final cardBg = isDark
+        ? (hasUnread ? const Color(0xFF1E2D4A) : const Color(0xFF131D31))
+        : (hasUnread ? const Color(0xFFF0F5FF) : Colors.white);
+
+    final borderColor = isDark
+        ? (hasUnread ? const Color(0xFF3B82F6) : const Color(0xFF1E2B45))
+        : (hasUnread ? const Color(0xFF2B5CE6).withOpacity(0.2) : const Color(0x0E000000));
+
+    final titleColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E);
+    final snippetColor = isDark
+        ? const Color(0xFF94A3B8)
+        : (hasUnread ? const Color(0xFF3D4A63) : const Color(0xFF9AA3B2));
 
     return Hero(
       tag: 'thread-${item.requestId}',
@@ -421,7 +465,7 @@ class _ThreadCard extends StatelessWidget {
         color: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardBg,
             borderRadius: BorderRadius.circular(20),
           ),
         ),
@@ -430,216 +474,239 @@ class _ThreadCard extends StatelessWidget {
         color: Colors.transparent,
         child: GestureDetector(
           onTap: onTap,
-          child: _threadCard(item, hasUnread),
-        ),
-      ),
-    );
-  }
-
-  Widget _threadCard(_ThreadItem item, bool hasUnread) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: hasUnread ? const Color(0xFFF0F5FF) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: hasUnread
-              ? const Color(0xFF2B5CE6).withOpacity(0.2)
-              : const Color(0x0E000000),
-          width: hasUnread ? 1.5 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF001540).withOpacity(hasUnread ? 0.07 : 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Avatar with initials
-          Container(
-            width: 46,
-            height: 46,
+          child: Container(
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF001540), Color(0xFF1A4FCC)],
+              color: cardBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: borderColor,
+                width: hasUnread ? 1.5 : 1,
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x28001540),
-                  blurRadius: 8,
-                  offset: Offset(0, 3),
+                  color: isDark
+                      ? const Color(0x30000000)
+                      : const Color(0xFF001540).withOpacity(hasUnread ? 0.07 : 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.chat_bubble_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.requestTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontWeight: hasUnread
-                              ? FontWeight.w800
-                              : FontWeight.w700,
-                          fontSize: 14.5,
-                          color: const Color(0xFF080F1E),
-                          letterSpacing: -0.1,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _formatTime(item.lastMessageAt),
-                      style: const TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 10.5,
-                        color: Color(0xFF9AA3B2),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    // Request code
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE9EDF6),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        item.requestCode.isEmpty
-                            ? 'REQ-${item.requestId.toString().padLeft(5, '0')}'
-                            : item.requestCode,
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF3D4A63),
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Status dot
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _statusColor(item.requestStatus),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      item.requestStatus,
-                      style: TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: _statusColor(item.requestStatus),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  item.lastMessage,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
-                    fontSize: 12.5,
-                    color: hasUnread
-                        ? const Color(0xFF3D4A63)
-                        : const Color(0xFF9AA3B2),
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (hasUnread)
+                // Avatar with initials
                 Container(
-                  constraints: const BoxConstraints(
-                    minWidth: 22,
-                    minHeight: 22,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
-                  ),
+                  width: 46,
+                  height: 46,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2B5CE6),
-                    borderRadius: BorderRadius.circular(99),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF001540), Color(0xFF1A4FCC)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: const [
                       BoxShadow(
-                        color: Color(0x402B5CE6),
+                        color: Color(0x28001540),
                         blurRadius: 8,
-                        offset: Offset(0, 2),
+                        offset: Offset(0, 3),
                       ),
                     ],
                   ),
-                  child: Text(
-                    item.unreadCount > 99 ? '99+' : '${item.unreadCount}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontWeight: FontWeight.w900,
-                      fontSize: 10,
-                      color: Colors.white,
-                    ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.chat_bubble_rounded,
+                    color: Colors.white,
+                    size: 20,
                   ),
-                )
-              else
-                const SizedBox(height: 22),
-              const SizedBox(height: 10),
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF002366).withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(9),
                 ),
-                child: const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 12,
-                  color: Color(0xFF002366),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.requestTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontWeight: hasUnread
+                                    ? FontWeight.w800
+                                    : FontWeight.w700,
+                                fontSize: 14.5,
+                                color: titleColor,
+                                letterSpacing: -0.1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatTime(item.lastMessageAt),
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 10.5,
+                              color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      // Meta row: Requester name + Request Code + Status
+                      Row(
+                        children: [
+                          if (isAdmin && item.requester.isNotEmpty) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              margin: const EdgeInsets.only(right: 6),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF1E293B)
+                                    : const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.person_rounded,
+                                    size: 10,
+                                    color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF3B82F6),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    item.requester,
+                                    style: TextStyle(
+                                      fontFamily: 'DM Sans',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 10,
+                                      color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          if (item.requestCode.isNotEmpty) ...[
+                            Text(
+                              item.requestCode,
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 3,
+                              height: 3,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: _statusColor(item.requestStatus).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              item.requestStatus,
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 9.5,
+                                color: _statusColor(item.requestStatus),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        item.lastMessage,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+                          fontSize: 12.5,
+                          color: snippetColor,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (hasUnread)
+                      Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 22,
+                          minHeight: 22,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2B5CE6),
+                          borderRadius: BorderRadius.circular(99),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x402B5CE6),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          item.unreadCount > 99 ? '99+' : '${item.unreadCount}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 22),
+                    const SizedBox(height: 10),
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1E2B45)
+                            : const Color(0xFF002366).withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 12,
+                        color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -648,8 +715,10 @@ class _ThreadCard extends StatelessWidget {
 // ── Stagger animation ─────────────────────────────────────────────────────────
 class _StaggerItem extends StatelessWidget {
   final AnimationController? controller;
-  final int index, total;
+  final int index;
+  final int total;
   final Widget child;
+
   const _StaggerItem({
     required this.controller,
     required this.index,
@@ -690,6 +759,8 @@ class _ThreadItem {
   final String requestCode;
   final String requestTitle;
   final String requestStatus;
+  final String requester;
+  final String category;
   final String lastMessage;
   final String lastMessageAt;
   final int lastMessageId;
@@ -701,6 +772,8 @@ class _ThreadItem {
     required this.requestCode,
     required this.requestTitle,
     required this.requestStatus,
+    required this.requester,
+    required this.category,
     required this.lastMessage,
     required this.lastMessageAt,
     required this.lastMessageId,
@@ -713,6 +786,8 @@ class _ThreadItem {
     requestCode: requestCode,
     requestTitle: requestTitle,
     requestStatus: requestStatus,
+    requester: requester,
+    category: category,
     lastMessage: lastMessage,
     lastMessageAt: lastMessageAt,
     lastMessageId: lastMessageId,
@@ -725,6 +800,8 @@ class _ThreadItem {
     requestCode: (json['request_code'] ?? '').toString(),
     requestTitle: (json['request_title'] ?? '').toString(),
     requestStatus: (json['request_status'] ?? 'Pending').toString(),
+    requester: (json['requester'] ?? '').toString(),
+    category: (json['category'] ?? '').toString(),
     lastMessage: (json['last_message'] ?? '').toString(),
     lastMessageAt: (json['last_message_at'] ?? '').toString(),
     lastMessageId: (json['last_message_id'] as num?)?.toInt() ?? 0,

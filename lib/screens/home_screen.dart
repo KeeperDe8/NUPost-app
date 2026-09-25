@@ -121,9 +121,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: AppColors.pageBg,
+      backgroundColor: isDark ? const Color(0xFF090D16) : AppColors.pageBg,
       body: ClipRect(
         child: Stack(
         children: [
@@ -140,12 +142,12 @@ class _HomeScreenState extends State<HomeScreen>
                         children: [
                           _buildHero(),
                           const SizedBox(height: 18),
-                          _buildApprovalBanner(),
+                          _buildApprovalBanner(isDark),
                           const SizedBox(height: 18),
-                          _buildQuickActions(),
+                          _buildQuickActions(isDark),
                           _buildSectionHeader('Recent Requests', 'View all',
                               onActionTap: () => MainShell.switchTo(context, 1)),
-                          _buildRecentRequests(),
+                          _buildRecentRequests(isDark),
                           const SizedBox(height: 100),
                         ],
                       ),
@@ -346,19 +348,25 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ── Approval Banner ───────────────────────────────────────────────────────
-  Widget _buildApprovalBanner() {
+  Widget _buildApprovalBanner(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF1E2838), const Color(0xFF16202E)]
+                : [const Color(0xFFFFFBEB), const Color(0xFFFEF3C7)],
           ),
-          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.22)),
+          border: Border.all(
+            color: isDark
+                ? const Color(0xFFF59E0B).withOpacity(0.3)
+                : const Color(0xFFF59E0B).withOpacity(0.22),
+          ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFF59E0B).withOpacity(0.08),
+              color: isDark ? const Color(0x30000000) : const Color(0xFFF59E0B).withOpacity(0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -393,25 +401,25 @@ class _HomeScreenState extends State<HomeScreen>
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'AVG. APPROVAL TIME',
                     style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF92400E),
+                      color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF92400E),
                       letterSpacing: 0.8,
                     ),
                   ),
-                  SizedBox(height: 3),
+                  const SizedBox(height: 3),
                   Text(
                     '— days',
                     style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF78350F),
+                      color: isDark ? Colors.white : const Color(0xFF78350F),
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -425,7 +433,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ── Quick Actions ─────────────────────────────────────────────────────────
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -437,17 +445,19 @@ class _HomeScreenState extends State<HomeScreen>
               child: Container(
                 height: 48,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF001540), Color(0xFF003080)],
+                    colors: isDark
+                        ? [const Color(0xFF1E3A8A), const Color(0xFF2563EB)]
+                        : [const Color(0xFF001540), const Color(0xFF003080)],
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(
-                      color: Color(0x45001540),
+                      color: isDark ? const Color(0x40000000) : const Color(0x45001540),
                       blurRadius: 16,
-                      offset: Offset(0, 5),
+                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
@@ -472,35 +482,37 @@ class _HomeScreenState extends State<HomeScreen>
               child: Container(
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF131D31) : Colors.white,
                   border: Border.all(
-                    color: const Color(0xFF002366).withOpacity(0.15),
+                    color: isDark
+                        ? const Color(0xFF1E2B45)
+                        : const Color(0xFF002366).withOpacity(0.15),
                     width: 1.5,
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(
-                      color: Color(0x0A001540),
+                      color: isDark ? const Color(0x30000000) : const Color(0x0A001540),
                       blurRadius: 8,
-                      offset: Offset(0, 3),
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 alignment: Alignment.center,
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       Icons.calendar_month_rounded,
                       size: 16,
-                      color: Color(0xFF002366),
+                      color: isDark ? const Color(0xFF90B4CE) : const Color(0xFF002366),
                     ),
-                    SizedBox(width: 5),
+                    const SizedBox(width: 5),
                     Text(
                       'Cal',
                       style: TextStyle(
                         fontFamily: 'DM Sans',
-                        color: Color(0xFF002366),
+                        color: isDark ? Colors.white : const Color(0xFF002366),
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
@@ -620,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ── Recent Requests ────────────────────────────────────────────────────────
-  Widget _buildRecentRequests() {
+  Widget _buildRecentRequests(bool isDark) {
     if (_isLoadingRequests) {
       return Column(
         children: const [
@@ -637,29 +649,29 @@ class _HomeScreenState extends State<HomeScreen>
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 42),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF131D31) : Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0x0F000000)),
-            boxShadow: const [
+            border: Border.all(color: isDark ? const Color(0xFF1E2B45) : const Color(0x0F000000)),
+            boxShadow: [
               BoxShadow(
-                color: Color(0x08001540),
+                color: isDark ? const Color(0x30000000) : const Color(0x08001540),
                 blurRadius: 12,
-                offset: Offset(0, 4),
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: const Column(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.inbox_rounded, size: 42, color: Color(0xFF9AA3B2)),
-              SizedBox(height: 12),
+              Icon(Icons.inbox_rounded, size: 42, color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2)),
+              const SizedBox(height: 12),
               Text(
                 'No requests yet',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF3D4A63),
+                  color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF3D4A63),
                 ),
               ),
             ],
@@ -838,108 +850,112 @@ class _HomeRequestCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0x0E000000)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x07001540),
-          blurRadius: 12,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 4,
-          height: 64,
-          decoration: BoxDecoration(
-            color: _statusColor,
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(4),
-              bottomRight: Radius.circular(4),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? const Color(0x30000000) : const Color(0x07001540),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 4,
+            height: 64,
+            decoration: BoxDecoration(
+              color: _statusColor,
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(4),
+                bottomRight: Radius.circular(4),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 16, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE9EDF6),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      child: Text(
-                        number,
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 10,
-                          color: Color(0xFF9AA3B2),
-                          letterSpacing: 0.3,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 16, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Text(
+                          number,
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10,
+                            color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF9AA3B2),
+                            letterSpacing: 0.3,
+                          ),
                         ),
                       ),
-                    ),
-                    const Spacer(),
-                    _HomeChip(status: status),
-                  ],
-                ),
-                const SizedBox(height: 9),
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: Color(0xFF080F1E),
-                    letterSpacing: -0.2,
-                    height: 1.3,
+                      const Spacer(),
+                      _HomeChip(status: status),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.calendar_today_rounded,
-                      size: 13,
-                      color: Color(0xFF9AA3B2),
+                  const SizedBox(height: 9),
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
+                      letterSpacing: -0.2,
+                      height: 1.3,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${_fmt(submittedAt)}  •  ${platforms.isNotEmpty ? platforms.first : "Facebook"}',
-                      style: const TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF9AA3B2),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 13,
+                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
                       ),
-                    ),
-                    const Spacer(),
-                    _PriorityBadge(priority: priority),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_fmt(submittedAt)}  •  ${platforms.isNotEmpty ? platforms.first : "Facebook"}',
+                        style: TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
+                        ),
+                      ),
+                      const Spacer(),
+                      _PriorityBadge(priority: priority),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _HomeChip extends StatelessWidget {

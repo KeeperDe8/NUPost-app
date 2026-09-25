@@ -295,9 +295,10 @@ class _RequestsScreenState extends State<RequestsScreen>
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFE9EDF6),
+      backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFFE9EDF6),
       body: Stack(
         children: [
           FadeTransition(
@@ -399,21 +400,26 @@ class _RequestsScreenState extends State<RequestsScreen>
                     child: Container(
                       height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF131D31) : Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF1E2B45) : Colors.transparent,
+                        ),
+                        boxShadow: [
                           BoxShadow(
-                            color: Color(0x0A001540),
+                            color: isDark ? const Color(0x30000000) : const Color(0x0A001540),
                             blurRadius: 10,
-                            offset: Offset(0, 2),
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
                       child: TabBar(
                         controller: _tabController,
                         indicator: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF001540), Color(0xFF0032A0)],
+                          gradient: LinearGradient(
+                            colors: isDark
+                                ? [const Color(0xFF1E3A8A), const Color(0xFF2563EB)]
+                                : [const Color(0xFF001540), const Color(0xFF0032A0)],
                           ),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: const [
@@ -428,7 +434,7 @@ class _RequestsScreenState extends State<RequestsScreen>
                         indicatorPadding: const EdgeInsets.all(4),
                         dividerColor: Colors.transparent,
                         labelColor: Colors.white,
-                        unselectedLabelColor: const Color(0xFF9AA3B2),
+                        unselectedLabelColor: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
                         labelStyle: const TextStyle(
                           fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w800,
@@ -486,9 +492,9 @@ class _RequestsScreenState extends State<RequestsScreen>
                                   Text(
                                     _error!,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'DM Sans',
-                                      color: Color(0xFF3D4A63),
+                                      color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF3D4A63),
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -535,25 +541,25 @@ class _RequestsScreenState extends State<RequestsScreen>
                                     width: 72,
                                     height: 72,
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF9AA3B2,
-                                      ).withOpacity(0.08),
+                                      color: isDark
+                                          ? const Color(0xFF1E2B45)
+                                          : const Color(0xFF9AA3B2).withOpacity(0.08),
                                       borderRadius: BorderRadius.circular(24),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.inbox_rounded,
                                       size: 36,
-                                      color: Color(0xFF9AA3B2),
+                                      color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
                                     ),
                                   ),
                                   const SizedBox(height: 14),
-                                  const Text(
+                                  Text(
                                     'No requests yet',
                                     style: TextStyle(
                                       fontFamily: 'DM Sans',
                                       fontWeight: FontWeight.w700,
                                       fontSize: 15,
-                                      color: Color(0xFF3D4A63),
+                                      color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF3D4A63),
                                     ),
                                   ),
                                   // Removed "Tap + Create" per user request
@@ -659,131 +665,134 @@ class _RequestCard extends StatelessWidget {
   Widget build(BuildContext context) => Hero(
     tag: 'request-${req.id}',
     flightShuttleBuilder: (_, __, ___, ____, _____) =>
-        Material(color: Colors.transparent, child: _body()),
+        Material(color: Colors.transparent, child: _body(context)),
     child: Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
-        child: _body(),
+        child: _body(context),
       ),
     ),
   );
 
-  Widget _body() => Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0x0E000000)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x07001540),
-          blurRadius: 12,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 4,
-          height: 64,
-          decoration: BoxDecoration(
-            color: _statusColor,
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(4),
-              bottomRight: Radius.circular(4),
+  Widget _body(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? const Color(0x30000000) : const Color(0x07001540),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 4,
+            height: 64,
+            decoration: BoxDecoration(
+              color: _statusColor,
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(4),
+                bottomRight: Radius.circular(4),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE9EDF6),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      child: Text(
-                        req.number,
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 10,
-                          color: Color(0xFF3D4A63),
-                          letterSpacing: 0.3,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Text(
+                          req.number,
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10,
+                            color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF3D4A63),
+                            letterSpacing: 0.3,
+                          ),
                         ),
                       ),
-                    ),
-                    const Spacer(),
-                    _Chip(status: req.status),
-                  ],
-                ),
-                const SizedBox(height: 9),
-                Text(
-                  req.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    color: Color(0xFF080F1E),
-                    letterSpacing: -0.2,
-                    height: 1.3,
+                      const Spacer(),
+                      _Chip(status: req.status),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time_rounded,
-                      size: 13,
-                      color: Color(0xFF9AA3B2),
+                  const SizedBox(height: 9),
+                  Text(
+                    req.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
+                      letterSpacing: -0.2,
+                      height: 1.3,
                     ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        req.submittedAt,
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 11.5,
-                          color: Color(0xFF9AA3B2),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.access_time_rounded,
+                        size: 13,
+                        color: Color(0xFF9AA3B2),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          req.submittedAt,
+                          style: const TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 11.5,
+                            color: Color(0xFF9AA3B2),
+                          ),
                         ),
                       ),
-                    ),
-                    Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF001540).withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(10),
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E2B45) : const Color(0xFF001540).withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 12,
+                          color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF002366),
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 12,
-                        color: Color(0xFF002366),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _Chip extends StatelessWidget {
@@ -791,26 +800,27 @@ class _Chip extends StatelessWidget {
   const _Chip({required this.status});
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     Color bg, fg;
     switch (status) {
       case 'Approved':
-        bg = const Color(0xFFD1FAE5);
-        fg = const Color(0xFF065F46);
+        bg = isDark ? const Color(0xFF065F46).withOpacity(0.3) : const Color(0xFFD1FAE5);
+        fg = isDark ? const Color(0xFF6EE7B7) : const Color(0xFF065F46);
         break;
       case 'Posted':
-        bg = const Color(0xFFEDE9FE);
-        fg = const Color(0xFF5B21B6);
+        bg = isDark ? const Color(0xFF5B21B6).withOpacity(0.3) : const Color(0xFFEDE9FE);
+        fg = isDark ? const Color(0xFFC4B5FD) : const Color(0xFF5B21B6);
         break;
       case 'Rejected':
-        bg = const Color(0xFFFEE2E2);
-        fg = const Color(0xFF991B1B);
+        bg = isDark ? const Color(0xFF991B1B).withOpacity(0.3) : const Color(0xFFFEE2E2);
+        fg = isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B);
         break;
       case 'Pending Review':
       case 'Under Review':
       case 'Pending':
       default:
-        bg = const Color(0xFFFEF3C7);
-        fg = const Color(0xFF92400E);
+        bg = isDark ? const Color(0xFF92400E).withOpacity(0.3) : const Color(0xFFFEF3C7);
+        fg = isDark ? const Color(0xFFFCD34D) : const Color(0xFF92400E);
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

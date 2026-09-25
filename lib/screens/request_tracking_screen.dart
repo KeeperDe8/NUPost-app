@@ -4,6 +4,7 @@ import '../services/session_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/media_preview_gallery.dart';
 import 'create_request_screen.dart';
+import 'message_thread_screen.dart';
 
 // ── Public data model (used by other screens) ─────────────────────────────────
 class TrackingEvent {
@@ -73,6 +74,9 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   List<String> _mediaUrls = [];
   List<String> _mediaFiles = [];
 
+  final TextEditingController _quickReplyCtrl = TextEditingController();
+  bool _isSendingReply = false;
+
   bool get _isEditable {
     if (SessionStore.isAdmin) return false;
     final s = _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus;
@@ -107,6 +111,66 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     if (widget.requestId != null && widget.requestId! > 0) {
       _fetchDetails();
     }
+  }
+
+  @override
+  void dispose() {
+    _entryCtrl.dispose();
+    _quickReplyCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendQuickReply() async {
+    final text = _quickReplyCtrl.text.trim();
+    if (text.isEmpty || _isSendingReply || widget.requestId == null || widget.requestId! <= 0) return;
+
+    final userId = SessionStore.userId;
+    if (userId == null || userId == 0) return;
+
+    setState(() => _isSendingReply = true);
+    try {
+      await ApiService.sendMessage(
+        userId: userId,
+        requestId: widget.requestId!,
+        message: text,
+      );
+      _quickReplyCtrl.clear();
+      await _fetchDetails();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message sent successfully!'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send message: ${e.toString().replaceFirst("Exception: ", "")}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSendingReply = false);
+    }
+  }
+
+  void _openFullConversation() {
+    if (widget.requestId == null || widget.requestId! <= 0) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MessageThreadScreen(
+          requestId: widget.requestId!,
+          requestCode: _dynamicNumber.isNotEmpty ? _dynamicNumber : widget.requestNumber,
+          requestTitle: _dynamicTitle.isNotEmpty ? _dynamicTitle : widget.requestTitle,
+          requestStatus: _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus,
+        ),
+      ),
+    ).then((_) => _fetchDetails());
   }
 
   Future<void> _fetchDetails() async {
@@ -251,12 +315,6 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     return Icons.rate_review_outlined;
   }
 
-  @override
-  void dispose() {
-    _entryCtrl.dispose();
-    super.dispose();
-  }
-
   Color get _statusColor {
     final s = _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus;
     switch (s.toLowerCase()) {
@@ -312,8 +370,10 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     final activeNumber = _dynamicNumber.isNotEmpty ? _dynamicNumber : widget.requestNumber;
     final activeEvents = _dynamicEvents.isNotEmpty ? _dynamicEvents : widget.events;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE9EDF6),
+      backgroundColor: isDark ? const Color(0xFF090D16) : const Color(0xFFE9EDF6),
       body: FadeTransition(
         opacity: _entryFade,
         child: SlideTransition(
@@ -488,6 +548,8 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                             _buildTimeline(activeEvents),
                           ] else
                             _buildEmptyState(),
+
+                          _buildQuickReplySection(isDark),
                         ],
                       ),
                     ),
@@ -506,18 +568,23 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
       return const SizedBox.shrink();
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF002366).withOpacity(0.2), width: 1.5),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0xFF002366).withOpacity(0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0A001540),
+            color: isDark ? const Color(0x30000000) : const Color(0x0A001540),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -525,13 +592,13 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.admin_panel_settings, color: Color(0xFF002366), size: 20),
-              SizedBox(width: 8),
+            children: [
+              Icon(Icons.admin_panel_settings, color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366), size: 20),
+              const SizedBox(width: 8),
               Text(
                 'Admin Status Actions',
                 style: TextStyle(
-                  color: Color(0xFF002366),
+                  color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF002366),
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -648,17 +715,23 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     final displayStatus = status.isNotEmpty ? status : widget.currentStatus;
     final displayNumber = number.isNotEmpty ? number : widget.requestNumber;
     final displayTitle = title.isNotEmpty ? title : widget.requestTitle;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0x0F000000), width: 1)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x0F000000),
+            width: 1,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? const Color(0x40000000) : const Color(0x07001540),
             blurRadius: 12,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -671,20 +744,20 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
             children: [
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(
+                icon: Icon(
                   Icons.arrow_back_ios_new_rounded,
-                  color: Color(0xFF002366),
+                  color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
                   size: 18,
                 ),
               ),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Request Tracking',
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w900,
                     fontSize: 20,
-                    color: Color(0xFF080F1E),
+                    color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
                     letterSpacing: -0.4,
                   ),
                 ),
@@ -776,16 +849,16 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE9EDF6),
+                        color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6),
                         borderRadius: BorderRadius.circular(7),
                       ),
                       child: Text(
                         displayNumber,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'DM Sans',
                           fontWeight: FontWeight.w700,
                           fontSize: 10,
-                          color: Color(0xFF3D4A63),
+                          color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF3D4A63),
                           letterSpacing: 0.4,
                         ),
                       ),
@@ -796,11 +869,11 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                       displayTitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontWeight: FontWeight.w600,
                         fontSize: 13.5,
-                        color: Color(0xFF080F1E),
+                        color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF080F1E),
                         height: 1.3,
                       ),
                     ),
@@ -964,18 +1037,19 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   Widget _buildProgressStepper(String status) {
     const steps = ['Submitted', 'In Review', 'Approved', 'Posted'];
     final current = _progressStep;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? const Color(0x30000000) : const Color(0x07001540),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1150,18 +1224,20 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
 
   // ── Empty State ───────────────────────────────────────────────────────────
   Widget _buildEmptyState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? const Color(0x30000000) : const Color(0x07001540),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1172,35 +1248,187 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: const Color(0xFF9AA3B2).withOpacity(0.08),
+              color: isDark
+                  ? const Color(0xFF1E2B45).withOpacity(0.5)
+                  : const Color(0xFF9AA3B2).withOpacity(0.08),
               borderRadius: BorderRadius.circular(22),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.timeline_rounded,
               size: 30,
-              color: Color(0xFF9AA3B2),
+              color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF9AA3B2),
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'No tracking history yet',
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontWeight: FontWeight.w700,
               fontSize: 15,
-              color: Color(0xFF3D4A63),
+              color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF3D4A63),
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Updates will appear here once your\nrequest is reviewed by the Marketing Office',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontSize: 12.5,
-              color: Color(0xFF9AA3B2),
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
               height: 1.55,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickReplySection(bool isDark) {
+    if (widget.requestId == null || widget.requestId! <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final cardBg = isDark ? const Color(0xFF131D31) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000);
+    final fieldBg = isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4FB);
+    final fieldBorder = isDark ? const Color(0xFF1E2B45) : const Color(0x0A000000);
+    final textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E);
+    final hintColor = isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2);
+    final isAdmin = SessionStore.isAdmin;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? const Color(0x30000000) : const Color(0x07001540),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.forum_outlined, color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366), size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isAdmin ? 'Reply to Requester' : 'Comments & Discussion',
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF002366),
+                  ),
+                ),
+              ),
+              InkWell(
+                onTap: _openFullConversation,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Full Chat',
+                        style: TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2B5CE6),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.open_in_new_rounded,
+                        size: 13,
+                        color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2B5CE6),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: fieldBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: fieldBorder),
+                  ),
+                  child: TextField(
+                    controller: _quickReplyCtrl,
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 13,
+                      color: textColor,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: isAdmin ? 'Type reply to requester...' : 'Ask a question or leave a note...',
+                      hintStyle: TextStyle(
+                        fontFamily: 'DM Sans',
+                        color: hintColor,
+                        fontSize: 13,
+                      ),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _isSendingReply ? null : _sendQuickReply,
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF001540), Color(0xFF1A4FCC)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: _isSendingReply
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1264,6 +1492,8 @@ class _TimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     // Staggered entry animation
     final start = (index * 0.12).clamp(0.0, 0.7);
     final end = (start + 0.4).clamp(0.0, 1.0);
@@ -1307,7 +1537,7 @@ class _TimelineItem extends StatelessWidget {
                               ],
                             )
                           : null,
-                      color: isFirst ? null : Colors.white,
+                      color: isFirst ? null : (isDark ? const Color(0xFF131D31) : Colors.white),
                       shape: BoxShape.circle,
                       border: isFirst
                           ? null
@@ -1324,10 +1554,10 @@ class _TimelineItem extends StatelessWidget {
                               ),
                             ]
                           : [
-                              const BoxShadow(
-                                color: Color(0x08001540),
+                              BoxShadow(
+                                color: isDark ? const Color(0x30000000) : const Color(0x08001540),
                                 blurRadius: 6,
-                                offset: Offset(0, 2),
+                                offset: const Offset(0, 2),
                               ),
                             ],
                     ),
@@ -1349,7 +1579,7 @@ class _TimelineItem extends StatelessWidget {
                             end: Alignment.bottomCenter,
                             colors: [
                               _iconColor.withOpacity(0.3),
-                              const Color(0xFFE9EDF6),
+                              isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(2),
@@ -1368,19 +1598,19 @@ class _TimelineItem extends StatelessWidget {
                 padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF131D31) : Colors.white,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: isFirst
-                          ? _iconColor.withOpacity(0.2)
-                          : const Color(0x0E000000),
+                      color: isDark
+                          ? (isFirst ? _iconColor.withOpacity(0.4) : const Color(0xFF1E2B45))
+                          : (isFirst ? _iconColor.withOpacity(0.2) : const Color(0x0E000000)),
                       width: isFirst ? 1.5 : 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(
-                          0xFF001540,
-                        ).withOpacity(isFirst ? 0.07 : 0.04),
+                        color: isDark
+                            ? const Color(0x30000000)
+                            : const Color(0xFF001540).withOpacity(isFirst ? 0.07 : 0.04),
                         blurRadius: isFirst ? 14 : 8,
                         offset: const Offset(0, 4),
                       ),
@@ -1429,7 +1659,7 @@ class _TimelineItem extends StatelessWidget {
                                                     ? FontWeight.w800
                                                     : FontWeight.w700,
                                                 fontSize: 14.5,
-                                                color: const Color(0xFF080F1E),
+                                                color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
                                                 letterSpacing: -0.2,
                                               ),
                                             ),
@@ -1445,7 +1675,7 @@ class _TimelineItem extends StatelessWidget {
                                               decoration: BoxDecoration(
                                                 color: (event.role?.toLowerCase() == 'admin')
                                                     ? const Color(0xFF002366)
-                                                    : const Color(0xFFEFF6FF),
+                                                    : (isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF)),
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: Text(
@@ -1458,7 +1688,7 @@ class _TimelineItem extends StatelessWidget {
                                                   fontSize: 9,
                                                   color: (event.role?.toLowerCase() == 'admin')
                                                       ? const Color(0xFFFFD400)
-                                                      : const Color(0xFF2563EB),
+                                                      : (isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB)),
                                                   letterSpacing: 0.5,
                                                 ),
                                               ),
@@ -1495,11 +1725,11 @@ class _TimelineItem extends StatelessWidget {
                                 const SizedBox(height: 5),
                                 Text(
                                   event.subtitle,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'DM Sans',
                                     fontWeight: FontWeight.w400,
                                     fontSize: 12.5,
-                                    color: Color(0xFF3D4A63),
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
                                     height: 1.5,
                                   ),
                                 ),
@@ -1507,19 +1737,19 @@ class _TimelineItem extends StatelessWidget {
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
-                                      const Icon(
+                                      Icon(
                                         Icons.access_time_rounded,
                                         size: 12,
-                                        color: Color(0xFF9AA3B2),
+                                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
                                         event.timestamp,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontFamily: 'DM Sans',
                                           fontWeight: FontWeight.w500,
                                           fontSize: 11,
-                                          color: Color(0xFF9AA3B2),
+                                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
                                         ),
                                       ),
                                     ],
@@ -1541,3 +1771,4 @@ class _TimelineItem extends StatelessWidget {
     );
   }
 }
+

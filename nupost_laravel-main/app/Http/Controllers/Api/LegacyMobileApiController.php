@@ -1439,7 +1439,7 @@ class LegacyMobileApiController extends Controller
         $baseUrl = url('/');
         $mediaUrls = array_map(function($file) use ($baseUrl) {
             if (str_starts_with($file, 'http')) return $file;
-            return rtrim($baseUrl, '/') . '/uploads/' . $file;
+            return rtrim($baseUrl, '/') . '/api/media.php?file=' . urlencode($file);
         }, $mediaFiles);
 
         return response()->json([
@@ -1467,6 +1467,31 @@ class LegacyMobileApiController extends Controller
                 'activities' => $activities,
             ],
         ], 200);
+    }
+
+    public function getMedia(Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        $filename = basename((string) ($request->query('file') ?? $request->route('file') ?? ''));
+        if ($filename === '') {
+            return response()->json(['success' => false, 'message' => 'File name required'], 400);
+        }
+
+        $path = public_path('uploads/' . $filename);
+        if (!file_exists($path)) {
+            $altPath = storage_path('app/public/uploads/' . $filename);
+            if (file_exists($altPath)) {
+                $path = $altPath;
+            } else {
+                return response()->json(['success' => false, 'message' => 'Media not found'], 404);
+            }
+        }
+
+        $mime = mime_content_type($path) ?: 'application/octet-stream';
+        return response()->file($path, [
+            'Content-Type' => $mime,
+            'Access-Control-Allow-Origin' => '*',
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
     }
 
     public function messageThreads(Request $request): JsonResponse
@@ -1501,10 +1526,15 @@ class LegacyMobileApiController extends Controller
             ], 200);
         }
 
+        $userRole = strtolower(trim((string) ($user->role ?? 'requestor')));
+        $isAdmin = ($userRole === 'admin');
+
         $table = $this->requestsTable();
-        $requests = DB::table($table)
-            ->where('requester', (string) ($user->name ?? ''))
-            ->get(['id', 'request_id', 'title', 'status']);
+        $query = DB::table($table);
+        if (!$isAdmin) {
+            $query->where('requester', (string) ($user->name ?? ''));
+        }
+        $requests = $query->get(['id', 'request_id', 'title', 'status', 'requester', 'category']);
 
         $threads = [];
         $totalUnread = 0;
@@ -1516,22 +1546,23 @@ class LegacyMobileApiController extends Controller
                 ->orderByDesc('id')
                 ->first(['id', 'sender_role', 'sender_name', 'message', 'created_at']);
 
-            if (!$latest) {
+            if (!$latest && !$isAdmin) {
                 continue;
             }
 
             $unreadCount = 0;
-            $totalUnread = 0; // App will track this locally now
 
             $threads[] = [
                 'request_id' => (int) $req->id,
                 'request_code' => (string) ($req->request_id ?? ''),
                 'request_title' => (string) ($req->title ?? ''),
+                'requester' => (string) ($req->requester ?? ''),
+                'category' => (string) ($req->category ?? ''),
                 'request_status' => trim((string) ($req->status ?? '')) !== ''
                     ? (string) $req->status
                     : 'Pending',
                 'last_message_id' => (int) ($latest->id ?? 0),
-                'last_message' => (string) ($latest->message ?? ''),
+                'last_message' => (string) ($latest->message ?? ($isAdmin ? 'No messages yet - tap to converse' : '')),
                 'last_sender_role' => (string) ($latest->sender_role ?? ''),
                 'last_sender_name' => (string) ($latest->sender_name ?? ''),
                 'last_message_at' => (string) ($latest->created_at ?? ''),
@@ -1585,11 +1616,15 @@ class LegacyMobileApiController extends Controller
             ], 200);
         }
 
+        $userRole = strtolower(trim((string) ($user->role ?? 'requestor')));
+        $isAdmin = ($userRole === 'admin');
+
         $table = $this->requestsTable();
-        $req = DB::table($table)
-            ->where('id', $requestId)
-            ->where('requester', (string) ($user->name ?? ''))
-            ->first(['id', 'request_id', 'title', 'status']);
+        $query = DB::table($table)->where('id', $requestId);
+        if (!$isAdmin) {
+            $query->where('requester', (string) ($user->name ?? ''));
+        }
+        $req = $query->first(['id', 'request_id', 'title', 'status', 'requester', 'category']);
 
         if (!$req) {
             return response()->json([
@@ -1621,6 +1656,8 @@ class LegacyMobileApiController extends Controller
                     'id' => (int) $req->id,
                     'request_id' => (string) ($req->request_id ?? ''),
                     'title' => (string) ($req->title ?? ''),
+                    'requester' => (string) ($req->requester ?? ''),
+                    'category' => (string) ($req->category ?? ''),
                     'status' => trim((string) ($req->status ?? '')) !== ''
                         ? (string) $req->status
                         : 'Pending',
@@ -1662,11 +1699,15 @@ class LegacyMobileApiController extends Controller
             ], 500);
         }
 
+        $userRole = strtolower(trim((string) ($user->role ?? 'requestor')));
+        $isAdmin = ($userRole === 'admin');
+
         $table = $this->requestsTable();
-        $req = DB::table($table)
-            ->where('id', $requestId)
-            ->where('requester', (string) ($user->name ?? ''))
-            ->first(['id', 'title']);
+        $query = DB::table($table)->where('id', $requestId);
+        if (!$isAdmin) {
+            $query->where('requester', (string) ($user->name ?? ''));
+        }
+        $req = $query->first(['id', 'title', 'requester']);
 
         if (!$req) {
             return response()->json([
@@ -1675,11 +1716,10 @@ class LegacyMobileApiController extends Controller
             ], 404);
         }
 
-        $userRole = strtolower(trim((string) ($user->role ?? 'requestor')));
-        $senderRole = ($userRole === 'admin') ? 'admin' : 'requestor';
+        $senderRole = ($isAdmin) ? 'admin' : 'requestor';
         $senderName = trim((string) ($user->name ?? ''));
         if ($senderName === '') {
-            $senderName = ($senderRole === 'admin') ? 'System Admin' : 'Requestor';
+            $senderName = ($isAdmin) ? 'System Administrator' : 'Requestor';
         }
 
         $payload = [
@@ -1717,8 +1757,8 @@ class LegacyMobileApiController extends Controller
             'data' => [
                 'id' => $newId,
                 'request_id' => $requestId,
-                'sender_role' => 'requestor',
-                'sender_name' => (string) ($user->name ?? ''),
+                'sender_role' => $senderRole,
+                'sender_name' => $senderName,
                 'message' => $message,
                 'created_at' => now()->toDateTimeString(),
             ],

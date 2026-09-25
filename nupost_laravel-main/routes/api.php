@@ -23,6 +23,9 @@ Route::get('/messages.php', [LegacyMobileApiController::class, 'messageThreads']
 Route::get('/message_thread.php', [LegacyMobileApiController::class, 'messageThread']);
 Route::post('/message_thread.php', [LegacyMobileApiController::class, 'sendMessage']);
 
+Route::get('/media.php', [LegacyMobileApiController::class, 'getMedia']);
+Route::get('/media/{file}', [LegacyMobileApiController::class, 'getMedia']);
+
 // Admin Endpoints
 Route::get('/admin_requests.php', [LegacyMobileApiController::class, 'adminRequests']);
 Route::post('/update_request_status.php', [LegacyMobileApiController::class, 'updateRequestStatus']);

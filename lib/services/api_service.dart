@@ -26,12 +26,37 @@ class ApiService {
   static String resolveMediaUrl(String rawPath) {
     final path = rawPath.trim();
     if (path.isEmpty) return '';
+
+    String domain = _baseUrl.replaceAll(RegExp(r'/api/?$'), '');
+
     if (path.startsWith('http://') || path.startsWith('https://')) {
+      final uri = Uri.tryParse(path);
+      if (uri != null) {
+        final host = uri.host.toLowerCase();
+        if (host == 'localhost' || host == '127.0.0.1' || host == '10.0.2.2') {
+          final domainUri = Uri.parse(domain);
+          return uri.replace(
+            scheme: domainUri.scheme,
+            host: domainUri.host,
+            port: domainUri.hasPort ? domainUri.port : null,
+          ).toString();
+        }
+      }
       return path;
     }
-    String domain = _baseUrl.replaceAll(RegExp(r'/api/?$'), '');
-    String cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return '$domain/$cleanPath';
+
+    if (path.startsWith('/api/') || path.startsWith('api/')) {
+      final clean = path.startsWith('/') ? path.substring(1) : path;
+      return '$domain/$clean';
+    }
+
+    if (path.startsWith('/uploads/') || path.startsWith('uploads/')) {
+      final clean = path.startsWith('/') ? path.substring(1) : path;
+      return '$domain/$clean';
+    }
+
+    final filename = path.split('/').last.split('\\').last;
+    return '$_baseUrl/media.php?file=${Uri.encodeComponent(filename)}';
   }
 
   static Future<Map<String, dynamic>> login({
@@ -393,6 +418,17 @@ class ApiService {
       'message': message,
     }, fallbackMessage: 'Failed to send message');
   }
+
+  static Future<Map<String, dynamic>> sendMessage({
+    required int userId,
+    required int requestId,
+    required String message,
+  }) =>
+      sendMessageToThread(
+        userId: userId,
+        requestId: requestId,
+        message: message,
+      );
 
   static Future<void> markThreadRead({
     required int userId,

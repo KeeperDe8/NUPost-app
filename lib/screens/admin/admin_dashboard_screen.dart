@@ -110,9 +110,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: AppColors.pageBg,
+      backgroundColor: isDark ? const Color(0xFF090D16) : AppColors.pageBg,
       body: ClipRect(
         child: Stack(
         children: [
@@ -134,15 +136,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildMonthlyGraphCard(),
+                            _buildMonthlyGraphCard(isDark),
                             const SizedBox(height: 20),
-                            _buildQueueSectionHeader(),
+                            _buildQueueSectionHeader(isDark),
                             const SizedBox(height: 12),
-                            _buildFilterChips(),
+                            _buildFilterChips(isDark),
                             const SizedBox(height: 12),
-                            _buildSearchBar(),
+                            _buildSearchBar(isDark),
                             const SizedBox(height: 16),
-                            _buildRequestList(),
+                            _buildRequestList(isDark),
                             const SizedBox(height: 100),
                           ],
                         ),
@@ -452,7 +454,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   // ── Monthly Volume Analytics Card ─────────────────────────────────────────
-  Widget _buildMonthlyGraphCard() {
+  Widget _buildMonthlyGraphCard(bool isDark) {
     if (_isLoading) {
       return const SkeletonLoader(height: 150);
     }
@@ -471,14 +473,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? const Color(0x30000000) : const Color(0x07001540),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -486,24 +488,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.bar_chart_rounded, color: AppColors.accent, size: 18),
-              SizedBox(width: 8),
+            children: [
+              const Icon(Icons.bar_chart_rounded, color: AppColors.accent, size: 18),
+              const SizedBox(width: 8),
               Text(
                 'Request Volume Analytics',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
-                  color: AppColors.ink,
+                  color: isDark ? const Color(0xFFF1F5F9) : AppColors.ink,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               Text(
                 'Last 6 Months',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
-                  color: AppColors.inkMute,
+                  color: isDark ? const Color(0xFF94A3B8) : AppColors.inkMute,
                   fontSize: 11,
                 ),
               ),
@@ -530,7 +532,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         fontFamily: 'DM Sans',
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: count > 0 ? AppColors.accent : AppColors.inkMute,
+                        color: count > 0 ? AppColors.accent : (isDark ? const Color(0xFF64748B) : AppColors.inkMute),
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -538,17 +540,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       width: 20,
                       height: (factor * 44).clamp(4.0, 44.0),
                       decoration: BoxDecoration(
-                        color: count > 0 ? AppColors.accent : Colors.grey.shade300,
+                        color: count > 0 ? AppColors.accent : (isDark ? const Color(0xFF1E2B45) : Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontSize: 10,
-                        color: AppColors.inkMute,
+                        color: isDark ? const Color(0xFF94A3B8) : AppColors.inkMute,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -562,15 +564,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _buildQueueSectionHeader() {
+  Widget _buildQueueSectionHeader(bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           'Requests Queue (${_requests.length})',
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'DM Sans',
-            color: AppColors.ink,
+            color: isDark ? const Color(0xFFF1F5F9) : AppColors.ink,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -579,7 +581,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(bool isDark) {
     final filters = [
       {'key': 'all', 'label': 'All'},
       {'key': 'Pending Review', 'label': 'Pending'},
@@ -592,13 +594,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        border: isDark ? Border.all(color: const Color(0xFF1E2B45)) : null,
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0A001540),
+            color: isDark ? const Color(0x30000000) : const Color(0x0A001540),
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -655,26 +658,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: isDark ? const Color(0xFF1E2B45) : AppColors.border),
       ),
       child: TextField(
         controller: _searchCtrl,
+        style: TextStyle(
+          fontFamily: 'DM Sans',
+          color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
+          fontSize: 13,
+        ),
         decoration: InputDecoration(
           hintText: 'Search title, requester, or category...',
-          hintStyle: const TextStyle(
+          hintStyle: TextStyle(
             fontFamily: 'DM Sans',
-            color: AppColors.inkMute,
+            color: isDark ? const Color(0xFF64748B) : AppColors.inkMute,
             fontSize: 13,
           ),
-          prefixIcon: const Icon(Icons.search, color: AppColors.inkMute, size: 20),
+          prefixIcon: Icon(Icons.search, color: isDark ? const Color(0xFF94A3B8) : AppColors.inkMute, size: 20),
           suffixIcon: _searchCtrl.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear, size: 18),
+                  icon: Icon(Icons.clear, size: 18, color: isDark ? const Color(0xFF94A3B8) : null),
                   onPressed: () {
                     _searchCtrl.clear();
                     setState(() {
@@ -697,7 +705,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _buildRequestList() {
+  Widget _buildRequestList(bool isDark) {
     if (_isLoading) {
       return Column(
         children: List.generate(4, (_) => const Padding(
@@ -798,14 +806,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             },
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF131D31) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0x0E000000)),
-                boxShadow: const [
+                border: Border.all(color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000)),
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x07001540),
+                    color: isDark ? const Color(0x30000000) : const Color(0x07001540),
                     blurRadius: 12,
-                    offset: Offset(0, 4),
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -837,16 +845,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE9EDF6),
+                                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6),
                                   borderRadius: BorderRadius.circular(7),
                                 ),
                                 child: Text(
                                   reqCode,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'DM Sans',
                                     fontWeight: FontWeight.w700,
                                     fontSize: 10,
-                                    color: Color(0xFF3D4A63),
+                                    color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF3D4A63),
                                     letterSpacing: 0.3,
                                   ),
                                 ),
@@ -860,11 +868,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'DM Sans',
                               fontWeight: FontWeight.w800,
                               fontSize: 15,
-                              color: Color(0xFF080F1E),
+                              color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
                               letterSpacing: -0.2,
                               height: 1.3,
                             ),
@@ -872,10 +880,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           const SizedBox(height: 10),
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.access_time_rounded,
                                 size: 13,
-                                color: Color(0xFF9AA3B2),
+                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
                               ),
                               const SizedBox(width: 4),
                               Expanded(
@@ -883,10 +891,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   createdAt.isNotEmpty
                                       ? 'Submitted $createdAt'
                                       : 'By $requester',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'DM Sans',
                                     fontSize: 11.5,
-                                    color: Color(0xFF9AA3B2),
+                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
                                   ),
                                 ),
                               ),
@@ -894,13 +902,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                 width: 30,
                                 height: 30,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF001540).withOpacity(0.06),
+                                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFF002366).withOpacity(0.06),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.arrow_forward_ios_rounded,
                                   size: 12,
-                                  color: Color(0xFF002366),
+                                  color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
                                 ),
                               ),
                             ],

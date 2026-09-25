@@ -99,24 +99,39 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
 
   Future<void> _send() async {
     final text = _input.text.trim();
+    if (text.isEmpty || _sending) return;
+
     final userId = SessionStore.userId;
-    if (_sending || text.isEmpty || userId == null || userId == 0) return;
+    if (userId == null || userId == 0) return;
 
     setState(() => _sending = true);
+    _input.clear();
+
     try {
-      await ApiService.sendMessageToThread(
+      final res = await ApiService.sendMessage(
         userId: userId,
         requestId: widget.requestId,
         message: text,
       );
-      _input.clear();
-      await _loadThread(showLoader: false);
+      if (!mounted) return;
+
+      final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
+      final newMsg = _ChatMessage(
+        id: (res['data']?['id'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
+        senderRole: isAdmin ? 'admin' : 'requestor',
+        senderName: SessionStore.name ?? (isAdmin ? 'Admin' : 'Requester'),
+        message: text,
+        createdAt: DateTime.now().toIso8601String(),
+      );
+
+      setState(() {
+        _messages = [..._messages, newMsg];
+      });
+      _scrollToBottom();
+      await ChatReadStore.markAsRead(widget.requestId, newMsg.id);
     } catch (e) {
       if (!mounted) return;
-      var msg = e.toString().replaceFirst('Exception: ', '');
-      if (msg.contains('HTTP 404') && msg.contains('message_thread.php')) {
-        msg = 'Message endpoint not found. Check API server.';
-      }
+      final msg = e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -157,19 +172,22 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageBg = isDark ? const Color(0xFF090D16) : AppColors.pageBg;
+
     return Scaffold(
-      backgroundColor: AppColors.pageBg,
+      backgroundColor: pageBg,
       body: SafeArea(
         child: Column(
           children: [
             // ── Header ───────────────────────────────────────────────────
-            _buildHeader(),
+            _buildHeader(isDark),
 
             // ── Message list ─────────────────────────────────────────────
-            Expanded(child: _buildBody()),
+            Expanded(child: _buildBody(isDark)),
 
             // ── Composer ─────────────────────────────────────────────────
-            _buildComposer(),
+            _buildComposer(isDark),
           ],
         ),
       ),
@@ -177,31 +195,38 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
   }
 
   // ── Header ────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
+    final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
+
+    final headerBg = isDark ? const Color(0xFF131D31) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF1E2B45) : const Color(0x0F000000);
+    final pillBg = isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4FB);
+    final pillBorder = isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000);
+
     return Hero(
       tag: 'thread-${widget.requestId}',
       flightShuttleBuilder: (_, __, ___, ____, _____) => Material(
         color: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: headerBg,
             borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),
       child: Material(
-        color: Colors.white,
+        color: headerBg,
         child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: headerBg,
             border: Border(
-              bottom: BorderSide(color: Color(0x0F000000), width: 1),
+              bottom: BorderSide(color: borderColor, width: 1),
             ),
             boxShadow: [
               BoxShadow(
-                color: Color(0x07001540),
+                color: isDark ? const Color(0x40000000) : const Color(0x07001540),
                 blurRadius: 12,
-                offset: Offset(0, 1),
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -213,20 +238,20 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.arrow_back_ios_new_rounded,
-                      color: Color(0xFF002366),
+                      color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
                       size: 18,
                     ),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Comments with Admin',
+                      isAdmin ? 'Conversation with Requestor' : 'Comments with Admin',
                       style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontWeight: FontWeight.w900,
                         fontSize: 18,
-                        color: Color(0xFF080F1E),
+                        color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -242,9 +267,9 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F4FB),
+                  color: pillBg,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0x0E000000)),
+                  border: Border.all(color: pillBorder),
                 ),
                 child: Row(
                   children: [
@@ -256,11 +281,11 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
                             widget.requestTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'DM Sans',
                               fontWeight: FontWeight.w700,
                               fontSize: 13.5,
-                              color: Color(0xFF080F1E),
+                              color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
                               letterSpacing: -0.1,
                             ),
                           ),
@@ -269,10 +294,10 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
                             widget.requestCode.isEmpty
                                 ? 'REQ-${widget.requestId.toString().padLeft(5, '0')}'
                                 : widget.requestCode,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'DM Sans',
                               fontSize: 11,
-                              color: Color(0xFF9AA3B2),
+                              color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -288,11 +313,11 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
                       decoration: BoxDecoration(
                         color: _statusColor(
                           widget.requestStatus,
-                        ).withOpacity(0.1),
+                        ).withOpacity(0.12),
                         border: Border.all(
                           color: _statusColor(
                             widget.requestStatus,
-                          ).withOpacity(0.25),
+                          ).withOpacity(0.3),
                         ),
                         borderRadius: BorderRadius.circular(99),
                       ),
@@ -331,28 +356,30 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
   }
 
   // ── Body ──────────────────────────────────────────────────────────────────
-  Widget _buildBody() {
+  Widget _buildBody(bool isDark) {
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+        child: CircularProgressIndicator(color: AppColors.accent),
       );
     }
     if (_loadError != null && _messages.isEmpty) {
-      return _buildLoadError();
+      return _buildLoadError(isDark);
     }
     if (_messages.isEmpty) {
-      return _buildEmpty();
+      return _buildEmpty(isDark);
     }
 
     return ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       itemCount: _messages.length,
-      itemBuilder: (_, i) => _buildBubble(_messages[i]),
+      itemBuilder: (_, i) => _buildBubble(_messages[i], isDark),
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty(bool isDark) {
+    final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -361,32 +388,36 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: const Color(0xFF9AA3B2).withOpacity(0.08),
+              color: isDark
+                  ? const Color(0xFF1E2B45).withOpacity(0.5)
+                  : const Color(0xFF9AA3B2).withOpacity(0.08),
               borderRadius: BorderRadius.circular(22),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.forum_rounded,
               size: 30,
-              color: Color(0xFF9AA3B2),
+              color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF9AA3B2),
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'No messages yet',
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontWeight: FontWeight.w700,
               fontSize: 15,
-              color: Color(0xFF3D4A63),
+              color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF3D4A63),
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Ask admin a question below!',
+          Text(
+            isAdmin
+                ? 'Send a message or note to the requestor below.'
+                : 'Ask admin a question or share instructions below!',
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontSize: 13,
-              color: Color(0xFF9AA3B2),
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2),
             ),
           ),
         ],
@@ -394,7 +425,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
     );
   }
 
-  Widget _buildLoadError() {
+  Widget _buildLoadError(bool isDark) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -418,10 +449,10 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
             Text(
               _loadError ?? 'Failed to load messages.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 13,
-                color: Color(0xFF3D4A63),
+                color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF3D4A63),
                 height: 1.5,
               ),
             ),
@@ -457,17 +488,18 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
   }
 
   // ── Chat Bubble ───────────────────────────────────────────────────────────
-  Widget _buildBubble(_ChatMessage m) {
-    final isMine = m.senderRole == 'requestor';
+  Widget _buildBubble(_ChatMessage m, bool isDark) {
+    final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
+    final isMine = isAdmin ? (m.senderRole == 'admin') : (m.senderRole != 'admin');
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.74,
+          maxWidth: MediaQuery.of(context).size.width * 0.76,
         ),
         margin: const EdgeInsets.only(bottom: 10),
-        child: isMine ? _outBubble(m) : _inBubble(m),
+        child: isMine ? _outBubble(m) : _inBubble(m, isDark),
       ),
     );
   }
@@ -481,7 +513,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
           end: Alignment.bottomRight,
           colors: [Color(0xFF001540), Color(0xFF1A4FCC)],
         ),
-        borderRadius: BorderRadius.all(Radius.circular(22)),
+        borderRadius: BorderRadius.all(Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Color(0x30001540),
@@ -490,37 +522,73 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
           ),
         ],
       ),
-      child: _bubbleContent(m, Colors.white, Colors.white60),
+      child: _bubbleContent(m, Colors.white, Colors.white70),
     );
   }
 
-  Widget _inBubble(_ChatMessage m) {
+  Widget _inBubble(_ChatMessage m, bool isDark) {
+    final bubbleBg = isDark ? const Color(0xFF1E2B45) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF2B3A5A) : const Color(0x0E000000);
+    final textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E);
+    final timeColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.all(Radius.circular(22)),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        color: bubbleBg,
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
+        border: Border.all(color: borderColor),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x08001540),
+            color: isDark ? const Color(0x20000000) : const Color(0x08001540),
             blurRadius: 8,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: _bubbleContent(
-        m,
-        const Color(0xFF080F1E),
-        const Color(0xFF9AA3B2),
-      ),
+      child: _bubbleContent(m, textColor, timeColor),
     );
   }
 
   Widget _bubbleContent(_ChatMessage m, Color textColor, Color timeColor) {
+    final roleTag = m.senderRole == 'admin' ? 'ADMIN' : 'REQUESTOR';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              m.senderName.isNotEmpty ? m.senderName : roleTag,
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: timeColor,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: (m.senderRole == 'admin' ? Colors.amber : Colors.blue)
+                    .withOpacity(0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                roleTag,
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  color: m.senderRole == 'admin' ? const Color(0xFFF59E0B) : const Color(0xFF60A5FA),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
         Text(
           m.message,
           style: TextStyle(
@@ -545,18 +613,36 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
     );
   }
 
+  String _formatTime(String raw) {
+    if (raw.isEmpty) return '';
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) return raw;
+    final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final min = dt.minute.toString().padLeft(2, '0');
+    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$min $ampm';
+  }
+
   // ── Composer ──────────────────────────────────────────────────────────────
-  Widget _buildComposer() {
+  Widget _buildComposer(bool isDark) {
+    final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
+    final composerBg = isDark ? const Color(0xFF131D31) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000);
+    final fieldBg = isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4FB);
+    final fieldBorder = isDark ? const Color(0xFF1E2B45) : const Color(0x0A000000);
+    final textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E);
+    final hintColor = isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0x0E000000), width: 1)),
+      decoration: BoxDecoration(
+        color: composerBg,
+        border: Border(top: BorderSide(color: borderColor, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: Color(0x08001540),
+            color: isDark ? const Color(0x40000000) : const Color(0x08001540),
             blurRadius: 12,
-            offset: Offset(0, -3),
+            offset: const Offset(0, -3),
           ),
         ],
       ),
@@ -567,31 +653,31 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
             child: Container(
               constraints: const BoxConstraints(maxHeight: 120),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F4FB),
+                color: fieldBg,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0x0A000000)),
+                border: Border.all(color: fieldBorder),
               ),
               child: TextField(
                 controller: _input,
                 minLines: 1,
                 maxLines: 5,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 14,
-                  color: Color(0xFF080F1E),
+                  color: textColor,
                 ),
-                decoration: const InputDecoration(
-                  hintText: 'Message admin…',
+                decoration: InputDecoration(
+                  hintText: isAdmin ? 'Reply to requestor…' : 'Message admin…',
                   hintStyle: TextStyle(
                     fontFamily: 'DM Sans',
-                    color: Color(0xFF9AA3B2),
+                    color: hintColor,
                     fontSize: 14,
                   ),
                   filled: false,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
+                  contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 11,
                   ),
@@ -616,7 +702,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
                         end: Alignment.bottomRight,
                         colors: [Color(0xFF001540), Color(0xFF1A4FCC)],
                       ),
-                color: _sending ? const Color(0xFFE9EDF6) : null,
+                color: _sending ? (isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6)) : null,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: _sending
                     ? null
@@ -650,18 +736,8 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
       ),
     );
   }
-
-  String _formatTime(String raw) {
-    final dt = DateTime.tryParse(raw);
-    if (dt == null) return '';
-    final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
-    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
-    final min = dt.minute.toString().padLeft(2, '0');
-    return '$hour:$min $ampm';
-  }
 }
 
-// ── Data model ────────────────────────────────────────────────────────────────
 class _ChatMessage {
   final int id;
   final String senderRole;
