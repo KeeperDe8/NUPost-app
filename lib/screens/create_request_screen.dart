@@ -299,15 +299,27 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   }
 
   Future<void> _pickDate() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(primary: Color(0xFF002366)),
-        ),
+        data: isDark
+            ? ThemeData.dark().copyWith(
+                scaffoldBackgroundColor: const Color(0xFF131D31),
+                dialogBackgroundColor: const Color(0xFF131D31),
+                colorScheme: const ColorScheme.dark(
+                  primary: Color(0xFFFFD200),
+                  onPrimary: Color(0xFF0A0F1D),
+                  surface: Color(0xFF131D31),
+                  onSurface: Colors.white,
+                ),
+              )
+            : Theme.of(context).copyWith(
+                colorScheme: const ColorScheme.light(primary: Color(0xFF002366)),
+              ),
         child: child!,
       ),
     );
@@ -497,17 +509,23 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     }
 
     if (_datePostCount >= 3) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       final confirmed = await showDialog<bool>(
         context: context,
         useRootNavigator: false,
         builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text(
+          backgroundColor: isDark ? const Color(0xFF131D31) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
+          ),
+          title: Text(
             'Busy date',
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontWeight: FontWeight.w800,
               fontSize: 18,
+              color: isDark ? Colors.white : const Color(0xFF080F1E),
             ),
           ),
           content: SingleChildScrollView(
@@ -518,7 +536,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                 Text(
                   'This date already has $_datePostCount scheduled post${_datePostCount == 1 ? '' : 's'}. '
                   'Posting here may overlap with others. Continue anyway?',
-                  style: const TextStyle(fontFamily: 'DM Sans', fontSize: 14),
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 14,
+                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
+                  ),
                 ),
                 if (_dateUpcomingPosts.isNotEmpty) ...[
                   const SizedBox(height: 14),
@@ -545,11 +567,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                               title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'DM Sans',
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12.5,
-                                color: Color(0xFF3D4A63),
+                                color: isDark ? Colors.white : const Color(0xFF3D4A63),
                               ),
                             ),
                           ),
@@ -574,12 +596,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text(
+              child: Text(
                 'Pick another date',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF9AA3B2),
+                  color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                 ),
               ),
             ),
@@ -709,12 +731,16 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   }
 
   void _showValidationErrorsDialog(List<String> errors) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       useRootNavigator: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
+        ),
+        backgroundColor: isDark ? const Color(0xFF131D31) : Colors.white,
         titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 10),
         contentPadding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
         actionsPadding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
@@ -724,7 +750,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF1F2),
+                color: isDark ? const Color(0xFF2E1218) : const Color(0xFFFFF1F2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
@@ -734,14 +760,14 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               ),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Action Required',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontWeight: FontWeight.w900,
                   fontSize: 18,
-                  color: Color(0xFF0F172A),
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                 ),
               ),
             ),
@@ -752,12 +778,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Please resolve the following requirements before submitting your request:',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 13,
-                  color: Color(0xFF64748B),
+                  color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF64748B),
                   height: 1.4,
                 ),
               ),
@@ -766,9 +792,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                 margin: const EdgeInsets.only(bottom: 9),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,11 +813,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                     Expanded(
                       child: Text(
                         err,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'DM Sans',
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1E293B),
+                          color: isDark ? Colors.white : const Color(0xFF1E293B),
                           height: 1.35,
                         ),
                       ),
@@ -807,7 +835,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF002366),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: isDark
+                      ? BorderSide(color: const Color(0xFFFFD200).withOpacity(0.4))
+                      : BorderSide.none,
+                ),
                 elevation: 0,
               ),
               onPressed: () => Navigator.pop(ctx),
@@ -829,6 +862,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
   Widget _buildSlaHint() {
     if (_selectedCategory == null) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final sla = getSlaInfo(_selectedCategory);
     final turnaround = (sla['turnaround'] ?? '2–4 days') as String;
     final note = (sla['note'] ?? '') as String;
@@ -845,14 +879,25 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       }
     }
 
+    final bgColor = isTooSoon
+        ? (isDark ? const Color(0xFF2A1215) : const Color(0xFFFFF1F2))
+        : (isDark ? const Color(0xFF0D2518) : const Color(0xFFF0FDF4));
+    final borderColor = isTooSoon
+        ? (isDark ? const Color(0xFF5A1D24) : const Color(0xFFFECDD3))
+        : (isDark ? const Color(0xFF144D2F) : const Color(0xFFBBF7D0));
+    final iconColor = isTooSoon
+        ? (isDark ? const Color(0xFFFF6B6B) : const Color(0xFFE11D48))
+        : (isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A));
+    final textColor = isTooSoon
+        ? (isDark ? const Color(0xFFFF6B6B) : const Color(0xFFBE123C))
+        : (isDark ? const Color(0xFF4ADE80) : const Color(0xFF15803D));
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8.5),
       decoration: BoxDecoration(
-        color: isTooSoon ? const Color(0xFFFFF1F2) : const Color(0xFFF0FDF4),
+        color: bgColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isTooSoon ? const Color(0xFFFECDD3) : const Color(0xFFBBF7D0),
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -860,7 +905,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           Icon(
             isTooSoon ? Icons.warning_amber_rounded : Icons.verified_outlined,
             size: 16,
-            color: isTooSoon ? const Color(0xFFE11D48) : const Color(0xFF16A34A),
+            color: iconColor,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -872,7 +917,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                 fontFamily: 'DM Sans',
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: isTooSoon ? const Color(0xFFBE123C) : const Color(0xFF15803D),
+                color: textColor,
               ),
             ),
           ),
@@ -931,8 +976,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   // ── BUILD ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE9EDF6),
+      backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFFE9EDF6),
       body: Stack(
         children: [
           FadeTransition(
@@ -1034,18 +1081,22 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                               _fieldLabel('Preferred Posting Date *'),
                               GestureDetector(
                                 onTap: () => SlaGuidelinesSheet.show(context, isReferenceMode: true),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF2B5CE6)),
-                                    SizedBox(width: 4),
+                                    Icon(
+                                      Icons.info_outline_rounded,
+                                      size: 14,
+                                      color: isDark ? const Color(0xFFFFD200) : const Color(0xFF2B5CE6),
+                                    ),
+                                    const SizedBox(width: 4),
                                     Text(
                                       'SLA Guide',
                                       style: TextStyle(
                                         fontFamily: 'DM Sans',
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
-                                        color: Color(0xFF2B5CE6),
+                                        color: isDark ? const Color(0xFFFFD200) : const Color(0xFF2B5CE6),
                                       ),
                                     ),
                                   ],
@@ -1087,10 +1138,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                             alignment: Alignment.centerRight,
                             child: Text(
                               '$_captionLength characters',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'DM Sans',
                                 fontSize: 10.5,
-                                color: Color(0xFF9AA3B2),
+                                color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                               ),
                             ),
                           ),
@@ -1102,10 +1153,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF5F3FF),
+                          color: isDark ? const Color(0xFF181528) : const Color(0xFFF5F3FF),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: const Color(0xFF7C3AED).withOpacity(0.18),
+                            color: const Color(0xFF7C3AED).withOpacity(isDark ? 0.35 : 0.18),
                           ),
                         ),
                         child: Column(
@@ -1116,7 +1167,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                                 Icon(
                                   Icons.auto_fix_high_rounded,
                                   size: 14,
-                                  color: const Color(0xFF7C3AED).withOpacity(0.7),
+                                  color: const Color(0xFF7C3AED).withOpacity(isDark ? 0.9 : 0.7),
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
@@ -1125,30 +1176,30 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                                     fontFamily: 'DM Sans',
                                     fontWeight: FontWeight.w800,
                                     fontSize: 9.5,
-                                    color: const Color(0xFF7C3AED).withOpacity(0.6),
+                                    color: const Color(0xFF7C3AED).withOpacity(isDark ? 0.9 : 0.6),
                                     letterSpacing: 0.8,
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 10),
-                            const Text(
+                            Text(
                               'Apply now and secure your place for the upcoming academic year: https://onlineapp.nu-lipa.edu.ph/quest/register.php',
                               style: TextStyle(
                                 fontFamily: 'DM Sans',
                                 fontSize: 12.5,
-                                color: Color(0xFF3D4A63),
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
                                 height: 1.5,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'Experience 𝘌𝘥𝘶𝘤𝘢𝘵𝘪𝘰𝘯 𝘛𝘩𝘢𝘵 𝘞𝘰𝘳𝘬𝘴.',
                               style: TextStyle(
                                 fontFamily: 'DM Sans',
                                 fontSize: 12.5,
                                 fontStyle: FontStyle.italic,
-                                color: Color(0xFF3D4A63),
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
                                 height: 1.5,
                               ),
                             ),
@@ -1183,7 +1234,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           if (_submitted)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.35),
+                color: Colors.black.withOpacity(0.55),
                 child: Center(
                   child: FadeTransition(
                     opacity: _successFade,
@@ -1193,8 +1244,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                         width: 160,
                         height: 160,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isDark ? const Color(0xFF131D31) : Colors.white,
                           borderRadius: BorderRadius.circular(32),
+                          border: isDark
+                              ? Border.all(color: const Color(0xFF1E2B45))
+                              : null,
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x40000000),
@@ -1209,15 +1263,15 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                             Container(
                               width: 60,
                               height: 60,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
                                   colors: [
                                     Color(0xFF34D399),
                                     Color(0xFF05C46B),
                                   ],
                                 ),
                                 shape: BoxShape.circle,
-                                boxShadow: const [
+                                boxShadow: [
                                   BoxShadow(
                                     color: Color(0x4005C46B),
                                     blurRadius: 16,
@@ -1232,22 +1286,22 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                               ),
                             ),
                             const SizedBox(height: 14),
-                            const Text(
+                            Text(
                               'Submitted!',
                               style: TextStyle(
                                 fontFamily: 'DM Sans',
                                 fontWeight: FontWeight.w900,
                                 fontSize: 16,
-                                color: Color(0xFF080F1E),
+                                color: isDark ? Colors.white : const Color(0xFF080F1E),
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'Request sent',
                               style: TextStyle(
                                 fontFamily: 'DM Sans',
                                 fontSize: 12,
-                                color: Color(0xFF9AA3B2),
+                                color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                               ),
                             ),
                           ],
@@ -1266,6 +1320,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
   // ── Progress bar ──────────────────────────────────────────────────────────
   Widget _buildProgress() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const total = 4;
     final done = _completedSteps;
     return Container(
@@ -1286,16 +1341,16 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                   fontSize: 11.5,
                   color: done == total
                       ? const Color(0xFF05C46B)
-                      : const Color(0xFF9AA3B2),
+                      : (isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2)),
                 ),
               ),
               Text(
                 '${(done / total * 100).toInt()}%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontWeight: FontWeight.w800,
                   fontSize: 11.5,
-                  color: Color(0xFF002366),
+                  color: isDark ? const Color(0xFFFFD200) : const Color(0xFF002366),
                 ),
               ),
             ],
@@ -1309,15 +1364,22 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               curve: Curves.easeOutCubic,
               builder: (_, val, __) => Stack(
                 children: [
-                  Container(height: 5, color: Colors.white),
+                  Container(
+                    height: 5,
+                    color: isDark ? const Color(0xFF1E2B45) : Colors.white,
+                  ),
                   FractionallySizedBox(
                     widthFactor: val,
                     child: Container(
                       height: 5,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF001540), Color(0xFF2B5CE6)],
-                        ),
+                        gradient: isDark
+                            ? const LinearGradient(
+                                colors: [Color(0xFFE5A000), Color(0xFFFFD200)],
+                              )
+                            : const LinearGradient(
+                                colors: [Color(0xFF001540), Color(0xFF2B5CE6)],
+                              ),
                         borderRadius: BorderRadius.circular(99),
                       ),
                     ),
@@ -1333,18 +1395,26 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
   // ── Header ────────────────────────────────────────────────────────────────
   Widget _buildHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0x0F000000), width: 1)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x07001540),
-            blurRadius: 12,
-            offset: Offset(0, 1),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x0F000000),
+            width: 1,
           ),
-        ],
+        ),
+        boxShadow: isDark
+            ? []
+            : const [
+                BoxShadow(
+                  color: Color(0x07001540),
+                  blurRadius: 12,
+                  offset: Offset(0, 1),
+                ),
+              ],
       ),
       padding: EdgeInsets.fromLTRB(
         22,
@@ -1357,24 +1427,26 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  'Create Request',
+                  widget.isEditing ? 'Edit Request' : 'Create Request',
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w900,
                     fontSize: 24,
-                    color: Color(0xFF002366),
+                    color: isDark ? Colors.white : const Color(0xFF002366),
                     letterSpacing: -0.5,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
-                  'Submit a new social media post',
+                  widget.isEditing
+                      ? 'Update your social media request'
+                      : 'Submit a new social media post',
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 13,
-                    color: Color(0xFF9AA3B2),
+                    color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                   ),
                 ),
               ],
@@ -1391,8 +1463,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                 height: 6,
                 decoration: BoxDecoration(
                   color: i < _completedSteps
-                      ? const Color(0xFF002366)
-                      : const Color(0xFFE9EDF6),
+                      ? (isDark ? const Color(0xFFFFD200) : const Color(0xFF002366))
+                      : (isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6)),
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -1404,84 +1476,102 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   }
 
   // ── Field label ───────────────────────────────────────────────────────────
-  Widget _fieldLabel(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontFamily: 'DM Sans',
-        fontWeight: FontWeight.w800,
-        fontSize: 11,
-        color: Color(0xFF9AA3B2),
-        letterSpacing: 0.8,
+  Widget _fieldLabel(String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontFamily: 'DM Sans',
+          fontWeight: FontWeight.w800,
+          fontSize: 11,
+          color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
+          letterSpacing: 0.8,
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   // ── Text fields ───────────────────────────────────────────────────────────
-  Widget _textField(TextEditingController ctrl, {String? hint}) => TextField(
-    controller: ctrl,
-    style: const TextStyle(
-      fontFamily: 'DM Sans',
-      fontSize: 14,
-      color: Color(0xFF080F1E),
-    ),
-    decoration: _inputDeco(hint: hint),
-  );
+  Widget _textField(TextEditingController ctrl, {String? hint}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return TextField(
+      controller: ctrl,
+      style: TextStyle(
+        fontFamily: 'DM Sans',
+        fontSize: 14,
+        color: isDark ? Colors.white : const Color(0xFF080F1E),
+      ),
+      decoration: _inputDeco(hint: hint),
+    );
+  }
 
   Widget _textAreaField(
     TextEditingController ctrl, {
     int rows = 4,
     ValueChanged<String>? onChanged,
-  }) => SizedBox(
-    height: rows * 22.0 + 28,
-    child: TextField(
-      controller: ctrl,
-      maxLines: null,
-      expands: true,
-      textAlignVertical: TextAlignVertical.top,
-      onChanged: onChanged,
-      style: const TextStyle(
-        fontFamily: 'DM Sans',
-        fontSize: 14,
-        color: Color(0xFF080F1E),
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(
+      height: rows * 22.0 + 28,
+      child: TextField(
+        controller: ctrl,
+        maxLines: null,
+        expands: true,
+        textAlignVertical: TextAlignVertical.top,
+        onChanged: onChanged,
+        style: TextStyle(
+          fontFamily: 'DM Sans',
+          fontSize: 14,
+          color: isDark ? Colors.white : const Color(0xFF080F1E),
+        ),
+        decoration: _inputDeco(),
       ),
-      decoration: _inputDeco(),
-    ),
-  );
+    );
+  }
 
-  InputDecoration _inputDeco({String? hint}) => InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(
-      fontFamily: 'DM Sans',
-      fontSize: 13.5,
-      color: Color(0xFF9AA3B2),
-    ),
-    filled: true,
-    fillColor: const Color(0xFFF1F4FB),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: BorderSide.none,
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: BorderSide.none,
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Color(0xFF2B5CE6), width: 1.5),
-    ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-  );
+  InputDecoration _inputDeco({String? hint}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(
+        fontFamily: 'DM Sans',
+        fontSize: 13.5,
+        color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
+      ),
+      filled: true,
+      fillColor: isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4FB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: isDark ? const Color(0xFFFFD200) : const Color(0xFF2B5CE6),
+          width: 1.5,
+        ),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
 
   // ── Platform list ─────────────────────────────────────────────────────────
   Widget _buildPlatformList() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final entries = _platforms.entries.toList();
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFE),
+        color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF8FAFE),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x0E000000)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+        ),
       ),
       child: Column(
         children: entries.asMap().entries.map((e) {
@@ -1510,21 +1600,21 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                         height: 20,
                         decoration: BoxDecoration(
                           color: isChecked
-                              ? const Color(0xFF002366)
+                              ? (isDark ? const Color(0xFFFFD200) : const Color(0xFF002366))
                               : Colors.transparent,
                           border: Border.all(
                             color: isChecked
-                                ? const Color(0xFF002366)
-                                : const Color(0xFFCDD1DB),
+                                ? (isDark ? const Color(0xFFFFD200) : const Color(0xFF002366))
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFCDD1DB)),
                             width: 1.5,
                           ),
                           borderRadius: BorderRadius.circular(7),
                         ),
                         child: isChecked
-                            ? const Icon(
+                            ? Icon(
                                 Icons.check_rounded,
                                 size: 13,
-                                color: Colors.white,
+                                color: isDark ? const Color(0xFF0A0F1D) : Colors.white,
                               )
                             : null,
                       ),
@@ -1534,16 +1624,20 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                         height: 32,
                         decoration: BoxDecoration(
                           color: isChecked
-                              ? const Color(0xFF002366).withOpacity(0.1)
-                              : const Color(0xFF9AA3B2).withOpacity(0.08),
+                              ? (isDark
+                                  ? const Color(0xFFFFD200).withOpacity(0.18)
+                                  : const Color(0xFF002366).withOpacity(0.1))
+                              : (isDark
+                                  ? const Color(0xFF1E2B45)
+                                  : const Color(0xFF9AA3B2).withOpacity(0.08)),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
                           _platformIcons[platform] ?? Icons.public_rounded,
                           size: 16,
                           color: isChecked
-                              ? const Color(0xFF002366)
-                              : const Color(0xFF9AA3B2),
+                              ? (isDark ? const Color(0xFFFFD200) : const Color(0xFF002366))
+                              : (isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1556,8 +1650,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                               : FontWeight.w500,
                           fontSize: 14.5,
                           color: isChecked
-                              ? const Color(0xFF080F1E)
-                              : const Color(0xFF3D4A63),
+                              ? (isDark ? Colors.white : const Color(0xFF080F1E))
+                              : (isDark ? const Color(0xFF8E9BAE) : const Color(0xFF3D4A63)),
                         ),
                       ),
                       const Spacer(),
@@ -1568,16 +1662,18 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2B5CE6).withOpacity(0.1),
+                            color: isDark
+                                ? const Color(0xFFFFD200).withOpacity(0.15)
+                                : const Color(0xFF2B5CE6).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(99),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Selected',
                             style: TextStyle(
                               fontFamily: 'DM Sans',
                               fontWeight: FontWeight.w700,
                               fontSize: 10,
-                              color: Color(0xFF2B5CE6),
+                              color: isDark ? const Color(0xFFFFD200) : const Color(0xFF2B5CE6),
                             ),
                           ),
                         ),
@@ -1589,7 +1685,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                 Container(
                   height: 1,
                   margin: const EdgeInsets.symmetric(horizontal: 14),
-                  color: const Color(0x08000000),
+                  color: isDark ? const Color(0xFF1E2B45) : const Color(0x08000000),
                 ),
             ],
           );
@@ -1604,103 +1700,126 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     required String hint,
     required List<String> items,
     required ValueChanged<String?> onChanged,
-  }) => Container(
-    height: 46,
-    decoration: BoxDecoration(
-      color: const Color(0xFFF1F4FB),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    padding: const EdgeInsets.symmetric(horizontal: 14),
-    child: DropdownButtonHideUnderline(
-      child: DropdownButton<String>(
-        value: value,
-        hint: Text(
-          hint,
-          style: const TextStyle(
-            fontFamily: 'DM Sans',
-            fontWeight: FontWeight.w500,
-            fontSize: 13.5,
-            color: Color(0xFF9AA3B2),
-          ),
-        ),
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          size: 18,
-          color: Color(0xFF9AA3B2),
-        ),
-        isExpanded: true,
-        style: const TextStyle(
-          fontFamily: 'DM Sans',
-          fontWeight: FontWeight.w600,
-          fontSize: 13.5,
-          color: Color(0xFF080F1E),
-        ),
-        items: items
-            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-            .toList(),
-        onChanged: onChanged,
-      ),
-    ),
-  );
-
-  // ── Date picker ───────────────────────────────────────────────────────────
-  Widget _buildDatePicker() => GestureDetector(
-    onTap: _pickDate,
-    child: Container(
-      height: 48,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 46,
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F4FB),
+        color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4FB),
         borderRadius: BorderRadius.circular(14),
+        border: isDark ? Border.all(color: const Color(0xFF1E2B45)) : null,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              _selectedDate == null
-                  ? 'Select a date…'
-                  : '${_selectedDate!.month}/${_selectedDate!.day}/${_selectedDate!.year}',
-              style: TextStyle(
-                fontFamily: 'DM Sans',
-                fontSize: 14,
-                color: _selectedDate == null
-                    ? const Color(0xFF9AA3B2)
-                    : const Color(0xFF080F1E),
-                fontWeight: _selectedDate == null
-                    ? FontWeight.w400
-                    : FontWeight.w600,
-              ),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          dropdownColor: isDark ? const Color(0xFF131D31) : Colors.white,
+          hint: Text(
+            hint,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontWeight: FontWeight.w500,
+              fontSize: 13.5,
+              color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
             ),
           ),
-          const Icon(
-            Icons.calendar_month_rounded,
-            size: 20,
-            color: Color(0xFF9AA3B2),
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 18,
+            color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
           ),
-        ],
+          isExpanded: true,
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w600,
+            fontSize: 13.5,
+            color: isDark ? Colors.white : const Color(0xFF080F1E),
+          ),
+          items: items
+              .map((e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(
+                      e,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF080F1E),
+                      ),
+                    ),
+                  ))
+              .toList(),
+          onChanged: onChanged,
+        ),
       ),
-    ),
-  );
+    );
+  }
+
+  // ── Date picker ───────────────────────────────────────────────────────────
+  Widget _buildDatePicker() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: _pickDate,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4FB),
+          borderRadius: BorderRadius.circular(14),
+          border: isDark ? Border.all(color: const Color(0xFF1E2B45)) : null,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                _selectedDate == null
+                    ? 'Select a date…'
+                    : '${_selectedDate!.month}/${_selectedDate!.day}/${_selectedDate!.year}',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 14,
+                  color: _selectedDate == null
+                      ? (isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2))
+                      : (isDark ? Colors.white : const Color(0xFF080F1E)),
+                  fontWeight: _selectedDate == null
+                      ? FontWeight.w400
+                      : FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.calendar_month_rounded,
+              size: 20,
+              color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   // ── Date volume panel ─────────────────────────────────────────────────────
   Widget _buildDateVolumePanel() {
     if (_selectedDate == null) return const SizedBox();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedSize(
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
       child: Container(
         margin: const EdgeInsets.only(top: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE4E8F0), width: 1.5),
+          color: isDark ? const Color(0xFF131D31) : Colors.white,
+          border: Border.all(
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0),
+            width: 1.5,
+          ),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x10000000),
-              blurRadius: 14,
-              offset: Offset(0, 4),
-            ),
-          ],
+          boxShadow: isDark
+              ? []
+              : const [
+                  BoxShadow(
+                    color: Color(0x10000000),
+                    blurRadius: 14,
+                    offset: Offset(0, 4),
+                  ),
+                ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1708,36 +1827,40 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
             // Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFE),
-                border: Border(bottom: BorderSide(color: Color(0xFFF0F2F8))),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(14.5)),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF8FAFE),
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFF0F2F8),
+                  ),
+                ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(14.5)),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_today_rounded,
                     size: 14,
-                    color: Color(0xFF9AA3B2),
+                    color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     '${_selectedDate!.month}/${_selectedDate!.day}/${_selectedDate!.year}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF080F1E),
+                      color: isDark ? Colors.white : const Color(0xFF080F1E),
                     ),
                   ),
                   const Spacer(),
                   if (_isLoadingDateData)
-                    const SizedBox(
+                    SizedBox(
                       width: 14,
                       height: 14,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Color(0xFF2B5CE6),
+                        color: isDark ? const Color(0xFFFFD200) : const Color(0xFF2B5CE6),
                       ),
                     )
                   else
@@ -1811,17 +1934,17 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                             const Spacer(),
                             Text(
                               'Schedule load',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'DM Sans',
                                 fontSize: 11,
-                                color: Color(0xFF9AA3B2),
+                                color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
 
-                        // Capacity bar with LayoutBuilder (fixes MediaQuery hack)
+                        // Capacity bar with LayoutBuilder
                         LayoutBuilder(
                           builder: (_, constraints) {
                             final pct =
@@ -1832,7 +1955,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                                 children: [
                                   Container(
                                     height: 8,
-                                    color: const Color(0xFFF1F4FB),
+                                    color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4FB),
                                   ),
                                   TweenAnimationBuilder<double>(
                                     tween: Tween(begin: 0, end: pct),
@@ -1872,9 +1995,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                                 vertical: 9,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFE),
+                                color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF8FAFE),
                                 border: Border.all(
-                                  color: const Color(0xFFF0F2F8),
+                                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFF0F2F8),
                                 ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -1894,21 +2017,21 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                                       title,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'DM Sans',
                                         fontWeight: FontWeight.w600,
                                         fontSize: 12.5,
-                                        color: Color(0xFF3D4A63),
+                                        color: isDark ? Colors.white : const Color(0xFF3D4A63),
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
                                     status,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: 'DM Sans',
                                       fontSize: 10.5,
-                                      color: Color(0xFF9AA3B2),
+                                      color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                                     ),
                                   ),
                                 ],
@@ -1917,21 +2040,21 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                           }),
                         ] else ...[
                           const SizedBox(height: 14),
-                          const Center(
+                          Center(
                             child: Column(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.event_available_rounded,
                                   size: 28,
                                   color: Color(0xFF05C46B),
                                 ),
-                                SizedBox(height: 6),
+                                const SizedBox(height: 6),
                                 Text(
                                   'No scheduled posts on this date',
                                   style: TextStyle(
                                     fontFamily: 'DM Sans',
                                     fontSize: 12.5,
-                                    color: Color(0xFF9AA3B2),
+                                    color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                                   ),
                                 ),
                               ],
@@ -1948,237 +2071,261 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   }
 
   // ── Media upload ──────────────────────────────────────────────────────────
-  Widget _buildMediaUpload() => GestureDetector(
-    onTap: _pickMedia,
-    child: Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 130),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFE),
-        border: Border.all(
-          color: const Color(0xFF2B5CE6).withOpacity(0.2),
-          width: 2,
-          style: BorderStyle.solid,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: _mediaFiles.isEmpty
-          ? Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2B5CE6).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: const Icon(
-                      Icons.upload_rounded,
-                      size: 22,
-                      color: Color(0xFF2B5CE6),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Tap to upload images or videos',
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13.5,
-                      color: Color(0xFF3D4A63),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  const Text(
-                    'PNG, JPG, MP4 · max 10MB',
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 11.5,
-                      color: Color(0xFF9AA3B2),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF05C46B).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        child: const Icon(
-                          Icons.check_rounded,
-                          size: 15,
-                          color: Color(0xFF05C46B),
-                        ),
-                      ),
-                      const SizedBox(width: 9),
-                      Text(
-                        '${_mediaFiles.length} file(s) selected',
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: Color(0xFF080F1E),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ..._mediaFiles.map(
-                    (f) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.attachment_rounded,
-                            size: 13,
-                            color: Color(0xFF9AA3B2),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              f.name,
-                              style: const TextStyle(
-                                fontFamily: 'DM Sans',
-                                fontSize: 11.5,
-                                color: Color(0xFF3D4A63),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Tap to change files',
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 11,
-                      color: Color(0xFF9AA3B2),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-    ),
-  );
-
-  // ── AI caption card ───────────────────────────────────────────────────────
-  Widget _buildAICaption() => Container(
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFF8F4FF), Color(0xFFEFF4FF)],
-      ),
-      border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.2)),
-      borderRadius: BorderRadius.circular(16),
-    ),
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Let AI craft an engaging caption based on your post details.',
-          style: TextStyle(
-            fontFamily: 'DM Sans',
-            fontSize: 13,
-            color: Color(0xFF3D4A63),
-            height: 1.55,
+  Widget _buildMediaUpload() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: _pickMedia,
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 130),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF8FAFE),
+          border: Border.all(
+            color: isDark
+                ? const Color(0xFFFFD200).withOpacity(0.35)
+                : const Color(0xFF2B5CE6).withOpacity(0.2),
+            width: 1.5,
           ),
+          borderRadius: BorderRadius.circular(16),
         ),
-        const SizedBox(height: 14),
-        SizedBox(
-          width: double.infinity,
-          height: 44,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFF2563EB)],
-              ),
-              borderRadius: BorderRadius.circular(13),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x407C3AED),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: _isGeneratingCaption ? null : _onGenerateCaption,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                disabledBackgroundColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(13),
-                ),
-              ),
-              child: _isGeneratingCaption
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        child: _mediaFiles.isEmpty
+            ? Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFFFFD200).withOpacity(0.12)
+                            : const Color(0xFF2B5CE6).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(15),
                       ),
-                    )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      child: Icon(
+                        Icons.upload_rounded,
+                        size: 22,
+                        color: isDark ? const Color(0xFFFFD200) : const Color(0xFF2B5CE6),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Tap to upload images or videos',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13.5,
+                        color: isDark ? Colors.white : const Color(0xFF3D4A63),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'PNG, JPG, MP4 · max 10MB',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 11.5,
+                        color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Icon(
-                          Icons.auto_awesome_rounded,
-                          size: 16,
-                          color: Colors.white,
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF05C46B).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: const Icon(
+                            Icons.check_rounded,
+                            size: 15,
+                            color: Color(0xFF05C46B),
+                          ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 9),
                         Text(
-                          'Generate Caption',
+                          '${_mediaFiles.length} file(s) selected',
                           style: TextStyle(
                             fontFamily: 'DM Sans',
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: isDark ? Colors.white : const Color(0xFF080F1E),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 10),
+                    ..._mediaFiles.map(
+                      (f) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.attachment_rounded,
+                              size: 13,
+                              color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                f.name,
+                                style: TextStyle(
+                                  fontFamily: 'DM Sans',
+                                  fontSize: 11.5,
+                                  color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap to change files',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 11,
+                        color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+
+  // ── AI caption card ───────────────────────────────────────────────────────
+  Widget _buildAICaption() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: isDark
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1E1735), Color(0xFF131D31)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFF8F4FF), Color(0xFFEFF4FF)],
+              ),
+        border: Border.all(
+          color: const Color(0xFF8B5CF6).withOpacity(isDark ? 0.35 : 0.2),
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Let AI craft an engaging caption based on your post details.',
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 13,
+              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
+              height: 1.55,
             ),
           ),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7C3AED), Color(0xFF2563EB)],
+                ),
+                borderRadius: BorderRadius.circular(13),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x407C3AED),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: _isGeneratingCaption ? null : _onGenerateCaption,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  disabledBackgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                ),
+                child: _isGeneratingCaption
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Generate Caption',
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // ── Sticky submit ─────────────────────────────────────────────────────────
   Widget _buildStickySubmit() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.97),
-        border: const Border(top: BorderSide(color: Color(0x0E000000))),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12001540),
-            blurRadius: 20,
-            offset: Offset(0, -4),
+        color: isDark ? const Color(0xFF131D31) : Colors.white.withOpacity(0.97),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
           ),
-        ],
+        ),
+        boxShadow: isDark
+            ? []
+            : const [
+                BoxShadow(
+                  color: Color(0x12001540),
+                  blurRadius: 20,
+                  offset: Offset(0, -4),
+                ),
+              ],
       ),
       child: GestureDetector(
         onTapDown: (_) {
@@ -2200,17 +2347,28 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
             width: double.infinity,
             height: 52,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF001540), Color(0xFF003080)],
-              ),
+              gradient: isDark
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF002366), Color(0xFF1243B0)],
+                    )
+                  : const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF001540), Color(0xFF003080)],
+                    ),
               borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
+              border: isDark
+                  ? Border.all(color: const Color(0xFFFFD200).withOpacity(0.35))
+                  : null,
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x40001540),
+                  color: isDark
+                      ? const Color(0xFF002366).withOpacity(0.4)
+                      : const Color(0x40001540),
                   blurRadius: 18,
-                  offset: Offset(0, 6),
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
@@ -2297,19 +2455,30 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accent ?? const Color(0xFF002366);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = accent ?? (isDark ? const Color(0xFFFFD200) : const Color(0xFF002366));
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x07001540),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+        ),
+        boxShadow: isDark
+            ? const [
+                BoxShadow(
+                  color: Color(0x20000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ]
+            : const [
+                BoxShadow(
+                  color: Color(0x07001540),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2323,7 +2492,7 @@ class _SectionCard extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withOpacity(isDark ? 0.18 : 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(icon, size: 17, color: color),
@@ -2343,7 +2512,10 @@ class _SectionCard extends StatelessWidget {
             ),
           ),
           // Thin divider
-          Container(height: 1, color: const Color(0x08000000)),
+          Container(
+            height: 1,
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x08000000),
+          ),
           // Content
           Padding(
             padding: const EdgeInsets.all(16),
