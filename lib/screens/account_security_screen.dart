@@ -202,6 +202,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
   void _showOtpDialog(String email) {
     final otpCtrl = TextEditingController();
     bool isVerifying = false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
@@ -209,33 +210,66 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text(
+            backgroundColor: isDark ? const Color(0xFF131D31) : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
+            ),
+            title: Text(
               'Security Verification',
-              style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF080F1E)),
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                color: isDark ? Colors.white : const Color(0xFF080F1E),
+              ),
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'To update your password, please enter the 6-digit OTP sent to your email.',
-                  style: TextStyle(fontFamily: 'DM Sans', fontSize: 13.5, color: Color(0xFF3D4A63), height: 1.4),
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 13.5,
+                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 TextField(
                   controller: otpCtrl,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
-                  style: const TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600, fontSize: 16, letterSpacing: 2.0),
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    letterSpacing: 2.0,
+                    color: isDark ? Colors.white : const Color(0xFF080F1E),
+                  ),
                   textAlign: TextAlign.center,
                   decoration: InputDecoration(
                     hintText: '000000',
-                    hintStyle: const TextStyle(letterSpacing: 2.0, color: Color(0xFFBFC5D0)),
+                    hintStyle: TextStyle(
+                      letterSpacing: 2.0,
+                      color: isDark ? const Color(0xFF64748B) : const Color(0xFFBFC5D0),
+                    ),
                     filled: true,
-                    fillColor: const Color(0xFFF1F4FB),
+                    fillColor: isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4FB),
                     counterText: '',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: isDark ? const Color(0xFFFFD200) : const Color(0xFF001A6E), width: 1.5),
+                    ),
                     contentPadding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
@@ -244,9 +278,13 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             actions: [
               TextButton(
                 onPressed: isVerifying ? null : () => Navigator.of(ctx).pop(),
-                child: const Text(
+                child: Text(
                   'Cancel',
-                  style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w700, color: Color(0xFF9AA3B2)),
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
+                  ),
                 ),
               ),
               ElevatedButton(
@@ -349,9 +387,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE9EDF6),
+      backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFFE9EDF6),
       body: FadeTransition(
         opacity: _entryFade,
         child: SlideTransition(
@@ -359,7 +398,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
           child: Column(
             children: [
               // ── Header ───────────────────────────────────────────────────
-              _buildHeader(topPad),
+              _buildHeader(topPad, isDark),
 
               // ── Body ─────────────────────────────────────────────────────
               Expanded(
@@ -369,19 +408,19 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Shield info card
-                      _buildInfoCard(),
+                      _buildInfoCard(isDark),
                       const SizedBox(height: 22),
 
                       // Form card
-                      _buildFormCard(),
+                      _buildFormCard(isDark),
                       const SizedBox(height: 20),
 
                       // Notification Preferences
-                      _buildNotificationCard(),
+                      _buildNotificationCard(isDark),
                       const SizedBox(height: 20),
 
                       // Privacy Settings
-                      _buildPrivacyCard(),
+                      _buildPrivacyCard(isDark),
                       const SizedBox(height: 20),
 
                       // Submit button (Password only)
@@ -390,7 +429,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
                       const SizedBox(height: 24),
 
                       // Security tips
-                      _buildTipsCard(),
+                      _buildTipsCard(isDark),
                     ],
                   ),
                 ),
@@ -403,17 +442,22 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
   }
 
   // ── Header ────────────────────────────────────────────────────────────────
-  Widget _buildHeader(double topPad) {
+  Widget _buildHeader(double topPad, bool isDark) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0x0F000000), width: 1)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x0F000000),
+            width: 1,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? Colors.black.withOpacity(0.3) : const Color(0x07001540),
             blurRadius: 12,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -422,23 +466,23 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back_ios_new_rounded,
-              color: Color(0xFF002366),
+              color: isDark ? const Color(0xFFFFD200) : const Color(0xFF002366),
               size: 18,
             ),
           ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'Account Security',
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontWeight: FontWeight.w900,
                     fontSize: 20,
-                    color: Color(0xFF080F1E),
+                    color: isDark ? Colors.white : const Color(0xFF080F1E),
                     letterSpacing: -0.4,
                   ),
                 ),
@@ -447,7 +491,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 12,
-                    color: Color(0xFF9AA3B2),
+                    color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                   ),
                 ),
               ],
@@ -458,13 +502,15 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: const Color(0xFF002366).withOpacity(0.07),
+              color: isDark
+                  ? const Color(0xFF1E2B45)
+                  : const Color(0xFF002366).withOpacity(0.07),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.lock_rounded,
               size: 18,
-              color: Color(0xFF002366),
+              color: isDark ? const Color(0xFFFFD200) : const Color(0xFF002366),
             ),
           ),
         ],
@@ -473,17 +519,20 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
   }
 
   // ── Info card ─────────────────────────────────────────────────────────────
-  Widget _buildInfoCard() {
+  Widget _buildInfoCard(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF001540), Color(0xFF0032A0), Color(0xFF1A4FCC)],
-          stops: [0.0, 0.5, 1.0],
+          colors: isDark
+              ? [const Color(0xFF0D182E), const Color(0xFF132244), const Color(0xFF1A3266)]
+              : [const Color(0xFF001540), const Color(0xFF0032A0), const Color(0xFF1A4FCC)],
+          stops: const [0.0, 0.5, 1.0],
         ),
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? Border.all(color: const Color(0xFF1E2B45), width: 1.2) : null,
         boxShadow: const [
           BoxShadow(
             color: Color(0x40001540),
@@ -512,16 +561,20 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: isDark
+                      ? const Color(0xFFFFD200).withOpacity(0.15)
+                      : Colors.white.withOpacity(0.15),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
+                    color: isDark
+                        ? const Color(0xFFFFD200).withOpacity(0.3)
+                        : Colors.white.withOpacity(0.2),
                     width: 1.5,
                   ),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.shield_rounded,
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFFFFD200) : Colors.white,
                   size: 22,
                 ),
               ),
@@ -561,17 +614,19 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
   }
 
   // ── Form card ─────────────────────────────────────────────────────────────
-  Widget _buildFormCard() {
+  Widget _buildFormCard(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? Colors.black.withOpacity(0.25) : const Color(0x07001540),
             blurRadius: 12,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -580,7 +635,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Current password
-          _FieldLabel(text: 'Current Password'),
+          _FieldLabel(text: 'Current Password', isDark: isDark),
           const SizedBox(height: 8),
           _PasswordField(
             controller: _currentCtrl,
@@ -588,14 +643,15 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             obscure: _obscureCurrent,
             onToggle: () => setState(() => _obscureCurrent = !_obscureCurrent),
             prefixIcon: Icons.lock_outline_rounded,
+            isDark: isDark,
           ),
 
           const SizedBox(height: 18),
-          _Divider(),
+          _Divider(isDark: isDark),
           const SizedBox(height: 18),
 
           // New password
-          _FieldLabel(text: 'New Password'),
+          _FieldLabel(text: 'New Password', isDark: isDark),
           const SizedBox(height: 8),
           _PasswordField(
             controller: _newCtrl,
@@ -603,18 +659,19 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             obscure: _obscureNew,
             onToggle: () => setState(() => _obscureNew = !_obscureNew),
             prefixIcon: Icons.vpn_key_rounded,
+            isDark: isDark,
           ),
 
           // Strength indicator
           if (_newCtrl.text.isNotEmpty) ...[
             const SizedBox(height: 10),
-            _buildStrengthIndicator(),
+            _buildStrengthIndicator(isDark),
           ],
 
           const SizedBox(height: 18),
 
           // Confirm password
-          _FieldLabel(text: 'Confirm New Password'),
+          _FieldLabel(text: 'Confirm New Password', isDark: isDark),
           const SizedBox(height: 8),
           _PasswordField(
             controller: _confirmCtrl,
@@ -622,6 +679,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             obscure: _obscureConfirm,
             onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
             prefixIcon: Icons.lock_reset_rounded,
+            isDark: isDark,
             // Show match indicator
             suffix: _confirmCtrl.text.isNotEmpty
                 ? Icon(
@@ -641,7 +699,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
   }
 
   // ── Strength bar ──────────────────────────────────────────────────────────
-  Widget _buildStrengthIndicator() {
+  Widget _buildStrengthIndicator(bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -650,11 +708,11 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
           children: [
             Text(
               'Password strength',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 10.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF9AA3B2),
+                color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
               ),
             ),
             Text(
@@ -677,7 +735,10 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             curve: Curves.easeOutCubic,
             builder: (_, val, __) => Stack(
               children: [
-                Container(height: 5, color: const Color(0xFFE9EDF6)),
+                Container(
+                  height: 5,
+                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6),
+                ),
                 FractionallySizedBox(
                   widthFactor: val,
                   child: Container(
@@ -761,17 +822,19 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
   }
 
   // ── Notification Preferences ───────────────────────────────────────────────
-  Widget _buildNotificationCard() {
+  Widget _buildNotificationCard(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? Colors.black.withOpacity(0.25) : const Color(0x07001540),
             blurRadius: 12,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -785,23 +848,23 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
+                  color: isDark ? const Color(0xFF2E2412) : const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: const Icon(
                   Icons.notifications_active_rounded,
                   size: 16,
-                  color: Color(0xFFD97706),
+                  color: Color(0xFFFFD200),
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'NOTIFICATION PREFERENCES',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontWeight: FontWeight.w800,
                   fontSize: 10.5,
-                  color: Color(0xFF9AA3B2),
+                  color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                   letterSpacing: 0.9,
                 ),
               ),
@@ -812,6 +875,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             title: 'Email Notifications',
             desc: 'Receive all notifications via email when enabled',
             value: _emailNotif,
+            isDark: isDark,
             onChanged: (val) async {
               setState(() => _emailNotif = val);
               if (!val) setState(() => _statusUpdates = false);
@@ -819,7 +883,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             },
           ),
           const SizedBox(height: 12),
-          _Divider(),
+          _Divider(isDark: isDark),
           const SizedBox(height: 12),
           Opacity(
             opacity: _emailNotif ? 1.0 : 0.5,
@@ -827,6 +891,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
               title: 'Request Status Updates',
               desc: 'Get an email when your request is approved, posted, or rejected',
               value: _statusUpdates,
+              isDark: isDark,
               onChanged: _emailNotif
                   ? (val) async {
                       setState(() => _statusUpdates = val);
@@ -853,17 +918,19 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
   }
 
   // ── Privacy Settings ───────────────────────────────────────────────────────
-  Widget _buildPrivacyCard() {
+  Widget _buildPrivacyCard(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x07001540),
+            color: isDark ? Colors.black.withOpacity(0.25) : const Color(0x07001540),
             blurRadius: 12,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -877,7 +944,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
+                  color: isDark ? const Color(0xFF0F291E) : const Color(0xFFDCFCE7),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: const Icon(
@@ -887,13 +954,13 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'PRIVACY SETTINGS',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontWeight: FontWeight.w800,
                   fontSize: 10.5,
-                  color: Color(0xFF9AA3B2),
+                  color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                   letterSpacing: 0.9,
                 ),
               ),
@@ -904,6 +971,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             title: 'Public Profile',
             desc: 'Make your profile visible to all users in NUPost',
             value: _publicProfile,
+            isDark: isDark,
             onChanged: (val) async {
               setState(() => _publicProfile = val);
               try {
@@ -925,6 +993,7 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
     required String title,
     required String desc,
     required bool value,
+    required bool isDark,
     required ValueChanged<bool>? onChanged,
   }) {
     return Row(
@@ -936,20 +1005,20 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontWeight: FontWeight.w700,
                   fontSize: 14.5,
-                  color: Color(0xFF080F1E),
+                  color: isDark ? Colors.white : const Color(0xFF080F1E),
                 ),
               ),
               const SizedBox(height: 3),
               Text(
                 desc,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 12.5,
-                  color: Color(0xFF3D4A63),
+                  color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF3D4A63),
                   height: 1.4,
                 ),
               ),
@@ -960,17 +1029,17 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: Colors.white,
-          activeTrackColor: const Color(0xFF001A6E),
-          inactiveThumbColor: Colors.white,
-          inactiveTrackColor: const Color(0xFFD1D5DB),
+          activeColor: isDark ? const Color(0xFFFFD200) : Colors.white,
+          activeTrackColor: isDark ? const Color(0xFF002D80) : const Color(0xFF001A6E),
+          inactiveThumbColor: isDark ? const Color(0xFF8E9BAE) : Colors.white,
+          inactiveTrackColor: isDark ? const Color(0xFF1E2B45) : const Color(0xFFD1D5DB),
         ),
       ],
     );
   }
 
   // ── Tips card ─────────────────────────────────────────────────────────────
-  Widget _buildTipsCard() {
+  Widget _buildTipsCard(bool isDark) {
     const tips = [
       ('Use at least 8 characters', Icons.check_circle_outline_rounded),
       (
@@ -983,8 +1052,12 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F5FF),
-        border: Border.all(color: const Color(0xFF2B5CE6).withOpacity(0.15)),
+        color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF0F5FF),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF1E2B45)
+              : const Color(0xFF2B5CE6).withOpacity(0.15),
+        ),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.all(16),
@@ -997,23 +1070,25 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2B5CE6).withOpacity(0.1),
+                  color: isDark
+                      ? const Color(0xFF1E2B45)
+                      : const Color(0xFF2B5CE6).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.tips_and_updates_rounded,
                   size: 16,
-                  color: Color(0xFF2B5CE6),
+                  color: isDark ? const Color(0xFFFFD200) : const Color(0xFF2B5CE6),
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
+              Text(
                 'Password Tips',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
-                  color: Color(0xFF080F1E),
+                  color: isDark ? Colors.white : const Color(0xFF080F1E),
                 ),
               ),
             ],
@@ -1025,15 +1100,19 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(tip.$2, size: 14, color: const Color(0xFF2B5CE6)),
+                  Icon(
+                    tip.$2,
+                    size: 14,
+                    color: isDark ? const Color(0xFFFFD200) : const Color(0xFF2B5CE6),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       tip.$1,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontSize: 12.5,
-                        color: Color(0xFF3D4A63),
+                        color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
                         height: 1.4,
                       ),
                     ),
@@ -1051,17 +1130,18 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen>
 // ── Shared field label ────────────────────────────────────────────────────────
 class _FieldLabel extends StatelessWidget {
   final String text;
-  const _FieldLabel({required this.text});
+  final bool isDark;
+  const _FieldLabel({required this.text, this.isDark = false});
 
   @override
   Widget build(BuildContext context) {
     return Text(
       text.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'DM Sans',
         fontWeight: FontWeight.w800,
         fontSize: 10.5,
-        color: Color(0xFF9AA3B2),
+        color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
         letterSpacing: 0.9,
       ),
     );
@@ -1076,6 +1156,7 @@ class _PasswordField extends StatelessWidget {
   final VoidCallback onToggle;
   final IconData prefixIcon;
   final Widget? suffix;
+  final bool isDark;
 
   const _PasswordField({
     required this.controller,
@@ -1084,6 +1165,7 @@ class _PasswordField extends StatelessWidget {
     required this.onToggle,
     required this.prefixIcon,
     this.suffix,
+    this.isDark = false,
   });
 
   @override
@@ -1091,23 +1173,27 @@ class _PasswordField extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'DM Sans',
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: Color(0xFF080F1E),
+        color: isDark ? Colors.white : const Color(0xFF080F1E),
       ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(
+        hintStyle: TextStyle(
           fontFamily: 'DM Sans',
           fontSize: 13.5,
-          color: Color(0xFFBFC5D0),
+          color: isDark ? const Color(0xFF64748B) : const Color(0xFFBFC5D0),
           fontWeight: FontWeight.w400,
         ),
         prefixIcon: Padding(
           padding: const EdgeInsets.only(left: 14, right: 10),
-          child: Icon(prefixIcon, size: 18, color: const Color(0xFF9AA3B2)),
+          child: Icon(
+            prefixIcon,
+            size: 18,
+            color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
+          ),
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: Row(
@@ -1123,25 +1209,28 @@ class _PasswordField extends StatelessWidget {
                       ? Icons.visibility_off_outlined
                       : Icons.visibility_outlined,
                   size: 18,
-                  color: const Color(0xFF9AA3B2),
+                  color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                 ),
               ),
             ),
           ],
         ),
         filled: true,
-        fillColor: const Color(0xFFF1F4FB),
+        fillColor: isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4FB),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderSide: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderSide: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF2B5CE6), width: 1.5),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFFFFD200) : const Color(0xFF2B5CE6),
+            width: 1.5,
+          ),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -1154,7 +1243,10 @@ class _PasswordField extends StatelessWidget {
 
 // ── Divider ───────────────────────────────────────────────────────────────────
 class _Divider extends StatelessWidget {
+  final bool isDark;
+  const _Divider({this.isDark = false});
+
   @override
   Widget build(BuildContext context) =>
-      Container(height: 1, color: const Color(0x08000000));
+      Container(height: 1, color: isDark ? const Color(0xFF1E2B45) : const Color(0x08000000));
 }

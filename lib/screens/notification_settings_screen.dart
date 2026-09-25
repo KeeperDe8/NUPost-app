@@ -67,14 +67,20 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FC),
+      backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFFF4F6FC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF001540),
+        backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFF001540),
         elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: isDark ? const Color(0xFFFFD200) : Colors.white,
+            size: 18,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -89,18 +95,20 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF002366)),
+          ? Center(
+              child: CircularProgressIndicator(
+                color: isDark ? const Color(0xFFFFD200) : const Color(0xFF002366),
+              ),
             )
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
               children: [
                 // Master Switch Card
-                _buildMasterSwitchCard(),
+                _buildMasterSwitchCard(isDark),
                 const SizedBox(height: 24),
 
                 // Channels Section
-                _buildSectionHeader('In-App Alerts'),
+                _buildSectionHeader('In-App Alerts', isDark),
                 const SizedBox(height: 10),
                 _buildCardContainer([
                   _buildToggleRow(
@@ -109,44 +117,47 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     icon: Icons.assignment_outlined,
                     value: _statusUpdates && _pushEnabled,
                     enabled: _pushEnabled,
+                    isDark: isDark,
                     onChanged: (v) => _updateSetting(
                       _keyStatusUpdates,
                       v,
                       (val) => _statusUpdates = val,
                     ),
                   ),
-                  _buildDivider(),
+                  _buildDivider(isDark),
                   _buildToggleRow(
                     title: 'Direct Messages & Comments',
                     subtitle: 'Get notified when the Marketing Office sends a message or note.',
                     icon: Icons.chat_bubble_outline_rounded,
                     value: _directMessages && _pushEnabled,
                     enabled: _pushEnabled,
+                    isDark: isDark,
                     onChanged: (v) => _updateSetting(
                       _keyDirectMessages,
                       v,
                       (val) => _directMessages = val,
                     ),
                   ),
-                  _buildDivider(),
+                  _buildDivider(isDark),
                   _buildToggleRow(
                     title: 'Calendar & Posting Reminders',
                     subtitle: 'Alerts on the scheduled day when your approved post goes live.',
                     icon: Icons.calendar_today_outlined,
                     value: _scheduleReminders && _pushEnabled,
                     enabled: _pushEnabled,
+                    isDark: isDark,
                     onChanged: (v) => _updateSetting(
                       _keyScheduleReminders,
                       v,
                       (val) => _scheduleReminders = val,
                     ),
                   ),
-                ]),
+                ], isDark),
 
                 const SizedBox(height: 24),
 
                 // External Channel Section
-                _buildSectionHeader('Email Notifications'),
+                _buildSectionHeader('Email Notifications', isDark),
                 const SizedBox(height: 10),
                 _buildCardContainer([
                   _buildToggleRow(
@@ -155,13 +166,14 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     icon: Icons.mail_outline_rounded,
                     value: _emailSummary,
                     enabled: true,
+                    isDark: isDark,
                     onChanged: (v) => _updateSetting(
                       _keyEmailSummary,
                       v,
                       (val) => _emailSummary = val,
                     ),
                   ),
-                ]),
+                ], isDark),
 
                 const SizedBox(height: 24),
 
@@ -169,26 +181,28 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0F4FC),
+                    color: isDark ? const Color(0xFF0D1527) : const Color(0xFFF0F4FC),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFD9E2F2)),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFD9E2F2),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Icon(
                         Icons.info_outline_rounded,
                         size: 20,
-                        color: Color(0xFF002366),
+                        color: isDark ? const Color(0xFFFFD200) : const Color(0xFF002366),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'Important security alerts and password reset notifications will always be sent regardless of notification preferences.',
                           style: TextStyle(
                             fontFamily: 'DM Sans',
                             fontSize: 12,
-                            color: Color(0xFF4B5563),
+                            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF4B5563),
                             height: 1.45,
                           ),
                         ),
@@ -201,16 +215,19 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _buildMasterSwitchCard() {
+  Widget _buildMasterSwitchCard(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF001540), Color(0xFF002366)],
+          colors: isDark
+              ? [const Color(0xFF0D182E), const Color(0xFF132244)]
+              : [const Color(0xFF001540), const Color(0xFF002366)],
         ),
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? Border.all(color: const Color(0xFF1E2B45), width: 1.2) : null,
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF001540).withOpacity(0.2),
@@ -276,30 +293,32 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, bool isDark) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'DM Sans',
         fontSize: 13,
         fontWeight: FontWeight.w800,
-        color: Color(0xFF6B7280),
+        color: isDark ? const Color(0xFFFFD200) : const Color(0xFF6B7280),
         letterSpacing: 0.4,
       ),
     );
   }
 
-  Widget _buildCardContainer(List<Widget> children) {
+  Widget _buildCardContainer(List<Widget> children, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE4E8F0)),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x06000000),
+            color: isDark ? Colors.black.withOpacity(0.25) : const Color(0x06000000),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -316,6 +335,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     required IconData icon,
     required bool value,
     required bool enabled,
+    required bool isDark,
     required ValueChanged<bool> onChanged,
   }) {
     return Padding(
@@ -327,13 +347,17 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: enabled ? const Color(0xFFF0F4FC) : const Color(0xFFF3F4F6),
+              color: enabled
+                  ? (isDark ? const Color(0xFF1E2B45) : const Color(0xFFF0F4FC))
+                  : (isDark ? const Color(0xFF111827) : const Color(0xFFF3F4F6)),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
               size: 20,
-              color: enabled ? const Color(0xFF002366) : const Color(0xFF9CA3AF),
+              color: enabled
+                  ? (isDark ? const Color(0xFFFFD200) : const Color(0xFF002366))
+                  : (isDark ? const Color(0xFF64748B) : const Color(0xFF9CA3AF)),
             ),
           ),
           const SizedBox(width: 14),
@@ -347,7 +371,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     fontFamily: 'DM Sans',
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: enabled ? const Color(0xFF080F1E) : const Color(0xFF9CA3AF),
+                    color: enabled
+                        ? (isDark ? Colors.white : const Color(0xFF080F1E))
+                        : (isDark ? const Color(0xFF64748B) : const Color(0xFF9CA3AF)),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -356,7 +382,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 11.5,
-                    color: enabled ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF),
+                    color: enabled
+                        ? (isDark ? const Color(0xFF8E9BAE) : const Color(0xFF6B7280))
+                        : (isDark ? const Color(0xFF475569) : const Color(0xFF9CA3AF)),
                     height: 1.35,
                   ),
                 ),
@@ -366,8 +394,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           const SizedBox(width: 10),
           Switch(
             value: value,
-            activeColor: const Color(0xFF002366),
-            activeTrackColor: const Color(0xFF90B0FF),
+            activeColor: isDark ? const Color(0xFFFFD200) : const Color(0xFF002366),
+            activeTrackColor: isDark ? const Color(0xFF002D80) : const Color(0xFF90B0FF),
+            inactiveThumbColor: isDark ? const Color(0xFF8E9BAE) : null,
+            inactiveTrackColor: isDark ? const Color(0xFF1E2B45) : null,
             onChanged: enabled ? onChanged : null,
           ),
         ],
@@ -375,11 +405,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _buildDivider() {
+  Widget _buildDivider(bool isDark) {
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      color: const Color(0xFFF0F4FC),
+      color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFF0F4FC),
     );
   }
 }

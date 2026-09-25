@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../services/app_memory_cache.dart';
 import '../../services/session_store.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -64,23 +65,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       duration: const Duration(milliseconds: 700),
     );
 
-    _loadData();
+    // Warm-start from session cache: 0ms instant display, zero skeleton on revisit
+    if (AppMemoryCache.hasAdminData) {
+      if (AppMemoryCache.adminStats != null) {
+        _stats = AppMemoryCache.adminStats!;
+      }
+      if (AppMemoryCache.adminRequests != null) {
+        _requests = AppMemoryCache.adminRequests!;
+      }
+      _isLoading = false;
+    }
+
+    _loadData(showLoading: !AppMemoryCache.hasAdminData);
     _entryCtrl.forward();
+    AppMemoryCache.requestsRevision.addListener(_onRequestsChanged);
   }
 
   @override
   void dispose() {
+    AppMemoryCache.requestsRevision.removeListener(_onRequestsChanged);
     _entryCtrl.dispose();
     _staggerCtrl?.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  void _onRequestsChanged() {
+    if (!mounted) return;
+    _loadData(showLoading: false);
+  }
+
+  Future<void> _loadData({bool showLoading = false}) async {
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final statsRes = await ApiService.fetchAdminStats();
@@ -90,8 +111,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       );
 
       if (mounted) {
+        final newStats = (statsRes['data'] as Map<String, dynamic>?) ?? _stats;
+        if (_selectedStatusFilter == 'all' && _searchQuery.isEmpty) {
+          AppMemoryCache.adminStats = newStats;
+          AppMemoryCache.adminRequests = reqsRes;
+        }
         setState(() {
-          _stats = (statsRes['data'] as Map<String, dynamic>?) ?? _stats;
+          _stats = newStats;
           _requests = reqsRes;
           _isLoading = false;
         });

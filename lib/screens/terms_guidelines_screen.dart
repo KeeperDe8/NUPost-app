@@ -101,14 +101,20 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FC),
+      backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFFF4F6FC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF001540),
+        backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFF001540),
         elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: isDark ? const Color(0xFFFFD200) : Colors.white,
+            size: 18,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -132,13 +138,15 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0xFF001540), Color(0xFF002366)],
+                    colors: isDark
+                        ? [const Color(0xFF070B14), const Color(0xFF001540), const Color(0xFF002366)]
+                        : [const Color(0xFF001540), const Color(0xFF002366)],
                   ),
-                  borderRadius: BorderRadius.only(
+                  borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(24),
                     bottomRight: Radius.circular(24),
                   ),
@@ -216,19 +224,23 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
                       curve: Curves.easeInOut,
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF131D31) : Colors.white,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
                           color: isExpanded
-                              ? const Color(0xFF002366).withOpacity(0.35)
-                              : const Color(0xFFE4E8F0),
+                              ? (isDark
+                                  ? const Color(0xFFFFD200).withOpacity(0.5)
+                                  : const Color(0xFF002366).withOpacity(0.35))
+                              : (isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0)),
                           width: isExpanded ? 1.5 : 1,
                         ),
                         boxShadow: [
                           BoxShadow(
                             color: isExpanded
-                                ? const Color(0xFF002366).withOpacity(0.08)
-                                : Colors.black.withOpacity(0.03),
+                                ? (isDark
+                                    ? const Color(0xFFFFD200).withOpacity(0.08)
+                                    : const Color(0xFF002366).withOpacity(0.08))
+                                : Colors.black.withOpacity(isDark ? 0.2 : 0.03),
                             blurRadius: isExpanded ? 12 : 6,
                             offset: const Offset(0, 3),
                           ),
@@ -253,16 +265,20 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
                                       height: 40,
                                       decoration: BoxDecoration(
                                         color: isExpanded
-                                            ? const Color(0xFF002366)
-                                            : const Color(0xFFF0F4FC),
+                                            ? (isDark
+                                                ? const Color(0xFF1E2B45)
+                                                : const Color(0xFF002366))
+                                            : (isDark
+                                                ? const Color(0xFF0D1527)
+                                                : const Color(0xFFF0F4FC)),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Icon(
                                         item['icon'] as IconData,
                                         size: 20,
                                         color: isExpanded
-                                            ? Colors.white
-                                            : const Color(0xFF002366),
+                                            ? (isDark ? const Color(0xFFFFD200) : Colors.white)
+                                            : (isDark ? const Color(0xFFFFD200) : const Color(0xFF002366)),
                                       ),
                                     ),
                                     const SizedBox(width: 14),
@@ -272,20 +288,20 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
                                         children: [
                                           Text(
                                             item['title'] as String,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontFamily: 'DM Sans',
                                               fontSize: 14.5,
                                               fontWeight: FontWeight.w800,
-                                              color: Color(0xFF080F1E),
+                                              color: isDark ? Colors.white : const Color(0xFF080F1E),
                                             ),
                                           ),
                                           const SizedBox(height: 3),
                                           Text(
                                             item['summary'] as String,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontFamily: 'DM Sans',
                                               fontSize: 12,
-                                              color: Color(0xFF6B7280),
+                                              color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF6B7280),
                                             ),
                                           ),
                                         ],
@@ -295,7 +311,7 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
                                       isExpanded
                                           ? Icons.keyboard_arrow_up_rounded
                                           : Icons.keyboard_arrow_down_rounded,
-                                      color: const Color(0xFF9AA3B2),
+                                      color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                                     ),
                                   ],
                                 ),
@@ -304,12 +320,12 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
                             if (isExpanded) ...[
                               Container(
                                 height: 1,
-                                color: const Color(0xFFF0F4FC),
+                                color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFF0F4FC),
                               ),
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
-                                color: const Color(0xFFFAFBFE),
+                                color: isDark ? const Color(0xFF0D1527) : const Color(0xFFFAFBFE),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: (item['content'] as List<String>)
@@ -318,22 +334,22 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
                                             child: Row(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                const Padding(
-                                                  padding: EdgeInsets.only(top: 5),
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 5),
                                                   child: Icon(
                                                     Icons.check_circle_rounded,
                                                     size: 14,
-                                                    color: Color(0xFF002366),
+                                                    color: isDark ? const Color(0xFFFFD200) : const Color(0xFF002366),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 10),
                                                 Expanded(
                                                   child: Text(
                                                     point,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontFamily: 'DM Sans',
                                                       fontSize: 13,
-                                                      color: Color(0xFF374151),
+                                                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF374151),
                                                       height: 1.45,
                                                     ),
                                                   ),
@@ -356,10 +372,12 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
               // Bottom Confirmation bar
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0D1527) : Colors.white,
                   border: Border(
-                    top: BorderSide(color: Color(0xFFE4E8F0)),
+                    top: BorderSide(
+                      color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0),
+                    ),
                   ),
                 ),
                 child: SafeArea(
@@ -374,6 +392,9 @@ class _TermsGuidelinesScreenState extends State<TermsGuidelinesScreen>
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
+                          side: isDark
+                              ? const BorderSide(color: Color(0xFF1E2B45))
+                              : BorderSide.none,
                         ),
                       ),
                       child: const Text(

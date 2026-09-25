@@ -66,59 +66,76 @@ class _FloatingMessageButtonState extends State<FloatingMessageButton>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Positioned(
       right: widget.right,
       bottom: widget.bottom,
-      child: GestureDetector(
-        onTap: () async {
-          await Navigator.pushNamed(context, '/messages');
-          if (!mounted) return;
-          _loadUnreadCount();
-        },
-        child: AnimatedBuilder(
-          animation: _floatAnim,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(0, _floatAnim.value),
-              child: child,
-            );
+      child: RepaintBoundary(
+        child: GestureDetector(
+          onTap: () async {
+            await Navigator.pushNamed(context, '/messages');
+            if (!mounted) return;
+            _loadUnreadCount();
           },
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Pulse ring when there are unread messages
-              if (_unreadCount > 0) Positioned.fill(child: _PulseRing()),
+          child: AnimatedBuilder(
+            animation: _floatAnim,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0, _floatAnim.value),
+                child: child,
+              );
+            },
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Pulse ring when there are unread messages
+                if (_unreadCount > 0) Positioned.fill(child: _PulseRing()),
 
-              // Main button
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF001540), Color(0xFF002D80)],
+                // Main button
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    gradient: isDark
+                        ? const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF002366), Color(0xFF1243B0)],
+                          )
+                        : const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF001540), Color(0xFF002D80)],
+                          ),
+                    borderRadius: BorderRadius.circular(18),
+                    border: isDark
+                        ? Border.all(
+                            color: const Color(0xFFFFD200).withOpacity(0.38),
+                            width: 1.4,
+                          )
+                        : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? const Color(0xFF002366).withOpacity(0.6)
+                            : const Color(0xFF001540).withOpacity(0.42),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFF001540).withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF001540).withOpacity(0.42),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                    BoxShadow(
-                      color: const Color(0xFF001540).withOpacity(0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  child: const Icon(
+                    Icons.chat_bubble_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.chat_bubble_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
 
               // Unread badge
               if (_unreadCount > 0)
@@ -163,8 +180,9 @@ class _FloatingMessageButtonState extends State<FloatingMessageButton>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 // Animated pulse ring widget

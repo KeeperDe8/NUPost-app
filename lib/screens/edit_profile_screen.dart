@@ -167,11 +167,13 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE9EDF6),
+      backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFFE9EDF6),
       body: FadeTransition(
         opacity: _entryFade,
         child: SlideTransition(
@@ -179,14 +181,14 @@ class _EditProfileScreenState extends State<EditProfileScreen>
           child: Column(
             children: [
               // ── Header ─────────────────────────────────────────────────
-              _buildHeader(topPad),
+              _buildHeader(topPad, isDark),
 
               // ── Content ─────────────────────────────────────────────────
               Expanded(
                 child: _isLoading
-                    ? const Center(
+                    ? Center(
                         child: CircularProgressIndicator(
-                          color: Color(0xFF002366),
+                          color: isDark ? const Color(0xFFFFD200) : const Color(0xFF002366),
                         ),
                       )
                     : SingleChildScrollView(
@@ -196,11 +198,11 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                           child: Column(
                             children: [
                               // Avatar card
-                              _buildAvatarCard(),
+                              _buildAvatarCard(isDark),
                               const SizedBox(height: 20),
 
                               // Form card
-                              _buildFormCard(),
+                              _buildFormCard(isDark),
                               const SizedBox(height: 20),
 
                               // Save button
@@ -218,17 +220,19 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   }
 
   // ── Header ──────────────────────────────────────────────────────────────
-  Widget _buildHeader(double topPad) {
+  Widget _buildHeader(double topPad, bool isDark) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF001540), Color(0xFF002878), Color(0xFF1243B0)],
-          stops: [0.0, 0.5, 1.0],
+          colors: isDark
+              ? [const Color(0xFF070B14), const Color(0xFF001540), const Color(0xFF002366)]
+              : [const Color(0xFF001540), const Color(0xFF002878), const Color(0xFF1243B0)],
+          stops: const [0.0, 0.5, 1.0],
         ),
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(32),
           bottomRight: Radius.circular(32),
         ),
@@ -255,9 +259,9 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                 // Back button
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFFFFD200) : Colors.white,
                     size: 18,
                   ),
                 ),
@@ -296,19 +300,21 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   }
 
   // ── Avatar Card ──────────────────────────────────────────────────────────
-  Widget _buildAvatarCard() {
+  Widget _buildAvatarCard(bool isDark) {
     return Container(
       margin: const EdgeInsets.only(top: 20),
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0A001540),
+            color: isDark ? Colors.black.withOpacity(0.25) : const Color(0x0A001540),
             blurRadius: 14,
-            offset: Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -327,6 +333,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                   colors: [Color(0xFF001540), Color(0xFF1A4FCC)],
                 ),
                 borderRadius: BorderRadius.circular(22),
+                border: isDark ? Border.all(color: const Color(0xFFFFD200).withOpacity(0.4), width: 1.5) : null,
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x45001540),
@@ -357,11 +364,11 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                   animation: _nameCtrl,
                   builder: (_, __) => Text(
                     _nameCtrl.text.isEmpty ? 'Your Name' : _nameCtrl.text,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
-                      color: Color(0xFF080F1E),
+                      color: isDark ? Colors.white : const Color(0xFF080F1E),
                       letterSpacing: -0.2,
                     ),
                   ),
@@ -373,10 +380,10 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                     _emailCtrl.text.isEmpty
                         ? 'your@email.com'
                         : _emailCtrl.text,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 12.5,
-                      color: Color(0xFF9AA3B2),
+                      color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
                     ),
                   ),
                 ),
@@ -387,19 +394,21 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFFBEB),
+                    color: isDark ? const Color(0xFF2E2412) : const Color(0xFFFFFBEB),
                     border: Border.all(
-                      color: const Color(0xFFF59E0B).withOpacity(0.28),
+                      color: isDark
+                          ? const Color(0xFFFFD200).withOpacity(0.35)
+                          : const Color(0xFFF59E0B).withOpacity(0.28),
                     ),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Text(
+                  child: Text(
                     '✦ Verified Requester',
                     style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontWeight: FontWeight.w800,
                       fontSize: 10.5,
-                      color: Color(0xFF92400E),
+                      color: isDark ? const Color(0xFFFFD200) : const Color(0xFF92400E),
                     ),
                   ),
                 ),
@@ -412,18 +421,20 @@ class _EditProfileScreenState extends State<EditProfileScreen>
   }
 
   // ── Form Card ────────────────────────────────────────────────────────────
-  Widget _buildFormCard() {
+  Widget _buildFormCard(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0x0E000000)),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0A001540),
+            color: isDark ? Colors.black.withOpacity(0.25) : const Color(0x0A001540),
             blurRadius: 14,
-            offset: Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -431,13 +442,13 @@ class _EditProfileScreenState extends State<EditProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Section label
-          const Text(
+          Text(
             'PERSONAL INFORMATION',
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontWeight: FontWeight.w800,
               fontSize: 10.5,
-              color: Color(0xFF9AA3B2),
+              color: isDark ? const Color(0xFFFFD200) : const Color(0xFF9AA3B2),
               letterSpacing: 1.0,
             ),
           ),
@@ -449,6 +460,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             hint: 'Juan Dela Cruz',
             prefixIcon: Icons.person_outline_rounded,
             isFocused: _focusedField == 'name',
+            isDark: isDark,
             onFocus: (v) => setState(() => _focusedField = v ? 'name' : null),
             validator: (v) =>
                 (v ?? '').isEmpty ? 'Full name is required' : null,
@@ -462,6 +474,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             prefixIcon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
             isFocused: _focusedField == 'email',
+            isDark: isDark,
             onFocus: (v) => setState(() => _focusedField = v ? 'email' : null),
             validator: (v) {
               if ((v ?? '').isEmpty) return 'Email is required';
@@ -478,6 +491,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             prefixIcon: Icons.phone_outlined,
             keyboardType: TextInputType.phone,
             isFocused: _focusedField == 'phone',
+            isDark: isDark,
             onFocus: (v) => setState(() => _focusedField = v ? 'phone' : null),
           ),
           const SizedBox(height: 16),
@@ -488,6 +502,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             hint: 'e.g., Student Council',
             prefixIcon: Icons.group_outlined,
             isFocused: _focusedField == 'org',
+            isDark: isDark,
             onFocus: (v) => setState(() => _focusedField = v ? 'org' : null),
           ),
           const SizedBox(height: 16),
@@ -498,23 +513,27 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             hint: 'e.g., College of Computing',
             prefixIcon: Icons.business_outlined,
             isFocused: _focusedField == 'dept',
+            isDark: isDark,
             onFocus: (v) => setState(() => _focusedField = v ? 'dept' : null),
           ),
 
           const SizedBox(height: 20),
 
           // Divider
-          Container(height: 1, color: const Color(0x08000000)),
+          Container(
+            height: 1,
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0x08000000),
+          ),
           const SizedBox(height: 20),
 
           // Bio section label
-          const Text(
+          Text(
             'BIO',
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontWeight: FontWeight.w800,
               fontSize: 10.5,
-              color: Color(0xFF9AA3B2),
+              color: isDark ? const Color(0xFFFFD200) : const Color(0xFF9AA3B2),
               letterSpacing: 1.0,
             ),
           ),
@@ -527,6 +546,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
             prefixIcon: Icons.notes_rounded,
             maxLines: 4,
             isFocused: _focusedField == 'bio',
+            isDark: isDark,
             onFocus: (v) => setState(() => _focusedField = v ? 'bio' : null),
           ),
         ],
@@ -604,6 +624,7 @@ class _FormField extends StatefulWidget {
   final TextInputType keyboardType;
   final int maxLines;
   final bool isFocused;
+  final bool isDark;
   final ValueChanged<bool> onFocus;
   final String? Function(String?)? validator;
 
@@ -615,6 +636,7 @@ class _FormField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
     required this.isFocused,
+    this.isDark = false,
     required this.onFocus,
     this.validator,
   });
@@ -654,16 +676,16 @@ class _FormFieldState extends State<_FormField> {
               height: 28,
               decoration: BoxDecoration(
                 color: widget.isFocused
-                    ? const Color(0xFF002366).withOpacity(0.1)
-                    : const Color(0xFF9AA3B2).withOpacity(0.08),
+                    ? (widget.isDark ? const Color(0xFF1E2B45) : const Color(0xFF002366).withOpacity(0.1))
+                    : (widget.isDark ? const Color(0xFF0D1527) : const Color(0xFF9AA3B2).withOpacity(0.08)),
                 borderRadius: BorderRadius.circular(9),
               ),
               child: Icon(
                 widget.prefixIcon,
                 size: 15,
                 color: widget.isFocused
-                    ? const Color(0xFF002366)
-                    : const Color(0xFF9AA3B2),
+                    ? (widget.isDark ? const Color(0xFFFFD200) : const Color(0xFF002366))
+                    : (widget.isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2)),
               ),
             ),
             const SizedBox(width: 10),
@@ -674,8 +696,8 @@ class _FormFieldState extends State<_FormField> {
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
                 color: widget.isFocused
-                    ? const Color(0xFF080F1E)
-                    : const Color(0xFF3D4A63),
+                    ? (widget.isDark ? const Color(0xFFFFD200) : const Color(0xFF080F1E))
+                    : (widget.isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63)),
               ),
             ),
           ],
@@ -686,18 +708,22 @@ class _FormFieldState extends State<_FormField> {
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: widget.isFocused ? Colors.white : const Color(0xFFF1F4FB),
+            color: widget.isDark
+                ? const Color(0xFF0D1527)
+                : (widget.isFocused ? Colors.white : const Color(0xFFF1F4FB)),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: widget.isFocused
-                  ? const Color(0xFF002366).withOpacity(0.5)
-                  : Colors.transparent,
+                  ? (widget.isDark ? const Color(0xFFFFD200) : const Color(0xFF002366).withOpacity(0.5))
+                  : (widget.isDark ? const Color(0xFF1E2B45) : Colors.transparent),
               width: 1.5,
             ),
             boxShadow: widget.isFocused
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF002366).withOpacity(0.08),
+                      color: widget.isDark
+                          ? const Color(0xFFFFD200).withOpacity(0.12)
+                          : const Color(0xFF002366).withOpacity(0.08),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -713,18 +739,18 @@ class _FormFieldState extends State<_FormField> {
                 ? TextAlignVertical.top
                 : TextAlignVertical.center,
             validator: widget.validator,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'DM Sans',
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF080F1E),
+              color: widget.isDark ? Colors.white : const Color(0xFF080F1E),
             ),
             decoration: InputDecoration(
               hintText: widget.hint,
-              hintStyle: const TextStyle(
+              hintStyle: TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 13.5,
-                color: Color(0xFFBFC5D0),
+                color: widget.isDark ? const Color(0xFF64748B) : const Color(0xFFBFC5D0),
                 fontWeight: FontWeight.w400,
               ),
               filled: false,

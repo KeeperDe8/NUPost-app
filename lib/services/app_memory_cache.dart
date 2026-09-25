@@ -19,6 +19,15 @@ class AppMemoryCache {
   static List<Map<String, dynamic>>? homeRecentRequests;
   static bool get hasHomeData => homeRecentRequests != null;
 
+  // ── Admin Dashboard Cache ─────────────────────────────────────────────────
+  static Map<String, dynamic>? adminStats;
+  static List<Map<String, dynamic>>? adminRequests;
+  static bool get hasAdminData => adminRequests != null && adminStats != null;
+
+  // ── Profile Cache ─────────────────────────────────────────────────────────
+  static Map<String, dynamic>? profileData;
+  static bool get hasProfile => profileData != null;
+
   // ── Notifications Cache ───────────────────────────────────────────────────
   static List<Map<String, dynamic>>? notifications;
   static int notificationsUnreadCount = 0;
@@ -40,6 +49,8 @@ class AppMemoryCache {
     requests = null;
     homeRecentRequests = null;
     homeStats = null;
+    adminRequests = null;
+    adminStats = null;
     calendarPosts = null;
     requestsRevision.value++;
   }
@@ -91,6 +102,9 @@ class AppMemoryCache {
     requests = null;
     homeStats = null;
     homeRecentRequests = null;
+    adminStats = null;
+    adminRequests = null;
+    profileData = null;
     notifications = null;
     notificationsUnreadCount = 0;
     messageThreads = null;

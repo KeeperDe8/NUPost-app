@@ -94,12 +94,13 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final maxHeight = mediaQuery.size.height * 0.88;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0D1527) : Colors.white,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(28),
           topRight: Radius.circular(28),
         ),
@@ -114,7 +115,7 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
               width: 44,
               height: 4.5,
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0),
                 borderRadius: BorderRadius.circular(99),
               ),
             ),
@@ -158,13 +159,13 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                     children: [
                       Row(
                         children: [
-                          const Text(
+                          Text(
                             'Creative SLA',
                             style: TextStyle(
                               fontFamily: 'DM Sans',
                               fontWeight: FontWeight.w900,
                               fontSize: 18,
-                              color: Color(0xFF080F1E),
+                              color: isDark ? Colors.white : const Color(0xFF080F1E),
                               letterSpacing: -0.3,
                             ),
                           ),
@@ -181,7 +182,7 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                                 fontFamily: 'DM Sans',
                                 fontWeight: FontWeight.w800,
                                 fontSize: 9.5,
-                                color: Color(0xFFB45309),
+                                color: Color(0xFFFFD200),
                                 letterSpacing: 0.6,
                               ),
                             ),
@@ -189,12 +190,12 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                         ],
                       ),
                       const SizedBox(height: 3),
-                      const Text(
+                      Text(
                         'Standard turnaround periods observed by Marketing Office.',
                         style: TextStyle(
                           fontFamily: 'DM Sans',
                           fontSize: 12.5,
-                          color: Color(0xFF64748B),
+                          color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF64748B),
                           height: 1.3,
                         ),
                       ),
@@ -203,14 +204,20 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                 ),
                 if (widget.isReferenceMode)
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF64748B),
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
               ],
             ),
           ),
           const SizedBox(height: 14),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          Divider(
+            height: 1,
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFF1F5F9),
+          ),
 
           // ── Scrollable List of Classifications ──────────────────────────────
           Flexible(
@@ -233,10 +240,12 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                       margin: const EdgeInsets.only(bottom: 9),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: isDark ? const Color(0xFF131D31) : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(
-                          color: const Color(0xFFE2E8F0).withValues(alpha: 0.8),
+                          color: isDark
+                              ? const Color(0xFF1E2B45)
+                              : const Color(0xFFE2E8F0).withValues(alpha: 0.8),
                           width: 1.1,
                         ),
                       ),
@@ -264,11 +273,11 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                                     Expanded(
                                       child: Text(
                                         title,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontFamily: 'DM Sans',
                                           fontWeight: FontWeight.w800,
                                           fontSize: 13.5,
-                                          color: Color(0xFF0F172A),
+                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                                         ),
                                       ),
                                     ),
@@ -298,7 +307,9 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                                       fontFamily: 'DM Sans',
                                       fontSize: 11,
                                       fontWeight: isAlertNote ? FontWeight.w600 : FontWeight.w500,
-                                      color: isAlertNote ? const Color(0xFFE11D48) : const Color(0xFF64748B),
+                                      color: isAlertNote
+                                          ? const Color(0xFFFF5252)
+                                          : (isDark ? const Color(0xFF8E9BAE) : const Color(0xFF64748B)),
                                       height: 1.25,
                                     ),
                                   ),
@@ -324,11 +335,15 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
               mediaQuery.padding.bottom > 0 ? mediaQuery.padding.bottom + 8 : 16,
             ),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+              color: isDark ? const Color(0xFF0D1527) : Colors.white,
+              border: Border(
+                top: BorderSide(
+                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFF1F5F9),
+                ),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, -3),
                 ),
@@ -372,18 +387,19 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                                 child: Checkbox(
                                   value: _dontShowAgain,
                                   onChanged: (val) => setState(() => _dontShowAgain = val ?? false),
-                                  activeColor: const Color(0xFF002366),
+                                  activeColor: const Color(0xFFFFD200),
+                                  checkColor: const Color(0xFF001540),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const Text(
+                              Text(
                                 "Don't show this notice automatically again",
                                 style: TextStyle(
                                   fontFamily: 'DM Sans',
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF475569),
+                                  color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
                                 ),
                               ),
                             ],
@@ -397,18 +413,20 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                             flex: 1,
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                side: BorderSide(
+                                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFCBD5E1),
+                                ),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                 padding: const EdgeInsets.symmetric(vertical: 13),
                               ),
                               onPressed: () => Navigator.pop(context, false),
-                              child: const Text(
+                              child: Text(
                                 'Cancel',
                                 style: TextStyle(
                                   fontFamily: 'DM Sans',
                                   fontWeight: FontWeight.w700,
                                   fontSize: 13.5,
-                                  color: Color(0xFF64748B),
+                                  color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF64748B),
                                 ),
                               ),
                             ),
@@ -419,7 +437,12 @@ class _SlaGuidelinesSheetState extends State<SlaGuidelinesSheet> {
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF002366),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  side: isDark
+                                      ? const BorderSide(color: Color(0xFF1E2B45))
+                                      : BorderSide.none,
+                                ),
                                 padding: const EdgeInsets.symmetric(vertical: 13),
                                 elevation: 0,
                               ),

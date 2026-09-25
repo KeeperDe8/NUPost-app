@@ -7,14 +7,20 @@ class HelpCenterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FC),
+      backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFFF4F6FC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF001540),
+        backgroundColor: isDark ? const Color(0xFF0A0F1D) : const Color(0xFF001540),
         elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: isDark ? const Color(0xFFFFD200) : Colors.white,
+            size: 18,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -37,14 +43,16 @@ class HelpCenterScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF131D31) : Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFE4E8F0)),
-                boxShadow: const [
+                border: Border.all(
+                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0),
+                ),
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x08000000),
+                    color: isDark ? Colors.black.withOpacity(0.25) : const Color(0x08000000),
                     blurRadius: 16,
-                    offset: Offset(0, 4),
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -55,12 +63,17 @@ class HelpCenterScreen extends StatelessWidget {
                     width: 76,
                     height: 76,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF001540), Color(0xFF0032A0)],
+                        colors: isDark
+                            ? [const Color(0xFF0D182E), const Color(0xFF1A3575)]
+                            : [const Color(0xFF001540), const Color(0xFF0032A0)],
                       ),
                       borderRadius: BorderRadius.circular(24),
+                      border: isDark
+                          ? Border.all(color: const Color(0xFFFFD200).withOpacity(0.3), width: 1.5)
+                          : null,
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFF002366).withOpacity(0.25),
@@ -81,9 +94,11 @@ class HelpCenterScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
+                      color: isDark ? const Color(0xFF2E1C0C) : const Color(0xFFFFF7ED),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFFFEDD5)),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF7C2D12) : const Color(0xFFFFEDD5),
+                      ),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
@@ -105,24 +120,24 @@ class HelpCenterScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
 
-                  const Text(
+                  Text(
                     'Help Center Coming Soon',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF080F1E),
+                      color: isDark ? Colors.white : const Color(0xFF080F1E),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Our interactive self-service knowledge base, FAQs, and ticket system are currently being prepared for the upcoming system release.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 13,
-                      color: Color(0xFF6B7280),
+                      color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF6B7280),
                       height: 1.45,
                     ),
                   ),
@@ -137,20 +152,29 @@ class HelpCenterScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF131D31) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE4E8F0)),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.black.withOpacity(0.2) : const Color(0x06000000),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Need Direct Assistance?',
                     style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF080F1E),
+                      color: isDark ? Colors.white : const Color(0xFF080F1E),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -158,18 +182,21 @@ class HelpCenterScreen extends StatelessWidget {
                     icon: Icons.email_outlined,
                     title: 'Email Marketing Office',
                     subtitle: 'marketing@nu-lipa.edu.ph',
+                    isDark: isDark,
                   ),
                   const SizedBox(height: 12),
                   _buildSupportItem(
                     icon: Icons.place_outlined,
                     title: 'In-Person Office',
                     subtitle: 'Marketing Office, NU Lipa Campus',
+                    isDark: isDark,
                   ),
                   const SizedBox(height: 12),
                   _buildSupportItem(
                     icon: Icons.chat_outlined,
                     title: 'In-App Messages',
                     subtitle: 'Send a message directly via the Messages tab',
+                    isDark: isDark,
                   ),
                 ],
               ),
@@ -181,8 +208,15 @@ class HelpCenterScreen extends StatelessWidget {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFF002366),
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [const Color(0xFF0D182E), const Color(0xFF132244)]
+                      : [const Color(0xFF001540), const Color(0xFF002366)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(20),
+                border: isDark ? Border.all(color: const Color(0xFF1E2B45), width: 1.2) : null,
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF002366).withOpacity(0.2),
@@ -259,6 +293,7 @@ class HelpCenterScreen extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
+    required bool isDark,
   }) {
     return Row(
       children: [
@@ -266,10 +301,14 @@ class HelpCenterScreen extends StatelessWidget {
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F4FC),
+            color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFF0F4FC),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: 19, color: const Color(0xFF002366)),
+          child: Icon(
+            icon,
+            size: 19,
+            color: isDark ? const Color(0xFFFFD200) : const Color(0xFF002366),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -278,20 +317,20 @@ class HelpCenterScreen extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1F2937),
+                  color: isDark ? Colors.white : const Color(0xFF1F2937),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 12,
-                  color: Color(0xFF6B7280),
+                  color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF6B7280),
                 ),
               ),
             ],

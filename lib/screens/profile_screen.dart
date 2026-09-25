@@ -77,7 +77,23 @@ class _ProfileScreenState extends State<ProfileScreen>
             curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic),
           ),
         );
-    _loadProfile();
+
+    // Warm-start from session cache: 0ms instant display, no skeleton on revisit
+    if (AppMemoryCache.hasProfile) {
+      final data = AppMemoryCache.profileData!;
+      final stats = (data['stats'] as Map<String, dynamic>?) ?? {};
+      _name = (data['name'] ?? SessionStore.name ?? '').toString();
+      _role = (data['role'] ?? SessionStore.role ?? 'Requestor').toString();
+      _organization = (data['organization'] ?? '').toString();
+      _email = (data['email'] ?? SessionStore.email ?? '').toString();
+      _contact = (data['phone'] ?? '').toString();
+      _totalRequests = (stats['total'] as num?)?.toInt() ?? 0;
+      _approved = (stats['approved'] as num?)?.toInt() ?? 0;
+      _pending = (stats['pending'] as num?)?.toInt() ?? 0;
+      _isLoading = false;
+    }
+
+    _loadProfile(showLoading: !AppMemoryCache.hasProfile);
   }
 
   @override
@@ -86,16 +102,20 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
-  Future<void> _loadProfile() async {
+  Future<void> _loadProfile({bool showLoading = false}) async {
     final userId = SessionStore.userId;
     if (userId == null) {
       setState(() => _isLoading = false);
       return;
     }
+    if (showLoading && mounted) {
+      setState(() => _isLoading = true);
+    }
     try {
       final result = await ApiService.fetchProfile(userId: userId);
       final data = (result['data'] as Map<String, dynamic>?) ?? {};
       final stats = (data['stats'] as Map<String, dynamic>?) ?? {};
+      AppMemoryCache.profileData = data;
       setState(() {
         final serverName = (data['name'] ?? SessionStore.name ?? '').toString();
         _name = serverName;
@@ -119,32 +139,42 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _onLogOut() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       useRootNavigator: false,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
+        backgroundColor: isDark ? const Color(0xFF131D31) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
+        ),
+        title: Text(
           'Log Out',
           style: TextStyle(
             fontFamily: 'DM Sans',
             fontWeight: FontWeight.w800,
             fontSize: 18,
+            color: isDark ? Colors.white : const Color(0xFF080F1E),
           ),
         ),
-        content: const Text(
+        content: Text(
           'Are you sure you want to log out?',
-          style: TextStyle(fontFamily: 'DM Sans', fontSize: 14),
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 14,
+            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(
                 fontFamily: 'DM Sans',
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF9AA3B2),
+                color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
               ),
             ),
           ),
@@ -628,20 +658,29 @@ class _ProfileScreenState extends State<ProfileScreen>
                           child: Container(
                             height: 52,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: isDark ? const Color(0xFF1C1318) : Colors.white,
                               border: Border.all(
                                 color: const Color(
                                   0xFFFF3B30,
-                                ).withOpacity(0.55),
+                                ).withOpacity(isDark ? 0.65 : 0.55),
+                                width: 1.2,
                               ),
                               borderRadius: BorderRadius.circular(18),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x0A000000),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 3),
-                                ),
-                              ],
+                              boxShadow: isDark
+                                  ? const [
+                                      BoxShadow(
+                                        color: Color(0x33FF3B30),
+                                        blurRadius: 10,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ]
+                                  : const [
+                                      BoxShadow(
+                                        color: Color(0x0A000000),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ],
                             ),
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
