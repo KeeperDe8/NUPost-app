@@ -42,6 +42,10 @@ class _MessagesScreenState extends State<MessagesScreen>
     if (AppMemoryCache.hasMessageThreads) {
       _threads = AppMemoryCache.messageThreads!
           .map(_ThreadItem.fromJson)
+          .where((t) =>
+              t.lastMessageId > 0 &&
+              t.lastMessage.trim().isNotEmpty &&
+              !t.lastMessage.startsWith('No messages yet'))
           .toList();
       _isLoading = false;
     }
@@ -81,10 +85,16 @@ class _MessagesScreenState extends State<MessagesScreen>
 
       AppMemoryCache.messageThreads = rows.whereType<Map<String, dynamic>>().toList();
 
-      // Calculate unread counts locally
+      // Calculate unread counts locally & filter empty conversation threads
       final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
       final updatedThreads = <_ThreadItem>[];
       for (var t in fetchedThreads) {
+        if (t.lastMessageId <= 0 ||
+            t.lastMessage.trim().isEmpty ||
+            t.lastMessage.startsWith('No messages yet')) {
+          continue;
+        }
+
         final lastReadId = await ChatReadStore.getLastReadId(t.requestId);
         final isUnread = t.lastMessageId > lastReadId &&
             (isAdmin ? t.lastSenderRole != 'admin' : t.lastSenderRole == 'admin');
@@ -141,26 +151,28 @@ class _MessagesScreenState extends State<MessagesScreen>
                               itemCount: _threads.length,
                               separatorBuilder: (_, __) =>
                                   const SizedBox(height: 10),
-                              itemBuilder: (_, i) => _StaggerItem(
-                                controller: _staggerCtrl,
-                                index: i,
-                                total: _threads.length,
-                                child: _ThreadCard(
-                                  item: _threads[i],
-                                  isDark: isDark,
-                                  onTap: () async {
-                                    await Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => MessageThreadScreen(
-                                          requestId: _threads[i].requestId,
-                                          requestCode: _threads[i].requestCode,
-                                          requestTitle: _threads[i].requestTitle,
-                                          requestStatus: _threads[i].requestStatus,
+                              itemBuilder: (_, i) => RepaintBoundary(
+                                child: _StaggerItem(
+                                  controller: _staggerCtrl,
+                                  index: i,
+                                  total: _threads.length,
+                                  child: _ThreadCard(
+                                    item: _threads[i],
+                                    isDark: isDark,
+                                    onTap: () async {
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => MessageThreadScreen(
+                                            requestId: _threads[i].requestId,
+                                            requestCode: _threads[i].requestCode,
+                                            requestTitle: _threads[i].requestTitle,
+                                            requestStatus: _threads[i].requestStatus,
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                    _loadThreads(showLoading: false);
-                                  },
+                                      );
+                                      _loadThreads(showLoading: false);
+                                    },
+                                  ),
                                 ),
                               ),
                             ),

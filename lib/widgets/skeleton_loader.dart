@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
-/// Base shimmer container widget
+/// Base shimmer container widget with full dark mode support
 class SkeletonLoader extends StatelessWidget {
   final double width;
   final double height;
@@ -20,14 +20,19 @@ class SkeletonLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defBase = isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0);
+    final defHighlight = isDark ? const Color(0xFF2B3D63) : const Color(0xFFF8FAFC);
+    final defFill = isDark ? const Color(0xFF1E2B45) : Colors.white;
+
     return Shimmer.fromColors(
-      baseColor: baseColor ?? const Color(0xFFE2E8F0),
-      highlightColor: highlightColor ?? const Color(0xFFF8FAFC),
+      baseColor: baseColor ?? defBase,
+      highlightColor: highlightColor ?? defHighlight,
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: defFill,
           borderRadius: BorderRadius.circular(borderRadius),
         ),
       ),
@@ -41,18 +46,22 @@ class RequestCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF131D31) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE4E8F0)),
-        boxShadow: const [
+        border: Border.all(color: cardBorder),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x04000000),
+            color: isDark ? Colors.black26 : const Color(0x04000000),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -92,13 +101,17 @@ class NotificationSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF131D31) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4E8F0)),
+        border: Border.all(color: cardBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,13 +144,17 @@ class MessageThreadSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF131D31) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE4E8F0)),
+        border: Border.all(color: cardBorder),
       ),
       child: Row(
         children: [
@@ -221,6 +238,10 @@ class ProfileSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF131D31) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0);
+
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
@@ -244,9 +265,9 @@ class ProfileSkeleton extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardBg,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE4E8F0)),
+              border: Border.all(color: cardBorder),
             ),
             child: Row(
               children: const [
@@ -280,6 +301,10 @@ class CalendarSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF131D31) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF1E2B45) : const Color(0xFFE4E8F0);
+
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -299,9 +324,9 @@ class CalendarSkeleton extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardBg,
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0xFFE4E8F0)),
+              border: Border.all(color: cardBorder),
             ),
             child: Column(
               children: [

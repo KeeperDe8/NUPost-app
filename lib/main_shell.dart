@@ -33,6 +33,7 @@ class _MainShellState extends State<MainShell> {
   final GlobalKey<NavigatorState> _shellNavKey = GlobalKey<NavigatorState>();
   late final ValueNotifier<int> _indexNotifier;
   final Set<int> _activatedTabs = {};
+  final Map<int, Widget> _cachedTabs = {};
 
   @override
   void initState() {
@@ -73,20 +74,33 @@ class _MainShellState extends State<MainShell> {
     if (!_activatedTabs.contains(i)) {
       return const SizedBox.shrink();
     }
+    if (_cachedTabs.containsKey(i)) {
+      return _cachedTabs[i]!;
+    }
+
+    Widget tabWidget;
     switch (i) {
       case 0:
-        return SessionStore.isAdmin ? const AdminDashboardScreen() : const HomeScreen();
+        tabWidget = SessionStore.isAdmin ? const AdminDashboardScreen() : const HomeScreen();
+        break;
       case 1:
-        return const RequestsScreen();
+        tabWidget = const RequestsScreen();
+        break;
       case 2:
-        return const CreateRequestScreen();
+        tabWidget = const CreateRequestScreen();
+        break;
       case 3:
-        return const NotificationsScreen();
+        tabWidget = const NotificationsScreen();
+        break;
       case 4:
-        return const ProfileScreen();
+        tabWidget = const ProfileScreen();
+        break;
       default:
-        return const SizedBox.shrink();
+        tabWidget = const SizedBox.shrink();
     }
+
+    _cachedTabs[i] = tabWidget;
+    return tabWidget;
   }
 
   Widget _buildTabContainer() {
@@ -94,26 +108,52 @@ class _MainShellState extends State<MainShell> {
       children: [
         ValueListenableBuilder<int>(
           valueListenable: _indexNotifier,
-          builder: (context2, index, child2) => IndexedStack(
-            index: index,
-            children: [
-              _buildTab(0),
-              _buildTab(1),
-              _buildTab(2),
-              _buildTab(3),
-              _buildTab(4),
-            ],
-          ),
+          builder: (context2, index, child2) {
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 240),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, anim) {
+                return FadeTransition(
+                  opacity: anim,
+                  child: child,
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey<int>(index),
+                child: _buildTab(index),
+              ),
+            );
+          },
         ),
         const FloatingMessageButton(bottom: 18),
       ],
     );
   }
 
+  PageRouteBuilder _buildPageRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (_, __, ___) => page,
+      transitionsBuilder: (_, anim, secAnim, child) {
+        const begin = Offset(0.06, 0);
+        const end = Offset.zero;
+        final curve = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+        return SlideTransition(
+          position: Tween(begin: begin, end: end).animate(curve),
+          child: FadeTransition(opacity: curve, child: child),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 260),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark ? const Color(0xFF0A0F1D) : const Color(0xFFE8ECF4);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE8ECF4),
+      backgroundColor: scaffoldBg,
       bottomNavigationBar: AppBottomNav(
         currentIndex: _currentIndex,
         onTap: setIndex,
@@ -134,14 +174,10 @@ class _MainShellState extends State<MainShell> {
           key: _shellNavKey,
           onGenerateRoute: (settings) {
             if (settings.name == '/messages') {
-              return MaterialPageRoute(
-                builder: (_) => const MessagesScreen(),
-              );
+              return _buildPageRoute(const MessagesScreen());
             }
             if (settings.name == '/calendar') {
-              return MaterialPageRoute(
-                builder: (_) => const PostCalendarScreen(),
-              );
+              return _buildPageRoute(const PostCalendarScreen());
             }
             return MaterialPageRoute(
               builder: (_) => _buildTabContainer(),

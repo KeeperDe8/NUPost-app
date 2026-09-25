@@ -12,6 +12,25 @@ class MediaPreviewGallery extends StatelessWidget {
     this.mediaFiles = const [],
   });
 
+  String _extractFileName(String raw) {
+    if (raw.contains('file=')) {
+      final parts = raw.split('file=');
+      if (parts.length > 1) {
+        return Uri.decodeComponent(parts[1].split('&').first);
+      }
+    }
+    final seg = raw.split('/').last.split('\\').last;
+    return seg.split('?').first;
+  }
+
+  String _extractExtension(String name) {
+    final clean = name.trim().replaceAll(RegExp(r'\.+$'), '');
+    if (clean.contains('.')) {
+      return clean.split('.').last.toUpperCase();
+    }
+    return 'FILE';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -21,9 +40,18 @@ class MediaPreviewGallery extends StatelessWidget {
     final subtextColor = isDark ? const Color(0xFF94A3B8) : AppColors.inkMute;
     final brokenBg = isDark ? const Color(0xFF0D1527) : const Color(0xFFF1F4F9);
 
-    final List<String> rawList = mediaUrls.isNotEmpty
+    final List<String> sourceList = mediaUrls.isNotEmpty
         ? mediaUrls
         : mediaFiles.map((f) => 'uploads/$f').toList();
+
+    final List<String> rawList = [];
+    for (final item in sourceList) {
+      if (item.contains(',')) {
+        rawList.addAll(item.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty));
+      } else if (item.trim().isNotEmpty) {
+        rawList.add(item.trim());
+      }
+    }
 
     final urls = rawList
         .map((item) => ApiService.resolveMediaUrl(item))
@@ -81,107 +109,137 @@ class MediaPreviewGallery extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               final url = urls[index];
+              final fileName = _extractFileName(url);
+              final ext = _extractExtension(fileName);
               final cleanUrl = url.split('?').first.toLowerCase();
               final isVideo = cleanUrl.endsWith('.mp4') ||
                   cleanUrl.endsWith('.mov') ||
                   cleanUrl.endsWith('.avi') ||
                   cleanUrl.endsWith('.mkv');
 
-              return GestureDetector(
-                onTap: () => _showMediaDialog(context, url, isVideo),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  child: Container(
-                    width: 120,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (isVideo)
-                          Container(
-                            color: AppColors.primary.withValues(alpha: 0.85),
-                            child: const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.play_circle_fill,
-                                    color: Colors.white, size: 36),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Video',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          Image.network(
-                            url,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (ctx, child, progress) {
-                              if (progress == null) return child;
-                              return Container(
-                                color: brokenBg,
-                                child: const Center(
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Color(0xFF3B82F6),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            errorBuilder: (_, __, ___) => Container(
-                              color: brokenBg,
-                              padding: const EdgeInsets.all(8),
-                              child: Column(
+              return RepaintBoundary(
+                child: GestureDetector(
+                  onTap: () => _showMediaDialog(context, url, isVideo, fileName, ext),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: Container(
+                      width: 124,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (isVideo)
+                            Container(
+                              color: AppColors.primary.withValues(alpha: 0.85),
+                              child: const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.broken_image_rounded,
-                                      color: subtextColor, size: 28),
-                                  const SizedBox(height: 4),
+                                  Icon(Icons.play_circle_fill,
+                                      color: Colors.white, size: 36),
+                                  SizedBox(height: 4),
                                   Text(
-                                    url.split('/').last.split('?').first,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
+                                    'Video',
                                     style: TextStyle(
-                                      color: subtextColor,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
                               ),
+                            )
+                          else
+                            Image.network(
+                              url,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (ctx, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  color: brokenBg,
+                                  child: const Center(
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF3B82F6),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (_, __, ___) => Container(
+                                color: brokenBg,
+                                padding: const EdgeInsets.all(8),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.insert_drive_file_rounded,
+                                        color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
+                                        size: 22,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      fileName,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFBBF24).withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        ext,
+                                        style: const TextStyle(
+                                          color: Color(0xFFD97706),
+                                          fontSize: 8.5,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            bottom: 4,
+                            right: 4,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.zoom_in,
+                                color: Colors.white,
+                                size: 14,
+                              ),
                             ),
                           ),
-                        Positioned(
-                          bottom: 4,
-                          right: 4,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.zoom_in,
-                              color: Colors.white,
-                              size: 14,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -193,11 +251,17 @@ class MediaPreviewGallery extends StatelessWidget {
     );
   }
 
-  void _showMediaDialog(BuildContext context, String url, bool isVideo) {
+  void _showMediaDialog(
+    BuildContext context,
+    String url,
+    bool isVideo,
+    String fileName,
+    String ext,
+  ) {
     showDialog(
       context: context,
       builder: (dialogCtx) => Dialog(
-        backgroundColor: Colors.black.withOpacity(0.92),
+        backgroundColor: Colors.black.withValues(alpha: 0.92),
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: ClipRRect(
@@ -214,7 +278,7 @@ class MediaPreviewGallery extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        url.split('/').last.split('?').first,
+                        fileName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -281,21 +345,50 @@ class MediaPreviewGallery extends StatelessWidget {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.broken_image_rounded,
-                                        color: Colors.white54, size: 48),
-                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1E2B45),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
+                                      ),
+                                      child: const Icon(Icons.attach_file_rounded,
+                                          color: Color(0xFFFBBF24), size: 48),
+                                    ),
+                                    const SizedBox(height: 14),
                                     Text(
-                                      'File: ${url.split('/').last.split('?').first}',
+                                      fileName,
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
-                                          color: Colors.white70, fontSize: 13),
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF2563EB).withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'FORMAT: $ext',
+                                        style: const TextStyle(
+                                          color: Color(0xFF93C5FD),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
                                     const Text(
-                                      'Media file not found on server (404).',
+                                      'Historical test attachment from database archive.',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                          color: Colors.white38, fontSize: 11),
+                                        color: Colors.white60,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ],
                                 ),

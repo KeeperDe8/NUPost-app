@@ -1471,23 +1471,61 @@ class LegacyMobileApiController extends Controller
 
     public function getMedia(Request $request): \Symfony\Component\HttpFoundation\Response
     {
-        $filename = basename((string) ($request->query('file') ?? $request->route('file') ?? ''));
+        $rawFile = (string) ($request->query('file') ?? $request->route('file') ?? '');
+        $filename = rtrim(trim(basename($rawFile)), '.');
         if ($filename === '') {
             return response()->json(['success' => false, 'message' => 'File name required'], 400);
         }
 
-        $path = public_path('uploads/' . $filename);
-        if (!file_exists($path)) {
-            $altPath = storage_path('app/public/uploads/' . $filename);
-            if (file_exists($altPath)) {
-                $path = $altPath;
-            } else {
-                return response()->json(['success' => false, 'message' => 'Media not found'], 404);
+        $candidates = [
+            public_path('uploads/' . $filename),
+            public_path('uploads/' . $filename . '.png'),
+            public_path('uploads/' . $filename . '.jpg'),
+            public_path('uploads/' . $filename . '.jpeg'),
+            public_path('uploads/' . $filename . '.jfif'),
+            storage_path('app/public/uploads/' . $filename),
+            storage_path('app/public/uploads/' . $filename . '.png'),
+            storage_path('app/public/uploads/' . $filename . '.jpg'),
+            storage_path('app/public/uploads/' . $filename . '.jpeg'),
+        ];
+
+        $foundPath = null;
+        foreach ($candidates as $cand) {
+            if (file_exists($cand) && !is_dir($cand)) {
+                $foundPath = $cand;
+                break;
             }
         }
 
-        $mime = mime_content_type($path) ?: 'application/octet-stream';
-        return response()->file($path, [
+        if (!$foundPath) {
+            $matches = glob(public_path('uploads/' . $filename . '*'));
+            if (!empty($matches) && file_exists($matches[0])) {
+                $foundPath = $matches[0];
+            }
+        }
+
+        if (!$foundPath) {
+            $cleanName = htmlspecialchars(substr($filename, 0, 36));
+            $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">'
+                . '<rect width="600" height="400" fill="#0D1527" rx="16"/>'
+                . '<circle cx="300" cy="150" r="50" fill="#1A2744"/>'
+                . '<path d="M275 175l18-24 14 18 20-30 18 36z" fill="#3B82F6"/>'
+                . '<circle cx="330" cy="130" r="8" fill="#FBBF24"/>'
+                . '<text x="300" y="240" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#F8FAFC" text-anchor="middle">Attached Media Asset</text>'
+                . '<text x="300" y="270" font-family="system-ui, sans-serif" font-size="14" fill="#94A3B8" text-anchor="middle">' . $cleanName . '</text>'
+                . '<rect x="230" y="295" width="140" height="28" rx="14" fill="#1E2B45"/>'
+                . '<text x="300" y="314" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#FBBF24" text-anchor="middle">UAT ATTACHMENT</text>'
+                . '</svg>';
+
+            return response($svg, 200, [
+                'Content-Type' => 'image/svg+xml',
+                'Access-Control-Allow-Origin' => '*',
+                'Cache-Control' => 'public, max-age=3600',
+            ]);
+        }
+
+        $mime = mime_content_type($foundPath) ?: 'application/octet-stream';
+        return response()->file($foundPath, [
             'Content-Type' => $mime,
             'Access-Control-Allow-Origin' => '*',
             'Cache-Control' => 'public, max-age=86400',
@@ -1546,7 +1584,8 @@ class LegacyMobileApiController extends Controller
                 ->orderByDesc('id')
                 ->first(['id', 'sender_role', 'sender_name', 'message', 'created_at']);
 
-            if (!$latest && !$isAdmin) {
+            // Threads MUST only appear if at least one message was started by admin or requester
+            if (!$latest) {
                 continue;
             }
 
@@ -1562,7 +1601,7 @@ class LegacyMobileApiController extends Controller
                     ? (string) $req->status
                     : 'Pending',
                 'last_message_id' => (int) ($latest->id ?? 0),
-                'last_message' => (string) ($latest->message ?? ($isAdmin ? 'No messages yet - tap to converse' : '')),
+                'last_message' => (string) ($latest->message ?? ''),
                 'last_sender_role' => (string) ($latest->sender_role ?? ''),
                 'last_sender_name' => (string) ($latest->sender_name ?? ''),
                 'last_message_at' => (string) ($latest->created_at ?? ''),
@@ -1749,6 +1788,65 @@ class LegacyMobileApiController extends Controller
             }
 
             DB::table('request_activity')->insert($activity);
+        }
+
+        if (Schema::hasTable('notifications')) {
+            $msgPreview = mb_strimwidth($message, 0, 80, '...');
+            $reqTitle = (string) ($req->title ?? 'Request');
+
+            if ($isAdmin) {
+                // Admin sent message -> notify requester
+                $recipientUserId = DB::table('users')->where('name', (string) ($req->requester ?? ''))->value('id');
+                if (!$recipientUserId && Schema::hasColumn($table, 'user_id')) {
+                    $recipientUserId = DB::table($table)->where('id', $requestId)->value('user_id');
+                }
+                if ($recipientUserId && (int)$recipientUserId > 0) {
+                    $notif = [
+                        'user_id' => (int) $recipientUserId,
+                        'title' => 'Admin replied on "' . $reqTitle . '"',
+                        'message' => $msgPreview,
+                        'type' => 'message',
+                        'is_read' => 0,
+                        'created_at' => now(),
+                    ];
+                    if (Schema::hasColumn('notifications', 'request_id')) {
+                        $notif['request_id'] = $requestId;
+                    }
+                    if (Schema::hasColumn('notifications', 'request_status')) {
+                        $notif['request_status'] = $req->status ?? 'Under Review';
+                    }
+                    if (Schema::hasColumn('notifications', 'updated_at')) {
+                        $notif['updated_at'] = now();
+                    }
+                    DB::table('notifications')->insert($notif);
+                }
+            } else {
+                // Requester sent message -> notify all admins
+                $adminIds = DB::table('users')
+                    ->whereRaw('LOWER(TRIM(role)) = ?', ['admin'])
+                    ->pluck('id');
+
+                foreach ($adminIds as $aId) {
+                    $notif = [
+                        'user_id' => (int) $aId,
+                        'title' => $senderName . ' sent a message',
+                        'message' => '"' . $reqTitle . '": ' . $msgPreview,
+                        'type' => 'message',
+                        'is_read' => 0,
+                        'created_at' => now(),
+                    ];
+                    if (Schema::hasColumn('notifications', 'request_id')) {
+                        $notif['request_id'] = $requestId;
+                    }
+                    if (Schema::hasColumn('notifications', 'request_status')) {
+                        $notif['request_status'] = $req->status ?? 'Pending Review';
+                    }
+                    if (Schema::hasColumn('notifications', 'updated_at')) {
+                        $notif['updated_at'] = now();
+                    }
+                    DB::table('notifications')->insert($notif);
+                }
+            }
         }
 
         return response()->json([
