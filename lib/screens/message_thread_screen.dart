@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../services/chat_read_store.dart';
+import '../services/app_memory_cache.dart';
 import '../theme/app_theme.dart';
 
 class MessageThreadScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
 
   bool _loading = true;
   bool _sending = false;
+  bool _isPolling = false;
   String? _loadError;
   List<_ChatMessage> _messages = const [];
   Timer? _poll;
@@ -39,8 +41,11 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
   void initState() {
     super.initState();
     _loadThread();
-    _poll = Timer.periodic(const Duration(seconds: 4), (_) {
-      _loadThread(showLoader: false);
+    // Fast 1.5-second polling for real-time live messaging
+    _poll = Timer.periodic(const Duration(milliseconds: 1500), (_) {
+      if (mounted && !_sending && !_isPolling) {
+        _loadThread(showLoader: false);
+      }
     });
   }
 
@@ -58,6 +63,9 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
       if (mounted) setState(() => _loading = false);
       return;
     }
+    if (_isPolling && !showLoader) return;
+    _isPolling = true;
+
     if (showLoader && mounted) setState(() => _loading = true);
 
     try {
@@ -75,13 +83,18 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
           .map(_ChatMessage.fromJson)
           .toList();
 
-      final hadNew = incoming.length > _messages.length;
-      setState(() {
-        _messages = incoming;
-        _loadError = null;
-      });
+      final hadNew = incoming.length != _messages.length ||
+          (incoming.isNotEmpty &&
+              _messages.isNotEmpty &&
+              incoming.last.id != _messages.last.id);
 
-      if (hadNew) _scrollToBottom();
+      if (hadNew || _messages.isEmpty) {
+        setState(() {
+          _messages = incoming;
+          _loadError = null;
+        });
+        if (hadNew) _scrollToBottom();
+      }
 
       // Mark as read locally
       if (incoming.isNotEmpty) {
@@ -89,11 +102,14 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _loadError = e.toString().replaceFirst('Exception: ', '');
-      });
+      if (showLoader) {
+        setState(() {
+          _loadError = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      _isPolling = false;
+      if (mounted && showLoader) setState(() => _loading = false);
     }
   }
 
@@ -117,7 +133,8 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
 
       final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
       final newMsg = _ChatMessage(
-        id: (res['data']?['id'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
+        id: (res['data']?['id'] as num?)?.toInt() ??
+            DateTime.now().millisecondsSinceEpoch,
         senderRole: isAdmin ? 'admin' : 'requestor',
         senderName: SessionStore.name ?? (isAdmin ? 'Admin' : 'Requester'),
         message: text,
@@ -129,6 +146,10 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
       });
       _scrollToBottom();
       await ChatReadStore.markAsRead(widget.requestId, newMsg.id);
+
+      // Re-fetch immediately to align with server record and refresh thread cache
+      AppMemoryCache.invalidateMessages();
+      _loadThread(showLoader: false);
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');

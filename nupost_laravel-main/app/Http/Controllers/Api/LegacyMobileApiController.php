@@ -1616,7 +1616,14 @@ class LegacyMobileApiController extends Controller
         $table = $this->requestsTable();
         $query = DB::table($table);
         if (!$isAdmin) {
-            $query->where('requester', (string) ($user->name ?? ''));
+            $query->where(function ($q) use ($user, $table) {
+                if (Schema::hasColumn($table, 'user_id')) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('requester', (string) ($user->name ?? ''));
+                } else {
+                    $q->where('requester', (string) ($user->name ?? ''));
+                }
+            });
         }
         $requests = $query->get(['id', 'request_id', 'title', 'status', 'requester', 'category']);
 
@@ -1707,7 +1714,14 @@ class LegacyMobileApiController extends Controller
         $table = $this->requestsTable();
         $query = DB::table($table)->where('id', $requestId);
         if (!$isAdmin) {
-            $query->where('requester', (string) ($user->name ?? ''));
+            $query->where(function ($q) use ($user, $table) {
+                if (Schema::hasColumn($table, 'user_id')) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('requester', (string) ($user->name ?? ''));
+                } else {
+                    $q->where('requester', (string) ($user->name ?? ''));
+                }
+            });
         }
         $req = $query->first(['id', 'request_id', 'title', 'status', 'requester', 'category']);
 

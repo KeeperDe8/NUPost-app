@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/session_store.dart';
@@ -73,6 +74,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   List<TrackingEvent> _dynamicEvents = [];
   List<String> _mediaUrls = [];
   List<String> _mediaFiles = [];
+  Timer? _pollTimer;
 
   final TextEditingController _quickReplyCtrl = TextEditingController();
   bool _isSendingReply = false;
@@ -110,11 +112,18 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
 
     if (widget.requestId != null && widget.requestId! > 0) {
       _fetchDetails();
+      // Near-realtime background sync for messages and timeline updates
+      _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (mounted && !_isSendingReply && !_isLoading) {
+          _fetchDetails(silent: true);
+        }
+      });
     }
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _entryCtrl.dispose();
     _quickReplyCtrl.dispose();
     super.dispose();
@@ -173,12 +182,14 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     ).then((_) => _fetchDetails());
   }
 
-  Future<void> _fetchDetails() async {
+  Future<void> _fetchDetails({bool silent = false}) async {
     if (widget.requestId == null) return;
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
     try {
       final res = await ApiService.fetchRequestDetails(requestId: widget.requestId!);
       final data = (res['data'] as Map<String, dynamic>?) ?? {};
@@ -254,14 +265,16 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
           if (eventsList.isNotEmpty) {
             _dynamicEvents = eventsList.reversed.toList();
           }
-          _isLoading = false;
+          if (!silent) _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
-          _isLoading = false;
+          if (!silent) {
+            _errorMessage = e.toString().replaceAll('Exception: ', '');
+            _isLoading = false;
+          }
         });
       }
     }

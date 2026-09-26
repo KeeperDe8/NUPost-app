@@ -347,9 +347,11 @@ class _RequestsScreenState extends State<RequestsScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'My Requests',
-                                style: TextStyle(
+                              Text(
+                                SessionStore.isAdmin
+                                    ? 'Manage Requests'
+                                    : 'My Requests',
+                                style: const TextStyle(
                                   fontFamily: 'DM Sans',
                                   fontWeight: FontWeight.w900,
                                   fontSize: 28,
@@ -359,7 +361,9 @@ class _RequestsScreenState extends State<RequestsScreen>
                               ),
                               const SizedBox(height: 5),
                               Text(
-                                'Track your submission status',
+                                SessionStore.isAdmin
+                                    ? 'Review and manage submission statuses'
+                                    : 'Track your submission status',
                                 style: TextStyle(
                                   fontFamily: 'DM Sans',
                                   fontSize: 13,

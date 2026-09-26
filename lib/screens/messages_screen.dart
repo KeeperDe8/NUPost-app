@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
@@ -20,6 +21,7 @@ class _MessagesScreenState extends State<MessagesScreen>
   bool _isLoading = true;
   String? _error;
   List<_ThreadItem> _threads = const [];
+  Timer? _pollTimer;
 
   AnimationController? _staggerCtrl;
   late final AnimationController _entryCtrl;
@@ -51,10 +53,14 @@ class _MessagesScreenState extends State<MessagesScreen>
     }
 
     _loadThreads(showLoading: !AppMemoryCache.hasMessageThreads);
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 2500), (_) {
+      if (mounted) _loadThreads(showLoading: false);
+    });
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _entryCtrl.dispose();
     _staggerCtrl?.dispose();
     super.dispose();
