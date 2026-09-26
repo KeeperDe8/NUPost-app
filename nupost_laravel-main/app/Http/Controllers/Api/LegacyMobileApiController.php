@@ -537,6 +537,20 @@ class LegacyMobileApiController extends Controller
             }
         }
 
+        $search = trim((string) $request->query('search', ''));
+        if ($search !== '') {
+            $cleanSearch = ltrim($search, '#');
+            $query->where(function ($q) use ($search, $cleanSearch) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('platform', 'like', "%{$search}%")
+                    ->orWhere('priority', 'like', "%{$search}%")
+                    ->orWhere('request_id', 'like', "%{$search}%")
+                    ->orWhere('id', 'like', "%{$cleanSearch}%");
+            });
+        }
+
         $rows = $query
             ->orderByDesc('created_at')
             ->get(['id', 'request_id', 'title', 'status', 'created_at', 'priority', 'platform'])
@@ -1959,11 +1973,16 @@ class LegacyMobileApiController extends Controller
         }
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
+            $cleanSearch = ltrim($search, '#');
+            $query->where(function ($q) use ($search, $cleanSearch) {
                 $q->where('title', 'like', "%{$search}%")
                     ->orWhere('requester', 'like', "%{$search}%")
                     ->orWhere('category', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('platform', 'like', "%{$search}%")
+                    ->orWhere('priority', 'like', "%{$search}%")
+                    ->orWhere('request_id', 'like', "%{$search}%")
+                    ->orWhere('id', 'like', "%{$cleanSearch}%");
             });
         }
 

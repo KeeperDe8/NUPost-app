@@ -47,10 +47,16 @@ class RequestManagementController extends Controller
         }
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
+            $cleanSearch = ltrim($search, '#');
+            $query->where(function ($q) use ($search, $cleanSearch) {
                 $q->where('title', 'like', "%$search%")
                   ->orWhere('requester', 'like', "%$search%")
-                  ->orWhere('category', 'like', "%$search%");
+                  ->orWhere('category', 'like', "%$search%")
+                  ->orWhere('description', 'like', "%$search%")
+                  ->orWhere('platform', 'like', "%$search%")
+                  ->orWhere('priority', 'like', "%$search%")
+                  ->orWhere('request_id', 'like', "%$search%")
+                  ->orWhere('id', 'like', "%$cleanSearch%");
             });
         }
 

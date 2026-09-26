@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../services/app_memory_cache.dart';
@@ -34,8 +35,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   };
 
   List<Map<String, dynamic>> _requests = [];
+  List<Map<String, dynamic>> _allRequests = [];
   String _selectedStatusFilter = 'all';
   String _searchQuery = '';
+  Timer? _debounceTimer;
 
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -72,6 +75,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       }
       if (AppMemoryCache.adminRequests != null) {
         _requests = AppMemoryCache.adminRequests!;
+        _allRequests = AppMemoryCache.adminRequests!;
       }
       _isLoading = false;
     }
@@ -83,6 +87,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     AppMemoryCache.requestsRevision.removeListener(_onRequestsChanged);
     _entryCtrl.dispose();
     _staggerCtrl?.dispose();
@@ -93,6 +98,75 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   void _onRequestsChanged() {
     if (!mounted) return;
     _loadData(showLoading: false);
+  }
+
+  void _onSearchChanged(String val) {
+    final query = val.trim();
+    setState(() {
+      _searchQuery = query;
+      if (_allRequests.isNotEmpty) {
+        _requests = _filterRequestsLocally(_allRequests, query, _selectedStatusFilter);
+      }
+    });
+
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) _loadData();
+    });
+  }
+
+  void _clearSearch() {
+    _searchCtrl.clear();
+    _debounceTimer?.cancel();
+    setState(() {
+      _searchQuery = '';
+      if (_allRequests.isNotEmpty) {
+        _requests = _filterRequestsLocally(_allRequests, '', _selectedStatusFilter);
+      }
+    });
+    _loadData();
+  }
+
+  List<Map<String, dynamic>> _filterRequestsLocally(
+    List<Map<String, dynamic>> source,
+    String query,
+    String statusFilter,
+  ) {
+    final q = query.toLowerCase();
+    return source.where((r) {
+      if (statusFilter != 'all') {
+        final st = (r['status'] ?? '').toString().toLowerCase();
+        if (statusFilter == 'pending') {
+          if (st != 'pending' && st != 'pending review' && st != 'under review' && st != '') {
+            return false;
+          }
+        } else if (st != statusFilter.toLowerCase()) {
+          return false;
+        }
+      }
+
+      if (q.isEmpty) return true;
+
+      final title = (r['title'] ?? '').toString().toLowerCase();
+      final requester = (r['requester'] ?? '').toString().toLowerCase();
+      final category = (r['category'] ?? '').toString().toLowerCase();
+      final description = (r['description'] ?? '').toString().toLowerCase();
+      final platform = (r['platform'] ?? '').toString().toLowerCase();
+      final priority = (r['priority'] ?? '').toString().toLowerCase();
+      final id = (r['id'] ?? '').toString().toLowerCase();
+      final rawCode = (r['request_id'] ?? '').toString().toLowerCase();
+      final formattedCode = 'req-${id.padLeft(5, '0')}';
+
+      return title.contains(q) ||
+          requester.contains(q) ||
+          category.contains(q) ||
+          description.contains(q) ||
+          platform.contains(q) ||
+          priority.contains(q) ||
+          id.contains(q) ||
+          rawCode.contains(q) ||
+          formattedCode.contains(q);
+    }).toList();
   }
 
   Future<void> _loadData({bool showLoading = false}) async {
@@ -115,6 +189,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         if (_selectedStatusFilter == 'all' && _searchQuery.isEmpty) {
           AppMemoryCache.adminStats = newStats;
           AppMemoryCache.adminRequests = reqsRes;
+          _allRequests = reqsRes;
+        } else if (_allRequests.isEmpty && _searchQuery.isEmpty) {
+          _allRequests = reqsRes;
         }
         setState(() {
           _stats = newStats;
@@ -642,6 +719,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 if (!isSelected) {
                   setState(() {
                     _selectedStatusFilter = f['key']!;
+                    if (_allRequests.isNotEmpty) {
+                      _requests = _filterRequestsLocally(
+                        _allRequests,
+                        _searchQuery,
+                        _selectedStatusFilter,
+                      );
+                    }
                   });
                   _loadData();
                 }
@@ -690,38 +774,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         color: isDark ? const Color(0xFF131D31) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: isDark ? const Color(0xFF1E2B45) : AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? const Color(0x30000000) : const Color(0x07001540),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: TextField(
         controller: _searchCtrl,
+        onChanged: _onSearchChanged,
         style: TextStyle(
           fontFamily: 'DM Sans',
           color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
           fontSize: 13,
         ),
         decoration: InputDecoration(
-          hintText: 'Search title, requester, or category...',
+          hintText: 'Search title, requester, or tracking ID...',
           hintStyle: TextStyle(
             fontFamily: 'DM Sans',
             color: isDark ? const Color(0xFF64748B) : AppColors.inkMute,
             fontSize: 13,
           ),
           prefixIcon: Icon(Icons.search, color: isDark ? const Color(0xFF94A3B8) : AppColors.inkMute, size: 20),
-          suffixIcon: _searchCtrl.text.isNotEmpty
+          suffixIcon: _searchCtrl.text.isNotEmpty || _searchQuery.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.clear, size: 18, color: isDark ? const Color(0xFF94A3B8) : null),
-                  onPressed: () {
-                    _searchCtrl.clear();
-                    setState(() {
-                      _searchQuery = '';
-                    });
-                    _loadData();
-                  },
+                  icon: Icon(Icons.clear, size: 18, color: isDark ? const Color(0xFF94A3B8) : AppColors.inkMute),
+                  onPressed: _clearSearch,
                 )
               : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
         onSubmitted: (val) {
+          _debounceTimer?.cancel();
           setState(() {
             _searchQuery = val.trim();
           });
@@ -765,17 +852,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     }
 
     if (_requests.isEmpty) {
+      final isSearching = _searchQuery.isNotEmpty;
       return Container(
         padding: const EdgeInsets.all(32),
         alignment: Alignment.center,
-        child: const Column(
+        child: Column(
           children: [
-            Icon(Icons.inbox_outlined, color: AppColors.inkMute, size: 48),
-            SizedBox(height: 12),
-            Text(
-              'No requests found matching criteria.',
-              style: TextStyle(fontFamily: 'DM Sans', color: AppColors.inkMute, fontSize: 14),
+            Icon(
+              isSearching ? Icons.search_off_rounded : Icons.inbox_outlined,
+              color: AppColors.inkMute,
+              size: 48,
             ),
+            const SizedBox(height: 12),
+            Text(
+              isSearching
+                  ? 'No requests found matching "$_searchQuery"'
+                  : 'No requests found matching criteria.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'DM Sans', color: AppColors.inkMute, fontSize: 14),
+            ),
+            if (isSearching) ...[
+              const SizedBox(height: 10),
+              TextButton.icon(
+                onPressed: _clearSearch,
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Clear Search', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600)),
+              ),
+            ],
           ],
         ),
       );
