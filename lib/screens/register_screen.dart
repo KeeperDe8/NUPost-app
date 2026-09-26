@@ -20,7 +20,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   late final Animation<Offset> _slideAnim;
   late final Animation<double> _btnScale;
 
-  final _fullNameCtrl = TextEditingController();
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
@@ -69,7 +70,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   void dispose() {
     _entryCtrl.dispose();
     _btnCtrl.dispose();
-    _fullNameCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
@@ -79,12 +81,14 @@ class _RegisterScreenState extends State<RegisterScreen>
   Future<void> _onCreateAccount() async {
     if (_isSubmitting) return;
 
-    final fullName = _fullNameCtrl.text.trim();
+    final firstName = _firstNameCtrl.text.trim();
+    final lastName = _lastNameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text;
     final confirmPassword = _confirmPasswordCtrl.text;
 
-    if (fullName.isEmpty ||
+    if (firstName.isEmpty ||
+        lastName.isEmpty ||
         email.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
@@ -106,8 +110,11 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     setState(() => _isSubmitting = true);
     try {
+      final fullName = '$firstName $lastName'.trim();
       await ApiService.register(
         name: fullName,
+        firstName: firstName,
+        lastName: lastName,
         email: email,
         password: password,
       );
@@ -278,13 +285,39 @@ class _RegisterScreenState extends State<RegisterScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Full Name
-                              _FieldLabel(text: 'Full Name'),
-                              const SizedBox(height: 8),
-                              _InputField(
-                                controller: _fullNameCtrl,
-                                hint: 'Juan Dela Cruz',
-                                prefixIcon: Icons.person_outline_rounded,
+                              // First Name & Last Name
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _FieldLabel(text: 'First Name'),
+                                        const SizedBox(height: 8),
+                                        _InputField(
+                                          controller: _firstNameCtrl,
+                                          hint: 'Juan',
+                                          prefixIcon: Icons.person_outline_rounded,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _FieldLabel(text: 'Last Name'),
+                                        const SizedBox(height: 8),
+                                        _InputField(
+                                          controller: _lastNameCtrl,
+                                          hint: 'Dela Cruz',
+                                          prefixIcon: Icons.person_outline_rounded,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 18),
 

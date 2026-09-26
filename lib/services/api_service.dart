@@ -72,15 +72,21 @@ class ApiService {
 
   static Future<Map<String, dynamic>> register({
     required String name,
+    String? firstName,
+    String? lastName,
     required String email,
     required String password,
   }) async {
     final uri = _buildUri(_baseUrl, 'register.php', null);
-    return _postJson(uri, {
+    final body = <String, dynamic>{
       'name': name,
       'email': email,
       'password': password,
-    }, fallbackMessage: 'Registration failed');
+    };
+    if (firstName != null && firstName.isNotEmpty) body['first_name'] = firstName;
+    if (lastName != null && lastName.isNotEmpty) body['last_name'] = lastName;
+
+    return _postJson(uri, body, fallbackMessage: 'Registration failed');
   }
 
   static Future<Map<String, dynamic>> updatePassword({

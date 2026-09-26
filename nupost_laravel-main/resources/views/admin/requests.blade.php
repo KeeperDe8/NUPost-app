@@ -223,7 +223,9 @@ td { padding: 12px 14px; font-size: 12.5px; vertical-align: middle; }
                                     <div class="req-thumb-placeholder">📄</div>
                                 @endif
                                 <div>
-                                    <div class="req-title">{{ Str::limit($req->title, 35) }}</div>
+                                    <a href="{{ route('admin.requests.show', $req->id) }}" style="text-decoration:none;">
+                                        <div class="req-title" style="color:var(--color-primary);">{{ Str::limit($req->title, 35) }}</div>
+                                    </a>
                                     <div class="req-desc">{{ Str::limit($req->description, 60) }}</div>
                                 </div>
                             </div>
@@ -235,6 +237,11 @@ td { padding: 12px 14px; font-size: 12.5px; vertical-align: middle; }
                         <td class="date-text">{{ $req->created_at->format('M j, Y') }}</td>
                         <td>
                             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <!-- VIEW DETAILS -->
+                                <a href="{{ route('admin.requests.show', $req->id) }}" class="comment-btn" style="text-decoration:none; background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;">
+                                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    View
+                                </a>
                                 <!-- STATUS UPDATE -->
                                 <form method="POST" action="{{ route('admin.requests.status') }}"
                                       style="display:flex;align-items:center;gap:4px;"

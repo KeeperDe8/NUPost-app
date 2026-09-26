@@ -11,7 +11,7 @@ class DashboardController extends Controller
     public function index()
     {
         $total    = PostRequest::count();
-        $pending  = PostRequest::where('status', 'Pending Review')->count();
+        $pending  = PostRequest::whereIn('status', ['Pending', 'Pending Review'])->count();
         $review   = PostRequest::where('status', 'Under Review')->count();
         $approved = PostRequest::where('status', 'Approved')->count();
         $posted   = PostRequest::where('status', 'Posted')->count();

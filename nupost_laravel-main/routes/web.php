@@ -77,6 +77,7 @@ Route::middleware('auth.nupost:admin')->prefix('admin')->name('admin.')->group(f
     Route::get('/requests',               [RequestManagementController::class, 'index'])->name('requests');
     Route::get('/requests/{id}',          [RequestManagementController::class, 'show'])->name('requests.show');
     Route::post('/requests/status',       [RequestManagementController::class, 'updateStatus'])->name('requests.status');
+    Route::post('/requests/{id}/caption', [RequestManagementController::class, 'updateCaption'])->name('requests.caption');
     Route::post('/requests/comment',      [RequestManagementController::class, 'postComment'])->name('requests.comment');
     Route::get('/requests/{id}/comments', [RequestManagementController::class, 'getComments'])->name('requests.comments');
 });

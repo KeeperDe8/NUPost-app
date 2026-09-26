@@ -31,10 +31,21 @@ class RequestController extends Controller
             'posted'   => 'Posted',
         ];
 
-        $query = PostRequest::where('requester', $user_name);
+        $user_id   = session('user_id');
+        $query = PostRequest::where(function ($q) use ($user_name, $user_id) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('post_requests', 'user_id') && $user_id) {
+                $q->where('user_id', $user_id)->orWhere('requester', $user_name);
+            } else {
+                $q->where('requester', $user_name);
+            }
+        });
 
         if ($filter !== 'all') {
-            $query->where('status', $status_map[$filter]);
+            if ($filter === 'pending') {
+                $query->whereIn('status', ['Pending Review', 'Pending']);
+            } elseif (isset($status_map[$filter])) {
+                $query->where('status', $status_map[$filter]);
+            }
         }
 
         if ($search !== '') {
@@ -97,7 +108,7 @@ class RequestController extends Controller
             $media_file = implode(',', $uploaded);
         }
 
-        $newReq = PostRequest::create([
+        $payload = [
             'title'          => $title,
             'requester'      => $user_name,
             'category'       => $category,
@@ -108,7 +119,17 @@ class RequestController extends Controller
             'caption'        => $caption,
             'preferred_date' => $post_date ?: null,
             'media_file'     => $media_file,
-        ]);
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('post_requests', 'user_id') && session('user_id')) {
+            $payload['user_id'] = session('user_id');
+        }
+
+        $newReq = PostRequest::create($payload);
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('post_requests', 'request_id') && empty($newReq->request_id)) {
+            $reqCode = 'REQ-' . str_pad((string) $newReq->id, 5, '0', STR_PAD_LEFT);
+            $newReq->update(['request_id' => $reqCode]);
+        }
 
         if (Schema::hasTable('notifications')) {
             $adminUsers = \App\Models\User::where('role', 'admin')->get();

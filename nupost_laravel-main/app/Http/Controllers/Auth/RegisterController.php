@@ -18,7 +18,18 @@ class RegisterController extends Controller
 
     public function store(Request $request)
     {
-        $name     = trim($request->input('name', ''));
+        $firstName = trim($request->input('first_name', ''));
+        $lastName  = trim($request->input('last_name', ''));
+        $name      = trim($request->input('name', ''));
+
+        if ($firstName !== '' && $lastName !== '') {
+            $name = "$firstName $lastName";
+        } elseif ($name !== '' && $firstName === '') {
+            $parts = explode(' ', $name, 2);
+            $firstName = $parts[0];
+            $lastName = $parts[1] ?? '';
+        }
+
         $email    = trim($request->input('email', ''));
         $password = trim($request->input('password', ''));
         $confirm  = trim($request->input('confirm_password', ''));
@@ -44,13 +55,21 @@ class RegisterController extends Controller
         if (User::where('email', $email)->exists())
             return back()->withInput()->with('error', 'Email is already registered.');
 
-        $user = User::create([
-            'name'       => $name,
-            'email'      => $email,
-            'role'       => 'requestor',
-            'password'   => Hash::make($password),
-            'is_verified'=> false,
-        ]);
+        $userPayload = [
+            'name'        => $name,
+            'email'       => $email,
+            'role'        => 'requestor',
+            'password'    => Hash::make($password),
+            'is_verified' => false,
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'first_name')) {
+            $userPayload['first_name'] = $firstName;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'last_name')) {
+            $userPayload['last_name'] = $lastName;
+        }
+
+        $user = User::create($userPayload);
 
         // Generate OTP
         $otp        = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);

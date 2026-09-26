@@ -102,6 +102,13 @@ class _HomeScreenState extends State<HomeScreen>
           _pendingCount = (stats['pending'] as num?)?.toInt() ?? 0;
           _approvedCount = (stats['approved'] as num?)?.toInt() ?? 0;
           _postedCount = (stats['posted'] as num?)?.toInt() ?? 0;
+        } else if (requests.isNotEmpty) {
+          _pendingCount = requests.where((r) {
+            final s = (r['status'] ?? '').toString().toLowerCase();
+            return s.contains('pending') || s.contains('review');
+          }).length;
+          _approvedCount = requests.where((r) => (r['status'] ?? '').toString().toLowerCase() == 'approved').length;
+          _postedCount = requests.where((r) => (r['status'] ?? '').toString().toLowerCase() == 'posted').length;
         }
         if (requests.isNotEmpty) {
           if (!SessionStore.isAdmin) {

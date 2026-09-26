@@ -81,7 +81,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     if (SessionStore.isAdmin) return false;
     final s = _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus;
     final lower = s.toLowerCase().trim();
-    return lower == 'rejected';
+    return lower == 'pending' || lower == 'pending review' || lower == 'rejected';
   }
 
   @override
@@ -488,23 +488,27 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                                           ),
                                         ),
                                         const SizedBox(width: 12),
-                                        const Expanded(
+                                        Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                'Re-submit Request',
-                                                style: TextStyle(
+                                                (_dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus).toLowerCase().contains('reject')
+                                                    ? 'Re-submit Request'
+                                                    : 'Edit Request',
+                                                style: const TextStyle(
                                                   fontFamily: 'DM Sans',
                                                   fontWeight: FontWeight.w900,
                                                   fontSize: 15,
                                                   color: Colors.white,
                                                 ),
                                               ),
-                                              SizedBox(height: 2),
+                                              const SizedBox(height: 2),
                                               Text(
-                                                'Tap to edit details or pictures and send back to admin',
-                                                style: TextStyle(
+                                                (_dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus).toLowerCase().contains('reject')
+                                                    ? 'Tap to edit details or pictures and send back to admin'
+                                                    : 'Tap to edit details or media before review begins',
+                                                style: const TextStyle(
                                                   fontFamily: 'DM Sans',
                                                   fontSize: 12,
                                                   color: Color(0xFFD0D9F0),
@@ -564,7 +568,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   }
 
   Widget _buildAdminActionBar() {
-    if (widget.requestId == null || widget.requestId! <= 0) {
+    if (!SessionStore.isAdmin || widget.requestId == null || widget.requestId! <= 0) {
       return const SizedBox.shrink();
     }
 

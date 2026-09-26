@@ -10,6 +10,7 @@ class PostRequest extends Model
 
     protected $fillable = [
         'request_id',
+        'user_id',
         'title',
         'requester',
         'category',

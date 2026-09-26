@@ -82,10 +82,17 @@ html, body { height: 100%; font-family: var(--font-inter); }
             @if(session('error'))
                 <div class="message error">{{ session('error') }}</div>
             @endif
-            <div class="register__field">
-                <label class="register__label">FULL NAME:</label>
-                <input class="register__input" type="text" name="name"
-                       placeholder="Juan Dela Cruz" required value="{{ old('name') }}">
+            <div style="display:flex;gap:12px;">
+                <div class="register__field" style="flex:1;">
+                    <label class="register__label">FIRST NAME:</label>
+                    <input class="register__input" type="text" name="first_name"
+                           placeholder="Juan" required value="{{ old('first_name') }}">
+                </div>
+                <div class="register__field" style="flex:1;">
+                    <label class="register__label">LAST NAME:</label>
+                    <input class="register__input" type="text" name="last_name"
+                           placeholder="Dela Cruz" required value="{{ old('last_name') }}">
+                </div>
             </div>
             <div class="register__field">
                 <label class="register__label">EMAIL ADDRESS:</label>

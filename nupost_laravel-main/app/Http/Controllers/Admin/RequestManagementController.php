@@ -22,7 +22,7 @@ class RequestManagementController extends Controller
         $sort   = $request->input('sort', 'newest');
 
         // Stat counts
-        $pending  = PostRequest::where('status', 'Pending Review')->count();
+        $pending  = PostRequest::whereIn('status', ['Pending', 'Pending Review'])->count();
         $review   = PostRequest::where('status', 'Under Review')->count();
         $approved = PostRequest::where('status', 'Approved')->count();
         $posted   = PostRequest::where('status', 'Posted')->count();
@@ -31,15 +31,18 @@ class RequestManagementController extends Controller
         $query = PostRequest::query();
 
         if ($filter !== 'all') {
-            $status_map = [
-                'pending'  => 'Pending Review',
-                'review'   => 'Under Review',
-                'approved' => 'Approved',
-                'posted'   => 'Posted',
-                'rejected' => 'Rejected',
-            ];
-            if (isset($status_map[$filter])) {
-                $query->where('status', $status_map[$filter]);
+            if ($filter === 'pending') {
+                $query->whereIn('status', ['Pending', 'Pending Review']);
+            } else {
+                $status_map = [
+                    'review'   => 'Under Review',
+                    'approved' => 'Approved',
+                    'posted'   => 'Posted',
+                    'rejected' => 'Rejected',
+                ];
+                if (isset($status_map[$filter])) {
+                    $query->where('status', $status_map[$filter]);
+                }
             }
         }
 
@@ -157,7 +160,40 @@ class RequestManagementController extends Controller
             }
         }
 
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Status updated to $new_status.",
+                'status' => $new_status,
+            ]);
+        }
+
         return back()->with('success', "Status updated to $new_status.");
+    }
+
+    public function updateCaption(Request $request, $id)
+    {
+        $req = PostRequest::findOrFail($id);
+        $caption = trim($request->input('caption', ''));
+
+        $req->update(['caption' => $caption]);
+
+        $adminEmail = session('admin_name', session('admin_email', 'Admin'));
+        RequestActivity::create([
+            'request_id' => $id,
+            'actor'      => $adminEmail,
+            'action'     => "Admin updated the caption draft",
+        ]);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Caption draft updated successfully.',
+                'caption' => $caption,
+            ]);
+        }
+
+        return back()->with('success', 'Caption draft updated successfully.');
     }
 
     public function postComment(Request $request)

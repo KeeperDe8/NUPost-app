@@ -24,6 +24,8 @@ class _RequestsScreenState extends State<RequestsScreen>
   String? _error;
   final List<String> _tabs = ['All', 'Pending', 'Approved', 'Posted'];
   List<_RequestPreview> _requests = const [];
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -66,6 +68,7 @@ class _RequestsScreenState extends State<RequestsScreen>
   @override
   void dispose() {
     AppMemoryCache.requestsRevision.removeListener(_onRequestsChanged);
+    _searchController.dispose();
     _tabController.dispose();
     _staggerController.dispose();
     _entryController.dispose();
@@ -450,6 +453,64 @@ class _RequestsScreenState extends State<RequestsScreen>
                     ),
                   ),
 
+                  // ── SEARCH BAR ─────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF131D31) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF1E2B45) : const Color(0x18002366),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark ? const Color(0x30000000) : const Color(0x08001540),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (val) {
+                          setState(() => _searchQuery = val.trim());
+                        },
+                        style: TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 13.5,
+                          color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF080F1E),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search by title or tracking ID...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 13,
+                            color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            size: 18,
+                            color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF002366),
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, size: 16),
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ),
+
                   // ── LIST ──────────────────────────────────────────────────
                   Expanded(
                     child: TabBarView(
@@ -465,6 +526,15 @@ class _RequestsScreenState extends State<RequestsScreen>
                                 }
                                 return e.status == tab;
                               }).toList();
+                        final q = _searchQuery.toLowerCase();
+                        final filteredItems = q.isEmpty
+                            ? items
+                            : items.where((e) {
+                                return e.title.toLowerCase().contains(q) ||
+                                    e.number.toLowerCase().contains(q) ||
+                                    e.priority.toLowerCase().contains(q);
+                              }).toList();
+
                         if (_isLoading && _requests.isEmpty) {
                           return ListView(
                             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -530,7 +600,8 @@ class _RequestsScreenState extends State<RequestsScreen>
                             ),
                           );
                         }
-                        if (items.isEmpty) {
+                        if (filteredItems.isEmpty) {
+                          final isSearching = _searchQuery.isNotEmpty;
                           return Center(
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 80),
@@ -547,14 +618,14 @@ class _RequestsScreenState extends State<RequestsScreen>
                                       borderRadius: BorderRadius.circular(24),
                                     ),
                                     child: Icon(
-                                      Icons.inbox_rounded,
+                                      isSearching ? Icons.search_off_rounded : Icons.inbox_rounded,
                                       size: 36,
                                       color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
                                     ),
                                   ),
                                   const SizedBox(height: 14),
                                   Text(
-                                    'No requests yet',
+                                    isSearching ? 'No matching requests' : 'No requests yet',
                                     style: TextStyle(
                                       fontFamily: 'DM Sans',
                                       fontWeight: FontWeight.w700,
@@ -562,7 +633,17 @@ class _RequestsScreenState extends State<RequestsScreen>
                                       color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF3D4A63),
                                     ),
                                   ),
-                                  // Removed "Tap + Create" per user request
+                                  if (isSearching) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Check your spelling or clear the filter',
+                                      style: TextStyle(
+                                        fontFamily: 'DM Sans',
+                                        fontSize: 12.5,
+                                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -570,16 +651,16 @@ class _RequestsScreenState extends State<RequestsScreen>
                         }
                         return ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-                          itemCount: items.length,
+                          itemCount: filteredItems.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 10),
                           itemBuilder: (ctx, i) => _StaggerItem(
                             controller: _staggerController,
                             index: i,
-                            total: items.length,
+                            total: filteredItems.length,
                             child: _RequestCard(
-                              req: items[i],
-                              onTap: () => _openRequestDetails(ctx, items[i]),
+                              req: filteredItems[i],
+                              onTap: () => _openRequestDetails(ctx, filteredItems[i]),
                             ),
                           ),
                         );
