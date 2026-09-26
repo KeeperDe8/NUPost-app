@@ -39,6 +39,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   String _selectedStatusFilter = 'all';
   String _searchQuery = '';
   Timer? _debounceTimer;
+  Timer? _liveSyncTimer;
 
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -83,11 +84,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _loadData(showLoading: !AppMemoryCache.hasAdminData);
     _entryCtrl.forward();
     AppMemoryCache.requestsRevision.addListener(_onRequestsChanged);
+
+    // Real-time live background sync for admin requests & stats
+    _liveSyncTimer = Timer.periodic(const Duration(milliseconds: 3500), (_) {
+      if (mounted && !_isLoading && _searchQuery.isEmpty) {
+        _loadData(showLoading: false);
+      }
+    });
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _liveSyncTimer?.cancel();
     AppMemoryCache.requestsRevision.removeListener(_onRequestsChanged);
     _entryCtrl.dispose();
     _staggerCtrl?.dispose();

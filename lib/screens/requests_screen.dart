@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'request_tracking_screen.dart';
 import '../services/api_service.dart';
@@ -26,6 +27,7 @@ class _RequestsScreenState extends State<RequestsScreen>
   List<_RequestPreview> _requests = const [];
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  Timer? _liveSyncTimer;
 
   @override
   void initState() {
@@ -63,10 +65,16 @@ class _RequestsScreenState extends State<RequestsScreen>
     });
     _loadRequests();
     AppMemoryCache.requestsRevision.addListener(_onRequestsChanged);
+
+    // Real-time background sync (every 3 seconds) for live status updates
+    _liveSyncTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted && !_isLoading) _loadRequests(silent: true);
+    });
   }
 
   @override
   void dispose() {
+    _liveSyncTimer?.cancel();
     AppMemoryCache.requestsRevision.removeListener(_onRequestsChanged);
     _searchController.dispose();
     _tabController.dispose();
@@ -77,7 +85,7 @@ class _RequestsScreenState extends State<RequestsScreen>
 
   void _onRequestsChanged() {
     if (!mounted) return;
-    _loadRequests();
+    _loadRequests(silent: true);
   }
 
   void _replayStagger() {
@@ -108,19 +116,23 @@ class _RequestsScreenState extends State<RequestsScreen>
     }).toList();
   }
 
-  Future<void> _loadRequests() async {
+  Future<void> _loadRequests({bool silent = false}) async {
     final userId = SessionStore.userId;
     if (userId == null && !SessionStore.isAdmin) {
-      setState(() {
-        _error = 'Login first.';
-        _requests = const [];
-      });
+      if (!silent) {
+        setState(() {
+          _error = 'Login first.';
+          _requests = const [];
+        });
+      }
       return;
     }
-    setState(() {
-      _isLoading = _requests.isEmpty;
-      _error = null;
-    });
+    if (!silent) {
+      setState(() {
+        _isLoading = _requests.isEmpty;
+        _error = null;
+      });
+    }
     try {
       final status = _statusForTab(_tabs[_tabController.index]);
       final List<Map<String, dynamic>> rows;
@@ -137,17 +149,37 @@ class _RequestsScreenState extends State<RequestsScreen>
       if (_tabController.index == 0) {
         AppMemoryCache.requests = rows;
       }
-      setState(() {
-        _requests = mapped;
-      });
-      _replayStagger();
+
+      bool hasChanges = false;
+      if (mapped.length != _requests.length) {
+        hasChanges = true;
+      } else {
+        for (int i = 0; i < mapped.length; i++) {
+          if (mapped[i].id != _requests[i].id || mapped[i].status != _requests[i].status) {
+            hasChanges = true;
+            break;
+          }
+        }
+      }
+
+      if (hasChanges || !silent) {
+        setState(() {
+          _requests = mapped;
+          _error = null;
+        });
+        if (hasChanges && !silent) {
+          _replayStagger();
+        }
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString().replaceFirst('Exception: ', '');
-        if (_requests.isEmpty) _requests = const [];
-      });
+      if (!silent) {
+        setState(() {
+          _error = e.toString().replaceFirst('Exception: ', '');
+          if (_requests.isEmpty) _requests = const [];
+        });
+      }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && !silent) setState(() => _isLoading = false);
     }
   }
 

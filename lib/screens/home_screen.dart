@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../main_shell.dart';
 import '../services/api_service.dart';
@@ -26,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   List<Map<String, dynamic>> _recentRequests = [];
   bool _isLoadingRequests = true;
+  Timer? _liveSyncTimer;
 
   @override
   void initState() {
@@ -61,10 +63,16 @@ class _HomeScreenState extends State<HomeScreen>
 
     _loadStats();
     AppMemoryCache.requestsRevision.addListener(_onRequestsChanged);
+
+    // Live background polling (every 3 seconds) for real-time status updates & counter sync
+    _liveSyncTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) _loadStats(silent: true);
+    });
   }
 
   @override
   void dispose() {
+    _liveSyncTimer?.cancel();
     AppMemoryCache.requestsRevision.removeListener(_onRequestsChanged);
     _entryController.dispose();
     super.dispose();
@@ -72,14 +80,18 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _onRequestsChanged() {
     if (!mounted) return;
-    _loadStats();
+    _loadStats(silent: true);
   }
 
-  Future<void> _loadStats() async {
+  Future<void> _loadStats({bool silent = false}) async {
     final userId = SessionStore.userId;
     if (userId == null || userId == 0) {
-      if (mounted) setState(() => _isLoadingRequests = false);
+      if (mounted && !silent) setState(() => _isLoadingRequests = false);
       return;
+    }
+
+    if (!silent && _recentRequests.isEmpty && mounted) {
+      setState(() => _isLoadingRequests = true);
     }
 
     try {
@@ -93,36 +105,46 @@ class _HomeScreenState extends State<HomeScreen>
       final profileData = results[0] as Map<String, dynamic>;
       final requests = results[1] as List<Map<String, dynamic>>;
 
+      int pending = _pendingCount;
+      int approved = _approvedCount;
+      int posted = _postedCount;
+
+      if (profileData['success'] == true) {
+        final stats = profileData['data']?['stats'] ?? {};
+        if (stats is Map<String, dynamic>) {
+          AppMemoryCache.homeStats = stats;
+          pending = (stats['pending'] as num?)?.toInt() ?? 0;
+          approved = (stats['approved'] as num?)?.toInt() ?? 0;
+          posted = (stats['posted'] as num?)?.toInt() ?? 0;
+        }
+      } else if (requests.isNotEmpty) {
+        pending = requests.where((r) {
+          final s = (r['status'] ?? '').toString().toLowerCase();
+          return s.contains('pending') || s.contains('review');
+        }).length;
+        approved = requests.where((r) => (r['status'] ?? '').toString().toLowerCase() == 'approved').length;
+        posted = requests.where((r) => (r['status'] ?? '').toString().toLowerCase() == 'posted').length;
+      }
+
+      List<Map<String, dynamic>> top3 = _recentRequests;
+      if (requests.isNotEmpty) {
+        if (!SessionStore.isAdmin) {
+          AppMemoryCache.updateUserRequestSequence(requests);
+        }
+        top3 = requests.take(3).toList();
+        AppMemoryCache.homeRecentRequests = top3;
+      }
+
       setState(() {
-        if (profileData['success'] == true) {
-          final stats = profileData['data']?['stats'] ?? {};
-          if (stats is Map<String, dynamic>) {
-            AppMemoryCache.homeStats = stats;
-          }
-          _pendingCount = (stats['pending'] as num?)?.toInt() ?? 0;
-          _approvedCount = (stats['approved'] as num?)?.toInt() ?? 0;
-          _postedCount = (stats['posted'] as num?)?.toInt() ?? 0;
-        } else if (requests.isNotEmpty) {
-          _pendingCount = requests.where((r) {
-            final s = (r['status'] ?? '').toString().toLowerCase();
-            return s.contains('pending') || s.contains('review');
-          }).length;
-          _approvedCount = requests.where((r) => (r['status'] ?? '').toString().toLowerCase() == 'approved').length;
-          _postedCount = requests.where((r) => (r['status'] ?? '').toString().toLowerCase() == 'posted').length;
-        }
-        if (requests.isNotEmpty) {
-          if (!SessionStore.isAdmin) {
-            AppMemoryCache.updateUserRequestSequence(requests);
-          }
-          final top3 = requests.take(3).toList();
-          AppMemoryCache.homeRecentRequests = top3;
-          _recentRequests = top3;
-        }
+        _pendingCount = pending;
+        _approvedCount = approved;
+        _postedCount = posted;
+        _recentRequests = top3;
         _isLoadingRequests = false;
       });
     } catch (e) {
       debugPrint('Error loading home stats: $e');
-      if (mounted) setState(() => _isLoadingRequests = false);
+      if (mounted && !silent) setState(() => _isLoadingRequests = false);
     }
   }
 

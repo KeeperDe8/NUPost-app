@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'api_service.dart';
+import 'app_memory_cache.dart';
 import 'session_store.dart';
 import '../screens/notifications_screen.dart';
 
@@ -18,8 +19,8 @@ class InAppNotificationService {
     _knownNotificationIds.clear();
     _initialFetchDone = false;
 
-    // Poll every 15 seconds
-    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _checkNewNotifications());
+    // Fast 3-second polling for near-instant notification delivery & live status sync
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _checkNewNotifications());
     // Initial fetch
     _checkNewNotifications();
   }
@@ -66,6 +67,10 @@ class InAppNotificationService {
             final title = (n['title'] ?? 'NUPost Update').toString();
             final message = (n['message'] ?? '').toString();
             final type = (n['type'] ?? 'info').toString();
+
+            // Real-time status update: invalidate cached requests & stats so active screens reload immediately
+            AppMemoryCache.invalidateRequests();
+            AppMemoryCache.invalidateNotifications();
 
             showBanner(
               title: title,
