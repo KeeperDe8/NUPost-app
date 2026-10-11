@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../services/app_memory_cache.dart';
 import 'request_tracking_screen.dart';
+import '../utils/app_date_time_utils.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -17,6 +18,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   int _unreadCount = 0;
   bool _isLoading = true;
   Timer? _pollTimer;
+  bool _isNavigating = false;
 
   // Filter tabs: 0=All, 1=Unread, 2=Status, 3=Messages
   int _filterIndex = 0;
@@ -108,14 +110,9 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         .map((n) => n.id)
         .toList();
     if (unreadIds.isEmpty) return;
-    try {
-      for (final id in unreadIds) {
-        await ApiService.markNotificationRead(
-          userId: userId,
-          notificationId: id,
-        );
-      }
-      if (!mounted) return;
+
+    // 1. Instant optimistic UI update (0ms latency feedback)
+    if (mounted) {
       setState(() {
         _notifications = _notifications
             .map((n) => unreadIds.contains(n.id) ? n.copyWith(isRead: true) : n)
@@ -125,9 +122,21 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           _notifications.length,
         );
       });
+      AppMemoryCache.notificationsUnreadCount = _unreadCount;
+    }
+
+    // 2. Parallel network persistence in the background
+    try {
+      await Future.wait(
+        unreadIds.map(
+          (id) => ApiService.markNotificationRead(
+            userId: userId,
+            notificationId: id,
+          ),
+        ),
+      );
     } catch (_) {}
   }
-
 
   void _dismissNotif(int id) {
     setState(() {
@@ -136,17 +145,21 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   }
 
   Future<void> _markAllAsRead() async {
-    try {
-      final userId = SessionStore.userId;
-      if (userId == null || userId == 0) return;
-      await ApiService.markAllNotificationsRead(userId: userId);
-      if (!mounted) return;
+    final userId = SessionStore.userId;
+    if (userId == null || userId == 0) return;
+
+    if (mounted) {
       setState(() {
         _notifications = _notifications
             .map((n) => n.copyWith(isRead: true))
             .toList();
         _unreadCount = 0;
       });
+      AppMemoryCache.notificationsUnreadCount = 0;
+    }
+
+    try {
+      await ApiService.markAllNotificationsRead(userId: userId);
     } catch (_) {}
   }
 
@@ -215,128 +228,45 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   }
 
   Future<void> _handleGroupTap(_NotifGroup group) async {
-    if (group.unreadCount > 0) await _markGroupAsRead(group);
-    if (!mounted) return;
-    final latest = group.latest;
-    if (_isMsg(latest.type)) {
-      await Navigator.of(context).pushNamed('/messages');
-      if (mounted) _loadNotifications(showLoading: false);
-      return;
-    }
-    if (latest.requestId != null && latest.requestId! > 0) {
-      await _openTracking(latest);
-      if (mounted) _loadNotifications(showLoading: false);
-      return;
-    }
-    if (_isTracking(latest.type)) {
-      await Navigator.of(context).pushNamed('/requests');
-      if (mounted) _loadNotifications(showLoading: false);
+    // Prevent rapid consecutive taps from opening multiple screens
+    if (_isNavigating) return;
+    _isNavigating = true;
+
+    try {
+      if (group.unreadCount > 0) {
+        unawaited(_markGroupAsRead(group));
+      }
+      final latest = group.latest;
+      if (_isMsg(latest.type)) {
+        await Navigator.of(context).pushNamed('/messages');
+      } else if (latest.requestId != null && latest.requestId! > 0) {
+        await _openTracking(latest);
+      } else if (_isTracking(latest.type)) {
+        await Navigator.of(context).pushNamed('/requests');
+      }
+      if (mounted) {
+        _loadNotifications(showLoading: false);
+      }
+    } finally {
+      _isNavigating = false;
     }
   }
 
   Future<void> _openTracking(_Notif n) async {
     final requestId = n.requestId;
     if (requestId == null || requestId <= 0 || !mounted) return;
-    bool loaderOpen = true;
-    showDialog(
-      context: context,
-      useRootNavigator: false,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF002366)),
+    final currentStatus = n.requestStatus ?? 'Pending';
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RequestTrackingScreen(
+          requestId: requestId,
+          requestNumber: 'REQ-$requestId',
+          requestTitle: n.title,
+          currentStatus: currentStatus,
+          currentStatusMessage: _statusMsg(currentStatus),
+        ),
       ),
     );
-    try {
-      final response = await ApiService.fetchRequestDetails(
-        requestId: requestId,
-      );
-      if (!mounted) return;
-      if (loaderOpen) {
-        Navigator.of(context).pop();
-        loaderOpen = false;
-      }
-      if (response['success'] != true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to open request tracking.')),
-        );
-        return;
-      }
-      final data = response['data'] ?? {};
-      final request = (data['request'] as Map?)?.cast<String, dynamic>() ?? {};
-      final activities = (data['activities'] as List?) ?? const [];
-      final requestCode = (request['request_id'] ?? '').toString().trim();
-      final requestTitle = (request['title'] ?? '').toString();
-      final currentStatus = (request['status'] ?? n.requestStatus ?? 'Pending')
-          .toString();
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => RequestTrackingScreen(
-            requestNumber: requestCode.isEmpty ? 'REQ-$requestId' : requestCode,
-            requestTitle: requestTitle,
-            currentStatus: currentStatus,
-            currentStatusMessage: _statusMsg(currentStatus),
-            events: _buildEvents(request, activities),
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      if (loaderOpen) Navigator.of(context).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
-  }
-
-  List<TrackingEvent> _buildEvents(
-    Map<String, dynamic> request,
-    List activities,
-  ) {
-    final events = <TrackingEvent>[
-      TrackingEvent(
-        icon: Icons.send_outlined,
-        title: 'Request Submitted',
-        subtitle: 'Your request was sent successfully.',
-        timestamp: _fmt(request['created_at'] ?? ''),
-      ),
-    ];
-    for (final raw in activities.whereType<Map>()) {
-      final a = raw.cast<String, dynamic>();
-      final action = (a['action'] ?? '').toString();
-      IconData icon = Icons.info_outline;
-      String title = 'Update';
-      String sub = action;
-      if (action.contains('Under Review')) {
-        icon = Icons.rate_review_outlined;
-        title = 'Under Review';
-        sub = 'Marketing team is evaluating your request.';
-      } else if (action.contains('Approved')) {
-        icon = Icons.check_circle_outline;
-        title = 'Approved';
-        sub = 'Your request has been approved.';
-      } else if (action.contains('Rejected')) {
-        icon = Icons.cancel_outlined;
-        title = 'Rejected';
-        sub = 'Your request was not approved.';
-      } else if (action.contains('Posted')) {
-        icon = Icons.publish;
-        title = 'Posted';
-        sub = 'Your content has been published.';
-      } else if (action.contains('Pending')) {
-        icon = Icons.hourglass_empty;
-        title = 'Pending';
-        sub = 'Your request is waiting for review.';
-      }
-      events.add(
-        TrackingEvent(
-          icon: icon,
-          title: title,
-          subtitle: sub,
-          timestamp: _fmt(a['created_at'] ?? ''),
-        ),
-      );
-    }
-    return events;
   }
 
   String _statusMsg(String s) {
@@ -351,30 +281,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     return 'Your request is being processed.';
   }
 
-  String _fmt(String dt) {
-    if (dt.isEmpty) return '';
-    try {
-      final d = DateTime.parse(dt);
-      const m = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      final h = d.hour > 12 ? d.hour - 12 : (d.hour == 0 ? 12 : d.hour);
-      return '${m[d.month - 1]} ${d.day}, ${d.year} · $h:${d.minute.toString().padLeft(2, '0')} ${d.hour >= 12 ? 'PM' : 'AM'}';
-    } catch (_) {
-      return dt;
-    }
-  }
 
   // ── BUILD ─────────────────────────────────────────────────────────────────
   @override
@@ -660,7 +566,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               height: 90,
               decoration: BoxDecoration(
                 color: cardBg,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: cardBorder),
               ),
               child: Row(
@@ -898,7 +804,7 @@ class _SwipeablNotifCard extends StatelessWidget {
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
           color: const Color(0xFFFF3B30).withOpacity(0.12),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFFF3B30).withOpacity(0.2)),
         ),
         child: Column(
@@ -942,28 +848,53 @@ class _NotifCard extends StatelessWidget {
   final VoidCallback onTap;
   const _NotifCard({required this.group, required this.onTap});
 
-  Color _accent(String type) {
-    switch (type) {
+  Color _accent(_Notif n) {
+    // If notification has a request status attached, match the exact color from Requests & Home screens!
+    final status = (n.requestStatus ?? '').toLowerCase().trim();
+    if (status.contains('approved')) return const Color(0xFF10B981);
+    if (status.contains('rejected')) return const Color(0xFFEF4444);
+    if (status.contains('posted')) return const Color(0xFF8B5CF6);
+    if (status.contains('pending') ||
+        status.contains('review') ||
+        status.contains('received')) {
+      return const Color(0xFFF59E0B);
+    }
+
+    final tit = n.title.toLowerCase();
+    if (tit.contains('posting request') ||
+        tit.contains('new request') ||
+        tit.contains('submitted')) {
+      return const Color(0xFFF59E0B);
+    }
+
+    switch (n.type.toLowerCase()) {
       case 'approved':
-        return const Color(0xFF05C46B);
+        return const Color(0xFF10B981);
       case 'rejected':
-        return const Color(0xFFFF3B30);
+        return const Color(0xFFEF4444);
       case 'posted':
         return const Color(0xFF8B5CF6);
       case 'comment':
       case 'message':
-        return const Color(0xFF4B7BF5);
+        return const Color(0xFF3B82F6);
       case 'review':
       case 'under_review':
       case 'received':
+      case 'pending':
+      case 'status_update':
         return const Color(0xFFF59E0B);
       default:
-        return const Color(0xFF2B5CE6);
+        return const Color(0xFF3B82F6);
     }
   }
 
-  IconData _icon(String type) {
-    switch (type) {
+  IconData _icon(String type, String title) {
+    final t = type.toLowerCase();
+    final tit = title.toLowerCase();
+    if (tit.contains('posting request') || tit.contains('new request')) {
+      return Icons.assignment_outlined;
+    }
+    switch (t) {
       case 'approved':
         return Icons.check_circle_rounded;
       case 'rejected':
@@ -977,77 +908,77 @@ class _NotifCard extends StatelessWidget {
       case 'under_review':
       case 'received':
         return Icons.access_time_rounded;
+      case 'status_update':
+        return Icons.assignment_outlined;
       default:
         return Icons.notifications_rounded;
     }
   }
 
-  String _timeAgo(DateTime t) {
-    final diff = DateTime.now().difference(t);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${t.month}/${t.day}/${t.year}';
-  }
+  String _timeAgo(DateTime t) => AppDateTimeUtils.formatTimeAgo(t);
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final n = group.latest;
-    final accent = _accent(n.type);
+    final accent = _accent(n);
     final hasUnread = group.unreadCount > 0;
 
-    final cardBg = hasUnread
-        ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFF0F5FF))
-        : (isDark ? const Color(0xFF131D31) : Colors.white);
-    final cardBorder = hasUnread
-        ? (isDark ? const Color(0xFF3B82F6).withOpacity(0.4) : const Color(0xFF2B5CE6).withOpacity(0.22))
-        : (isDark ? const Color(0xFF1E2B45) : const Color(0x0E000000));
+    final cardBg = isDark
+        ? (hasUnread ? const Color(0xFF162032) : const Color(0xFF131D31))
+        : (hasUnread ? const Color(0xFFF0F5FF) : Colors.white);
+    final cardBorder = isDark
+        ? (hasUnread ? accent.withOpacity(0.35) : const Color(0xFF1E2B45))
+        : (hasUnread ? accent.withOpacity(0.25) : const Color(0x0E000000));
     final titleColor = isDark ? Colors.white : const Color(0xFF080F1E);
     final msgColor = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF3D4A63);
     final badgeBg = isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6);
     final badgeText = isDark ? const Color(0xFFE2E8F0) : const Color(0xFF3D4A63);
     final timeColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF9AA3B2);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: cardBorder,
-            width: hasUnread ? 1.5 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isDark
-                  ? Colors.black26
-                  : const Color(0xFF001540).withOpacity(hasUnread ? 0.07 : 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        splashColor: accent.withOpacity(0.12),
+        highlightColor: accent.withOpacity(0.06),
+        child: Container(
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: cardBorder,
+              width: 1,
             ),
-          ],
-        ),
-        child: IntrinsicHeight(
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? const Color(0x30000000)
+                    : const Color(0xFF001540).withOpacity(hasUnread ? 0.07 : 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Left accent bar
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: hasUnread ? 4 : 0,
+              // Left accent pill (matches homescreen and requests screen exactly!)
+              Container(
+                width: 4,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: accent,
+                  color: hasUnread ? accent : Colors.transparent,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    bottomLeft: Radius.circular(20),
+                    topRight: Radius.circular(4),
+                    bottomRight: Radius.circular(4),
                   ),
                 ),
               ),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(hasUnread ? 14 : 18, 14, 18, 14),
+                  padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1063,7 +994,7 @@ class _NotifCard extends StatelessWidget {
                           ),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: Icon(_icon(n.type), color: accent, size: 20),
+                        child: Icon(_icon(n.type, n.title), color: accent, size: 20),
                       ),
                       const SizedBox(width: 13),
                       Expanded(
@@ -1229,8 +1160,7 @@ class _Notif {
           json['is_read'] == 1 ||
           json['is_read'] == '1',
       createdAt:
-          DateTime.tryParse((json['created_at'] ?? '').toString()) ??
-          DateTime.now(),
+          AppDateTimeUtils.parseServerDateTime(json['created_at']),
       requestStatus: s.isEmpty ? null : s,
     );
   }

@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../services/app_memory_cache.dart';
 import '../widgets/skeleton_loader.dart';
+import '../utils/app_date_time_utils.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -114,7 +115,7 @@ class _RequestsScreenState extends State<RequestsScreen>
         status: (row['status'] ?? 'Pending').toString(),
         submittedAt: createdAt.isEmpty
             ? 'Submitted —'
-            : 'Submitted $createdAt',
+            : 'Submitted ${AppDateTimeUtils.formatSubmitted(createdAt)}',
         priority: (row['priority'] ?? '').toString(),
       );
     }).toList();
@@ -295,30 +296,7 @@ class _RequestsScreenState extends State<RequestsScreen>
     }
   }
 
-  String _fmt(String dt) {
-    if (dt.isEmpty) return '';
-    try {
-      final d = DateTime.parse(dt);
-      const m = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      final h = d.hour > 12 ? d.hour - 12 : (d.hour == 0 ? 12 : d.hour);
-      return '${m[d.month - 1]} ${d.day}, ${d.year} · $h:${d.minute.toString().padLeft(2, '0')} ${d.hour >= 12 ? 'PM' : 'AM'}';
-    } catch (_) {
-      return dt;
-    }
-  }
+  String _fmt(String dt) => AppDateTimeUtils.formatEventTimestamp(dt);
 
   @override
   Widget build(BuildContext context) {

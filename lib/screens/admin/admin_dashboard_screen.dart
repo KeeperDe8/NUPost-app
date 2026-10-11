@@ -6,6 +6,7 @@ import '../../services/session_store.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../request_tracking_screen.dart';
+import '../../utils/app_date_time_utils.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -1027,7 +1028,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               Expanded(
                                 child: Text(
                                   createdAt.isNotEmpty
-                                      ? 'Submitted $createdAt'
+                                      ? 'Submitted ${AppDateTimeUtils.formatSubmitted(createdAt)}'
                                       : 'By $requester',
                                   style: TextStyle(
                                     fontFamily: 'DM Sans',

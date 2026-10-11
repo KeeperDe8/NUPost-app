@@ -7,6 +7,7 @@ import '../services/session_store.dart';
 import '../services/chat_read_store.dart';
 import '../services/app_memory_cache.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_date_time_utils.dart';
 
 class MessageThreadScreen extends StatefulWidget {
   final int requestId;
@@ -634,15 +635,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
     );
   }
 
-  String _formatTime(String raw) {
-    if (raw.isEmpty) return '';
-    final dt = DateTime.tryParse(raw);
-    if (dt == null) return raw;
-    final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-    final min = dt.minute.toString().padLeft(2, '0');
-    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$min $ampm';
-  }
+  String _formatTime(String raw) => AppDateTimeUtils.formatTimeOnly(raw);
 
   // ── Composer ──────────────────────────────────────────────────────────────
   Widget _buildComposer(bool isDark) {

@@ -7,6 +7,7 @@ import '../services/app_memory_cache.dart';
 import '../theme/app_theme.dart';
 import '../widgets/skeleton_loader.dart';
 import 'request_tracking_screen.dart';
+import '../utils/app_date_time_utils.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -854,29 +855,7 @@ class _HomeRequestCard extends StatelessWidget {
     }
   }
 
-  String _fmt(String dt) {
-    if (dt.isEmpty) return 'Recent';
-    try {
-      final d = DateTime.parse(dt);
-      const m = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      return '${m[d.month - 1]} ${d.day}';
-    } catch (_) {
-      return 'Recent';
-    }
-  }
+  String _fmt(String dt) => AppDateTimeUtils.formatShortDate(dt);
 
   @override
   Widget build(BuildContext context) {

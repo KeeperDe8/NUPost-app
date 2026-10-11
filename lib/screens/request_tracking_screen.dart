@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/media_preview_gallery.dart';
 import 'create_request_screen.dart';
 import 'message_thread_screen.dart';
+import '../utils/app_date_time_utils.dart';
 
 // ── Public data model (used by other screens) ─────────────────────────────────
 class TrackingEvent {
@@ -243,7 +244,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
           icon: _iconForAction(actStr),
           title: actor,
           subtitle: actStr,
-          timestamp: (actMap['created_at'] ?? '').toString(),
+          timestamp: AppDateTimeUtils.formatEventTimestamp(actMap['created_at']),
           role: role,
         ));
       }

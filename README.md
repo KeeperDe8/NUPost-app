@@ -46,6 +46,9 @@ NUPost solves this by unifying **request submission**, **structured approvals & 
 | 12 | **⚙️ Notification Preferences & Help Center** | Persistent notification toggles via `SharedPreferences` and in-app Help Center with direct office support |
 | 13 | **📶 Adaptive Network Queue & Offline Cache** | Dynamic 6s/10s adaptive timeouts, retry backoff, 60s sliding window circuit breaker, and stale-while-revalidate local caching |
 | 14 | **✨ Shimmer Skeleton Loaders** | Modern pulsating placeholder animations across all primary screens (Home, Requests, Messages, Calendar, Profile) |
+| 15 | **🕒 Timezone Localization & Clock Sync** | Timezone-aware date parser utility (`AppDateTimeUtils`) converting UTC database timestamps accurately to Philippine local time (`Asia/Manila` / UTC+8), displaying exact submission times and fixing relative notification timestamps |
+| 16 | **⚡ Optimistic UI Updates & Anti-Double-Tap** | 0ms instant notification mark-as-read updates, background API synchronization, and navigation debouncing locks preventing duplicate screen launches on rapid multi-taps |
+| 17 | **🛡️ Production Media Pipeline & Security** | Triple-fallback directory resolution (`public_html/uploads`, `public/uploads`, `storage/app/public/uploads`), image optimization, transparent PNG error failover, and strict HTTP security headers (HSTS, X-Frame-Options, nosniff, Referrer-Policy) |
 
 ---
 
@@ -198,6 +201,8 @@ nupost_app/
 │   │   └── network_queue_manager.dart # In-flight queue, sliding-window breaker & offline cache
 │   ├── theme/
 │   │   └── app_theme.dart             # DM Sans typography & color system
+│   ├── utils/
+│   │   └── app_date_time_utils.dart   # Central timezone-aware UTC to Asia/Manila converter
 │   └── widgets/
 │       ├── app_snackbar.dart          # Floating status notifications
 │       ├── floating_message_button.dart
