@@ -808,13 +808,13 @@ class LegacyMobileApiController extends Controller
                 ], 404);
             }
 
+            $isAdmin = (strtolower(trim((string) ($user->role ?? ''))) === 'admin');
             $currentStatus = trim((string) ($existingReq->status ?? ''));
             $lowerStatus = strtolower($currentStatus);
-            $editableStatuses = ['pending', 'pending review', 'rejected'];
-            if (!in_array($lowerStatus, $editableStatuses, true)) {
+            if (!$isAdmin && $lowerStatus !== 'rejected') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Requests can only be edited while Pending Review or if Rejected by an admin.',
+                    'message' => 'Requests can only be edited if rejected by an admin.',
                 ], 422);
             }
 

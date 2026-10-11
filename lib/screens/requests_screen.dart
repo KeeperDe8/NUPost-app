@@ -35,8 +35,8 @@ class _RequestsScreenState extends State<RequestsScreen>
     _tabController = TabController(length: _tabs.length, vsync: this);
     _staggerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
+      duration: const Duration(milliseconds: 600),
+    )..forward();
     _entryController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -57,11 +57,14 @@ class _RequestsScreenState extends State<RequestsScreen>
     if (AppMemoryCache.hasRequests) {
       _requests = _mapRowsToPreviews(AppMemoryCache.requests!);
       _isLoading = false;
+      _staggerController.forward();
     }
 
     _tabController.addListener(() {
-      setState(() {});
-      if (!_tabController.indexIsChanging) _loadRequests();
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+        _replayStagger();
+      }
     });
     _loadRequests();
     AppMemoryCache.requestsRevision.addListener(_onRequestsChanged);
@@ -89,6 +92,7 @@ class _RequestsScreenState extends State<RequestsScreen>
   }
 
   void _replayStagger() {
+    if (!mounted) return;
     _staggerController.reset();
     _staggerController.forward();
   }
@@ -134,21 +138,18 @@ class _RequestsScreenState extends State<RequestsScreen>
       });
     }
     try {
-      final status = _statusForTab(_tabs[_tabController.index]);
       final List<Map<String, dynamic>> rows;
       if (SessionStore.isAdmin) {
-        rows = await ApiService.fetchAdminRequests(status: status ?? 'all');
+        rows = await ApiService.fetchAdminRequests(status: 'all');
       } else {
         rows = await ApiService.fetchRequests(
           userId: userId!,
-          status: status,
+          status: null, // Always fetch complete user request list so all tabs & stats are accurate
         );
         AppMemoryCache.updateUserRequestSequence(rows);
       }
       final mapped = _mapRowsToPreviews(rows);
-      if (_tabController.index == 0) {
-        AppMemoryCache.requests = rows;
-      }
+      AppMemoryCache.requests = rows;
 
       bool hasChanges = false;
       if (mapped.length != _requests.length) {
@@ -169,7 +170,11 @@ class _RequestsScreenState extends State<RequestsScreen>
         });
         if (hasChanges && !silent) {
           _replayStagger();
+        } else if (!_staggerController.isAnimating && !_staggerController.isCompleted) {
+          _staggerController.forward();
         }
+      } else if (!_staggerController.isAnimating && !_staggerController.isCompleted) {
+        _staggerController.forward();
       }
     } catch (e) {
       if (!silent) {
@@ -183,18 +188,6 @@ class _RequestsScreenState extends State<RequestsScreen>
     }
   }
 
-  String? _statusForTab(String tab) {
-    switch (tab) {
-      case 'Pending':
-        return 'Pending';
-      case 'Approved':
-        return 'Approved';
-      case 'Posted':
-        return 'Posted';
-      default:
-        return null;
-    }
-  }
 
   Future<void> _openRequestDetails(
     BuildContext context,
@@ -638,65 +631,84 @@ class _RequestsScreenState extends State<RequestsScreen>
                         }
                         if (filteredItems.isEmpty) {
                           final isSearching = _searchQuery.isNotEmpty;
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 80),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 72,
-                                    height: 72,
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? const Color(0xFF1E2B45)
-                                          : const Color(0xFF9AA3B2).withOpacity(0.08),
-                                      borderRadius: BorderRadius.circular(24),
-                                    ),
-                                    child: Icon(
-                                      isSearching ? Icons.search_off_rounded : Icons.inbox_rounded,
-                                      size: 36,
-                                      color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
-                                    ),
+                          return RefreshIndicator(
+                            color: const Color(0xFF002366),
+                            onRefresh: () => _loadRequests(silent: false),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) => SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: constraints.maxHeight,
                                   ),
-                                  const SizedBox(height: 14),
-                                  Text(
-                                    isSearching ? 'No matching requests' : 'No requests yet',
-                                    style: TextStyle(
-                                      fontFamily: 'DM Sans',
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15,
-                                      color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF3D4A63),
-                                    ),
-                                  ),
-                                  if (isSearching) ...[
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      'Check your spelling or clear the filter',
-                                      style: TextStyle(
-                                        fontFamily: 'DM Sans',
-                                        fontSize: 12.5,
-                                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
+                                  child: Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(bottom: 80),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 72,
+                                            height: 72,
+                                            decoration: BoxDecoration(
+                                              color: isDark
+                                                  ? const Color(0xFF1E2B45)
+                                                  : const Color(0xFF9AA3B2).withOpacity(0.08),
+                                              borderRadius: BorderRadius.circular(24),
+                                            ),
+                                            child: Icon(
+                                              isSearching ? Icons.search_off_rounded : Icons.inbox_rounded,
+                                              size: 36,
+                                              color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 14),
+                                          Text(
+                                            isSearching ? 'No matching requests' : 'No requests yet',
+                                            style: TextStyle(
+                                              fontFamily: 'DM Sans',
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 15,
+                                              color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF3D4A63),
+                                            ),
+                                          ),
+                                          if (isSearching) ...[
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              'Check your spelling or clear the filter',
+                                              style: TextStyle(
+                                                fontFamily: 'DM Sans',
+                                                fontSize: 12.5,
+                                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF9AA3B2),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ],
+                                  ),
+                                ),
                               ),
                             ),
                           );
                         }
-                        return ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-                          itemCount: filteredItems.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 10),
-                          itemBuilder: (ctx, i) => _StaggerItem(
-                            controller: _staggerController,
-                            index: i,
-                            total: filteredItems.length,
-                            child: _RequestCard(
-                              req: filteredItems[i],
-                              onTap: () => _openRequestDetails(ctx, filteredItems[i]),
+                        return RefreshIndicator(
+                          color: const Color(0xFF002366),
+                          onRefresh: () => _loadRequests(silent: false),
+                          child: ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                            itemCount: filteredItems.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (ctx, i) => _StaggerItem(
+                              controller: _staggerController,
+                              index: i,
+                              total: filteredItems.length,
+                              child: _RequestCard(
+                                req: filteredItems[i],
+                                onTap: () => _openRequestDetails(ctx, filteredItems[i]),
+                              ),
                             ),
                           ),
                         );
@@ -992,14 +1004,19 @@ class _StaggerItem extends StatelessWidget {
       curve: Interval(start, end, curve: Curves.easeOutCubic),
     );
     return AnimatedBuilder(
-      animation: curve,
-      builder: (_, inner) => Opacity(
-        opacity: curve.value,
-        child: Transform.translate(
-          offset: Offset(0, (1 - curve.value) * 16),
-          child: inner,
-        ),
-      ),
+      animation: controller,
+      builder: (_, inner) {
+        final val = controller.isAnimating
+            ? curve.value
+            : (controller.value == 0.0 ? 1.0 : curve.value);
+        return Opacity(
+          opacity: val.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, (1 - val) * 16),
+            child: inner,
+          ),
+        );
+      },
       child: child,
     );
   }

@@ -83,7 +83,8 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
     if (SessionStore.isAdmin) return false;
     final s = _dynamicStatus.isNotEmpty ? _dynamicStatus : widget.currentStatus;
     final lower = s.toLowerCase().trim();
-    return lower == 'pending' || lower == 'pending review' || lower == 'rejected';
+    // Requestor cannot edit unless the request was rejected by an admin
+    return lower == 'rejected';
   }
 
   @override
@@ -281,7 +282,7 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
   }
 
   void _openEditRequest() async {
-    if (widget.requestId == null || widget.requestId! <= 0) return;
+    if (!_isEditable || widget.requestId == null || widget.requestId! <= 0) return;
     final reqData = {
       'id': widget.requestId,
       'title': _dynamicTitle.isNotEmpty ? _dynamicTitle : widget.requestTitle,
@@ -826,22 +827,22 @@ class _RequestTrackingScreenState extends State<RequestTrackingScreen>
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF002366).withOpacity(0.08),
+                      color: const Color(0xFFDC2626).withOpacity(0.08),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF002366).withOpacity(0.2)),
+                      border: Border.all(color: const Color(0xFFDC2626).withOpacity(0.25)),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFF002366)),
+                        Icon(Icons.replay_rounded, size: 15, color: Color(0xFFDC2626)),
                         SizedBox(width: 4),
                         Text(
-                          'Edit',
+                          'Re-submit',
                           style: TextStyle(
                             fontFamily: 'DM Sans',
                             fontWeight: FontWeight.w800,
                             fontSize: 12,
-                            color: Color(0xFF002366),
+                            color: Color(0xFFDC2626),
                           ),
                         ),
                       ],
