@@ -63,6 +63,7 @@ html, body { height: 100%; font-family: var(--font-inter); }
 @media(max-width: 768px) { .register__card { width: 92%; padding: 28px 24px; } }
 
 /* Terms & Conditions Row & Modal */
+.terms-container { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .terms-row { display: flex; align-items: flex-start; gap: 8px; margin-top: -2px; }
 .terms-checkbox-wrap { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none; }
 .terms-checkbox-wrap input[type="checkbox"] { display: none; }
@@ -76,6 +77,28 @@ html, body { height: 100%; font-family: var(--font-inter); }
 }
 .terms-custom-box svg { display: none; }
 .terms-checkbox-wrap input[type="checkbox"]:checked + .terms-custom-box svg { display: block; }
+.terms-custom-box.terms-error-highlight {
+    border-color: #dc2626 !important;
+    background-color: #fef2f2;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+    animation: shakeBox .35s ease;
+}
+@keyframes shakeBox {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+}
+.terms-error-alert {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: #dc2626; background: #fee2e2;
+    border: 1px solid #fecaca; border-radius: 6px; padding: 7px 10px;
+    animation: fadeInError .2s ease;
+}
+.terms-error-alert svg { flex-shrink: 0; }
+@keyframes fadeInError {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 .terms-text { font-size: 11.5px; color: #4b5563; line-height: 1.45; }
 .terms-link { color: var(--color-primary); font-weight: 600; text-decoration: none; cursor: pointer; }
 .terms-link:hover { text-decoration: underline; }
@@ -189,18 +212,28 @@ html, body { height: 100%; font-family: var(--font-inter); }
                 </div>
             </div>
             {{-- TERMS AND CONDITIONS --}}
-            <div class="terms-row">
-                <label class="terms-checkbox-wrap">
-                    <input type="checkbox" name="terms" id="terms-checkbox" required {{ old('terms') ? 'checked' : '' }}>
-                    <span class="terms-custom-box">
-                        <svg width="10" height="10" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                    </span>
-                    <span class="terms-text">
-                        I agree to the <a href="javascript:void(0)" class="terms-link" onclick="openTermsModal(event)">Terms and Conditions</a> and University Privacy Policy
-                    </span>
-                </label>
+            <div class="terms-container">
+                <div class="terms-row">
+                    <label class="terms-checkbox-wrap">
+                        <input type="checkbox" name="terms" id="terms-checkbox" value="1" {{ old('terms') ? 'checked' : '' }}>
+                        <span class="terms-custom-box">
+                            <svg width="10" height="10" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </span>
+                        <span class="terms-text">
+                            I agree to the <a href="javascript:void(0)" class="terms-link" onclick="openTermsModal(event)">Terms and Conditions</a> and University Privacy Policy
+                        </span>
+                    </label>
+                </div>
+                <div id="terms-error-message" class="terms-error-alert" style="display: none;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>Please agree to the Terms and Conditions before proceeding.</span>
+                </div>
             </div>
 
             <button class="register__button" type="submit" id="reg-submit-btn">CREATE ACCOUNT</button>
@@ -279,9 +312,57 @@ function closeTermsOnBackdrop(e) {
 }
 
 function acceptTermsModal() {
-    document.getElementById('terms-checkbox').checked = true;
+    const cb = document.getElementById('terms-checkbox');
+    if (cb) {
+        cb.checked = true;
+        clearTermsError();
+    }
     closeTermsModal();
 }
+
+const regForm = document.querySelector('.register__form');
+const termsCheckbox = document.getElementById('terms-checkbox');
+const termsBox = document.querySelector('.terms-custom-box');
+const termsError = document.getElementById('terms-error-message');
+
+function showTermsError() {
+    if (termsError) termsError.style.display = 'flex';
+    if (termsBox) {
+        termsBox.classList.remove('terms-error-highlight');
+        void termsBox.offsetWidth;
+        termsBox.classList.add('terms-error-highlight');
+    }
+}
+
+function clearTermsError() {
+    if (termsError) termsError.style.display = 'none';
+    if (termsBox) termsBox.classList.remove('terms-error-highlight');
+}
+
+if (termsCheckbox) {
+    termsCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            clearTermsError();
+        }
+    });
+}
+
+if (regForm) {
+    regForm.addEventListener('submit', function(e) {
+        if (termsCheckbox && !termsCheckbox.checked) {
+            e.preventDefault();
+            showTermsError();
+            termsCheckbox.closest('.terms-container')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            return false;
+        }
+    });
+}
+
+@if(session('error') && (str_contains(session('error'), 'Terms') || str_contains(session('error'), 'terms')))
+document.addEventListener('DOMContentLoaded', function() {
+    showTermsError();
+});
+@endif
 </script>
 </body>
 </html>

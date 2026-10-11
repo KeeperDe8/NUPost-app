@@ -84,6 +84,14 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 .signup-link a:hover { text-decoration: underline; }
 .secure-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #6b7280; margin-top: 16px; }
 .secure-badge svg { color: #10b981; }
+.login__header { width: 100%; display: flex; align-items: center; justify-content: flex-start; margin-bottom: 12px; margin-top: -6px; }
+.login__back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500; color: #64748b;
+    text-decoration: none; padding: 6px 10px; margin-left: -6px;
+    border-radius: 6px; transition: all .15s ease;
+}
+.login__back-link:hover { color: var(--color-primary); background: #f1f5f9; }
 @media(max-width: 768px) { .login__card { width: 92%; padding: 28px 24px; } }
 </style>
 </head>
@@ -93,6 +101,14 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
         <img src="/assets/nubg1.png" alt="NU Lipa Campus">
     </div>
     <section class="login__card">
+        <div class="login__header">
+            <a href="{{ url('/') }}" class="login__back-link" title="Back to Home">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                <span>Back to Home</span>
+            </a>
+        </div>
         <div class="login__logo">
             <img src="/assets/nupostlogo.png" alt="NUPost Logo">
         </div>

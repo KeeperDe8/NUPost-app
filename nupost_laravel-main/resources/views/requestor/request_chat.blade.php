@@ -4,44 +4,186 @@
 
 @section('head-styles')
 <style>
-.main { max-width: 700px; margin: 0 auto; padding: 28px 24px; }
-.back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background: white; border: 1px solid var(--color-border); border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--color-text-muted); text-decoration: none; transition: background .15s; margin-bottom: 20px; }
-.back-btn:hover { background: var(--color-bg); }
-.req-strip { background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.req-strip-title { font-size: 14.5px; font-weight: 700; }
-.req-strip-id    { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
-.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
-.badge--approved      { background: #dcfce7; color: #16a34a; }
-.badge--posted        { background: #dbeafe; color: #2563eb; }
-.badge--under-review  { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
-.badge--pending       { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
-.badge--rejected      { background: #fee2e2; color: #dc2626; }
-.chat-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; height: 560px; }
-.chat-header { padding: 14px 18px; background: var(--color-primary); color: white; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.chat-header-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
-.chat-header-title { font-size: 13.5px; font-weight: 600; }
-.chat-header-sub { font-size: 11px; opacity: .7; }
-.chat-messages { flex: 1; overflow-y: auto; padding: 20px 18px; display: flex; flex-direction: column; gap: 14px; background: #f8faff; }
-.chat-messages::-webkit-scrollbar { width: 4px; }
-.chat-messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
-.chat-bubble-row { display: flex; align-items: flex-end; gap: 8px; }
-.chat-bubble-row--me { flex-direction: row-reverse; }
-.chat-avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: white; }
-.chat-avatar--me    { background: #7c3aed; }
-.chat-avatar--admin { background: var(--color-primary); }
-.chat-bubble { max-width: 72%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.55; word-break: break-word; }
-.chat-bubble--me    { background: #7c3aed; color: white; border-bottom-right-radius: 4px; }
-.chat-bubble--admin { background: white; color: var(--color-text); border: 1px solid var(--color-border); border-bottom-left-radius: 4px; }
-.chat-meta { font-size: 10.5px; margin-top: 4px; opacity: .65; }
-.chat-bubble--me .chat-meta    { text-align: right; color: rgba(255,255,255,.8); }
-.chat-bubble--admin .chat-meta { color: #9ca3af; }
-.chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #9ca3af; }
-.chat-empty p { font-size: 13px; }
-.chat-input-area { border-top: 1px solid var(--color-border); padding: 14px 16px; background: white; display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0; }
-.chat-input { flex: 1; border: 1px solid var(--color-border); border-radius: 10px; padding: 10px 14px; font-size: 13px; font-family: var(--font); resize: none; outline: none; transition: border-color .15s; color: var(--color-text); min-height: 42px; max-height: 120px; }
-.chat-input:focus { border-color: #7c3aed; }
-.chat-send-btn { width: 42px; height: 42px; background: #7c3aed; color: white; border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.chat-send-btn:hover { background: #6d28d9; }
+    .main { max-width: 700px; margin: 0 auto; padding: 28px 24px; }
+    
+    .back-btn { 
+        display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; 
+        background: white; border: 1px solid var(--color-border); border-radius: 8px; 
+        font-size: 13px; font-weight: 500; color: var(--color-text-muted); 
+        text-decoration: none; transition: background .15s; margin-bottom: 20px; 
+    }
+    .back-btn:hover { background: var(--color-bg); }
+
+    .chat-card { 
+        background: white; border-radius: 16px; box-shadow: var(--shadow-md); 
+        overflow: hidden; display: flex; flex-direction: column; height: 600px; 
+    }
+
+    /* BLUE GRADIENT HEADER */
+    .chat-header { 
+        padding: 20px 24px; 
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); 
+        color: white; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-shrink: 0; 
+    }
+    .header-info-group { display: flex; flex-direction: column; gap: 2px; }
+    .chat-header-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+    .chat-header-sub { font-size: 11px; opacity: 0.85; font-weight: 400; }
+    
+    /* STATUS BADGE INSIDE HEADER */
+    .header-badge {
+        padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 700; 
+        text-transform: uppercase; background: rgba(255, 255, 255, 0.2); 
+        backdrop-filter: blur(4px); color: white; border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .chat-messages {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background: #f8faff;
+        box-sizing: border-box;
+        scroll-behavior: smooth;
+    }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+
+    .chat-bubble-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        width: 100%;
+        max-width: 100%;
+        flex-shrink: 0;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        position: relative;
+    }
+    .chat-bubble-row--me {
+        flex-direction: row-reverse;
+        justify-content: flex-start;
+    }
+    
+    .chat-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 2px;
+    }
+    .chat-avatar--me { background: #7c3aed; }
+    .chat-avatar--admin { background: #1e3a8a; }
+
+    .chat-bubble {
+        max-width: 75%;
+        min-width: 48px;
+        padding: 10px 14px;
+        border-radius: 18px;
+        font-size: 13.5px;
+        line-height: 1.5;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        box-sizing: border-box;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .chat-bubble--me {
+        background: #7c3aed;
+        color: white;
+        border-radius: 18px 18px 4px 18px;
+    }
+    .chat-bubble--admin {
+        background: white;
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+        border-radius: 18px 18px 18px 4px;
+    }
+
+    .chat-text {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.5;
+    }
+
+    .chat-meta {
+        font-size: 10.5px;
+        margin-top: 4px;
+        line-height: 1.2;
+        opacity: 0.75;
+        user-select: none;
+        white-space: nowrap;
+    }
+    .chat-bubble--me .chat-meta {
+        text-align: right;
+        color: rgba(255, 255, 255, 0.85);
+        align-self: flex-end;
+    }
+    .chat-bubble--admin .chat-meta {
+        color: #64748b;
+        align-self: flex-start;
+    }
+
+    .chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #9ca3af; }
+    
+    .chat-input-area { border-top: 1px solid var(--color-border); padding: 16px; background: white; display: flex; gap: 12px; align-items: flex-end; }
+    .chat-input { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; font-size: 13.5px; outline: none; transition: all .2s; min-height: 46px; max-height: 120px; }
+    .chat-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    
+    .chat-send-btn { width: 46px; height: 46px; background: #1e3a8a; color: white; border: none; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+    .chat-send-btn:active { transform: scale(0.95); }
+    .chat-send-btn:hover { background: #1e40af; }
+
+    /* ── DARK THEME OVERRIDES ── */
+    [data-theme="dark"] .back-btn {
+        background: #081636 !important;
+        border-color: rgba(30, 79, 216, 0.25) !important;
+        color: #94a3b8 !important;
+    }
+    [data-theme="dark"] .back-btn:hover {
+        background: #0b1a3d !important;
+        color: #f8fafc !important;
+    }
+    [data-theme="dark"] .chat-card {
+        background: #081636 !important;
+        border: 1px solid rgba(30, 79, 216, 0.25) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    }
+    [data-theme="dark"] .chat-messages {
+        background: #040c1e !important;
+    }
+    [data-theme="dark"] .chat-messages::-webkit-scrollbar-thumb {
+        background: rgba(30, 79, 216, 0.3) !important;
+    }
+    [data-theme="dark"] .chat-bubble--admin {
+        background: #0b1a3d !important;
+        color: #f8fafc !important;
+        border-color: rgba(30, 79, 216, 0.25) !important;
+    }
+    [data-theme="dark"] .chat-bubble--admin .chat-meta {
+        color: #94a3b8 !important;
+    }
+    [data-theme="dark"] .chat-input-area {
+        background: #081636 !important;
+        border-top-color: rgba(30, 79, 216, 0.25) !important;
+    }
+    [data-theme="dark"] .chat-input {
+        background: #0b1a3d !important;
+        color: #f8fafc !important;
+        border-color: rgba(30, 79, 216, 0.3) !important;
+    }
 </style>
 @endsection
 
@@ -52,31 +194,15 @@
         Back to Requests
     </a>
 
-    @php
-        $status_raw   = strtolower($req->status);
-        $status_class = match(true) {
-            str_contains($status_raw, 'approved')     => 'badge--approved',
-            str_contains($status_raw, 'posted')       => 'badge--posted',
-            str_contains($status_raw, 'under review') => 'badge--under-review',
-            str_contains($status_raw, 'rejected')     => 'badge--rejected',
-            default                                   => 'badge--pending',
-        };
-    @endphp
-
-    <div class="req-strip">
-        <div>
-            <div class="req-strip-title">{{ $req->title }}</div>
-            <div class="req-strip-id">{{ $req->request_id ?? 'REQ-' . $req->id }}</div>
-        </div>
-        <span class="badge {{ $status_class }}">{{ $req->status }}</span>
-    </div>
-
     <div class="chat-card">
+        {{-- HEADER WITH GRADIENT AND REQUEST TITLE --}}
         <div class="chat-header">
-            <div class="chat-header-dot"></div>
-            <div>
-                <div class="chat-header-title">Comments with Admin</div>
-                <div class="chat-header-sub">Messages here are visible to admin</div>
+            <div class="header-info-group">
+                <div class="chat-header-title">{{ $req->title }}</div>
+                <div class="chat-header-sub">ID: {{ $req->request_id ?? 'REQ-' . $req->id }} &bull; Internal Comments</div>
+            </div>
+            <div class="header-badge">
+                {{ $req->status }}
             </div>
         </div>
 
@@ -88,30 +214,31 @@
                         {{ strtoupper(substr($msg->sender_name, 0, 1)) }}
                     </div>
                     <div class="chat-bubble {{ $is_me ? 'chat-bubble--me' : 'chat-bubble--admin' }}">
-                        {!! nl2br(e($msg->message)) !!}
+                        <div class="chat-text">{!! nl2br(e($msg->message)) !!}</div>
                         <div class="chat-meta">
-                            {{ $is_me ? 'You' : $msg->sender_name }} &middot; {{ $msg->created_at->format('M j, g:i A') }}
+                            {{ $is_me ? 'You' : 'Admin' }} &middot; {{ $msg->created_at->format('M j, g:i A') }}
                         </div>
                     </div>
                 </div>
             @empty
                 <div class="chat-empty">
-                    <svg width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24">
+                    <svg width="40" height="40" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
-                    <p>No messages yet. Ask admin a question here!</p>
+                    <p style="font-size: 14px;">No messages yet. Send a query to admin.</p>
                 </div>
             @endforelse
         </div>
 
-        <form method="POST" action="{{ route('requestor.requests.chat.send', $req->id) }}" class="chat-input-area" id="chat-form">
+        <form method="POST" action="{{ route('requestor.requests.chat.send', $req->id) }}" class="chat-input-area" id="chat-form" onsubmit="return handleChatSubmit(event)">
             @csrf
             <textarea class="chat-input" name="chat_message" id="chat-input"
-                      placeholder="Send a message or question to admin..."
+                      placeholder="Type your message here..."
                       rows="1"
                       onkeydown="handleChatKey(event)"></textarea>
-            <button type="submit" class="chat-send-btn" title="Send">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <button type="submit" class="chat-send-btn" id="chat-send-btn">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
         </form>
     </div>
@@ -120,16 +247,49 @@
 
 @section('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const chatBox = document.getElementById('chat-messages');
-    if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-});
-function handleChatKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const val = document.getElementById('chat-input').value.trim();
-        if (val) document.getElementById('chat-form').submit();
+    let isSubmittingChat = false;
+
+    function scrollChatBottom() {
+        const chatBox = document.getElementById('chat-messages');
+        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
     }
-}
+    document.addEventListener('DOMContentLoaded', scrollChatBottom);
+
+    function handleChatSubmit(e) {
+        if (isSubmittingChat) {
+            if (e) e.preventDefault();
+            return false;
+        }
+        const input = document.getElementById('chat-input');
+        const val = input ? input.value.trim() : '';
+        if (!val) {
+            if (e) e.preventDefault();
+            return false;
+        }
+
+        isSubmittingChat = true;
+        const btn = document.getElementById('chat-send-btn');
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.innerHTML = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="animation:spin .7s linear infinite;"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg>';
+        }
+        return true;
+    }
+
+    function handleChatKey(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (isSubmittingChat) return;
+            const form = document.getElementById('chat-form');
+            if (handleChatSubmit(e)) {
+                form.submit();
+            }
+        }
+    }
 </script>
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 @endsection

@@ -15,6 +15,7 @@
     })();
 </script>
 
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
@@ -684,10 +685,76 @@ html, body {
     .calendar-container { overflow-x: auto; }
     .calendar-grid { min-width: 700px; }
 }
+
+/* ── Sleek Instant Top Progress Bar (YouTube-style feedback) ── */
+#np-page-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, #002366 0%, #3b82f6 50%, #f59e0b 100%);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
+    z-index: 9999999;
+    pointer-events: none;
+    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    opacity: 0;
+}
+
+/* ── Premium UI Micro-Animations (Zero-Flicker & Tactile) ── */
+button, .btn, .btn-primary, .back-btn, .hero-card__btn, .tab-btn {
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), 
+                box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), 
+                background-color 0.18s ease, 
+                border-color 0.18s ease !important;
+}
+button:active, .btn:active, .btn-primary:active, .back-btn:active, .hero-card__btn:active {
+    transform: scale(0.97) !important;
+}
+
+.card, .scard, .hero-card, .table-card {
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+                box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+                border-color 0.22s ease;
+}
+
+table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+input[type="text"], input[type="email"], input[type="password"], input[type="search"], select, textarea {
+    transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                background-color 0.2s ease !important;
+}
+
+.badge, .status-pill, .hero-stat {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+.badge:hover, .hero-stat:hover {
+    transform: translateY(-2px);
+}
+
+.notif-dropdown {
+    animation: dropSmooth 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: top right;
+}
+@keyframes dropSmooth {
+    from {
+        opacity: 0.7;
+        transform: translateY(-6px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 </style>
 @yield('head-styles')
 </head>
 <body>
+<div id="np-page-progress"></div>
 <div class="shell">
 
     <!-- SIDEBAR -->
@@ -920,25 +987,51 @@ function markAllRead() {
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // Poll every 30s
-loadNotifications();
-setInterval(loadNotifications, 30000);
+if (!window._notifPollActive) {
+    window._notifPollActive = true;
+    setInterval(loadNotifications, 30000);
+}
 
 // ── THEME TOGGLE ──
-const themeToggle = document.getElementById('themeToggle');
-if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-        const current = document.documentElement.getAttribute('data-theme') || 'light';
-        const next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('nupost-theme', next);
-    });
-}
+document.addEventListener('DOMContentLoaded', () => {
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle && !themeToggle._bound) {
+        themeToggle._bound = true;
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme') || 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('nupost-theme', next);
+        });
+    }
+    loadNotifications();
+});
 </script>
 <script>
 // Prevent viewing authenticated pages via back button after logout (bfcache)
 window.addEventListener('pageshow', function (event) {
     if (event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2)) {
         window.location.reload();
+    }
+});
+</script>
+<!-- instant.page: Pre-fetches pages on link hover for 0ms navigation -->
+<script src="//instant.page/5.2.0" type="module" integrity="sha384-jnZyxPjiipYXnSU0Rck6V38m2BQHTEXv80QwJuJChhxLMgkE4g++aD4IVFzpBc1z"></script>
+<script>
+// Instant visual feedback on link clicks (YouTube style top bar)
+document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (!link || !link.href) return;
+    if (link.target === '_blank' || link.hasAttribute('download')) return;
+    if (link.href.startsWith('javascript:') || link.href.includes('#')) return;
+    if (link.origin !== window.location.origin) return;
+    if (link.pathname === window.location.pathname && link.search === window.location.search) return;
+    if (link.href.includes('/export') || link.href.includes('/download')) return;
+
+    const bar = document.getElementById('np-page-progress');
+    if (bar) {
+        bar.style.opacity = '1';
+        bar.style.width = '75%';
     }
 });
 </script>

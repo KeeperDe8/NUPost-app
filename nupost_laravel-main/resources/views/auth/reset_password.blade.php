@@ -16,7 +16,9 @@ html, body { height: 100%; font-family: var(--font); }
 .page { position: relative; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .page__bg { position: absolute; inset: 0; z-index: 0; }
 .page__bg img { width: 100%; height: 100%; object-fit: cover; }
-.card { position: relative; z-index: 1; background: white; width: 440px; border-radius: 12px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); padding: 36px; display: flex; flex-direction: column; align-items: center; }
+.card {
+    position: relative; z-index: 1; background: white; width: 440px; border-radius: 12px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); padding: 36px; display: flex; flex-direction: column; align-items: center;
+}
 .logo { width: 160px; margin-bottom: 20px; }
 .logo img { width: 100%; }
 .icon-wrap { width: 60px; height: 60px; background: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }

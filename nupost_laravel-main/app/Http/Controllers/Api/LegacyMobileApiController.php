@@ -625,15 +625,20 @@ class LegacyMobileApiController extends Controller
             if (!empty($files)) {
                 $uploadDir = public_path('uploads');
                 if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
+                    @mkdir($uploadDir, 0775, true);
                 }
+                $altUploadDir = base_path('public_html/uploads');
+                if (!is_dir($altUploadDir)) {
+                    @mkdir($altUploadDir, 0775, true);
+                }
+                $mirrorNeeded = is_dir($altUploadDir) && realpath($altUploadDir) !== realpath($uploadDir);
 
                 $allowedTypes = [
                     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
                     'video/mp4', 'video/quicktime',
                 ];
                 $allowedExtensions = ['jpg', 'jpeg', 'jfif', 'png', 'gif', 'webp', 'mp4', 'mov'];
-                $maxSize = 10 * 1024 * 1024;
+                $maxSize = 25 * 1024 * 1024;
 
                 foreach (array_slice($files, 0, 4) as $file) {
                     if (!$file instanceof UploadedFile || !$file->isValid() || $file->getSize() > $maxSize) {
@@ -655,6 +660,18 @@ class LegacyMobileApiController extends Controller
 
                     $newName = uniqid('media_', true) . ($ext !== '' ? ".{$ext}" : '');
                     $file->move($uploadDir, $newName);
+
+                    if ($mirrorNeeded) {
+                        @copy($uploadDir . '/' . $newName, $altUploadDir . '/' . $newName);
+                    }
+
+                    if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                        \App\Services\ImageOptimizer::optimize($uploadDir . '/' . $newName);
+                        if ($mirrorNeeded) {
+                            @copy($uploadDir . '/' . $newName, $altUploadDir . '/' . $newName);
+                        }
+                    }
+
                     $mediaNames[] = $newName;
                 }
             }
@@ -847,15 +864,20 @@ class LegacyMobileApiController extends Controller
             if (!empty($files)) {
                 $uploadDir = public_path('uploads');
                 if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
+                    @mkdir($uploadDir, 0775, true);
                 }
+                $altUploadDir = base_path('public_html/uploads');
+                if (!is_dir($altUploadDir)) {
+                    @mkdir($altUploadDir, 0775, true);
+                }
+                $mirrorNeeded = is_dir($altUploadDir) && realpath($altUploadDir) !== realpath($uploadDir);
 
                 $allowedTypes = [
                     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
                     'video/mp4', 'video/quicktime',
                 ];
                 $allowedExtensions = ['jpg', 'jpeg', 'jfif', 'png', 'gif', 'webp', 'mp4', 'mov'];
-                $maxSize = 10 * 1024 * 1024;
+                $maxSize = 25 * 1024 * 1024;
 
                 foreach (array_slice($files, 0, 4) as $file) {
                     if (!$file instanceof UploadedFile || !$file->isValid() || $file->getSize() > $maxSize) {
@@ -877,6 +899,18 @@ class LegacyMobileApiController extends Controller
 
                     $newName = uniqid('media_', true) . ($ext !== '' ? ".{$ext}" : '');
                     $file->move($uploadDir, $newName);
+
+                    if ($mirrorNeeded) {
+                        @copy($uploadDir . '/' . $newName, $altUploadDir . '/' . $newName);
+                    }
+
+                    if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                        \App\Services\ImageOptimizer::optimize($uploadDir . '/' . $newName);
+                        if ($mirrorNeeded) {
+                            @copy($uploadDir . '/' . $newName, $altUploadDir . '/' . $newName);
+                        }
+                    }
+
                     $mediaNames[] = $newName;
                 }
             }
@@ -1539,13 +1573,21 @@ class LegacyMobileApiController extends Controller
 
         $candidates = [
             public_path('uploads/' . $filename),
-            public_path('uploads/' . $filename . '.png'),
+            base_path('public_html/uploads/' . $filename),
+            base_path('uploads/' . $filename),
+            storage_path('app/public/uploads/' . $filename),
             public_path('uploads/' . $filename . '.jpg'),
+            public_path('uploads/' . $filename . '.png'),
             public_path('uploads/' . $filename . '.jpeg'),
             public_path('uploads/' . $filename . '.jfif'),
-            storage_path('app/public/uploads/' . $filename),
-            storage_path('app/public/uploads/' . $filename . '.png'),
+            public_path('uploads/' . $filename . '.webp'),
+            base_path('public_html/uploads/' . $filename . '.jpg'),
+            base_path('public_html/uploads/' . $filename . '.png'),
+            base_path('public_html/uploads/' . $filename . '.jpeg'),
+            base_path('public_html/uploads/' . $filename . '.jfif'),
+            base_path('public_html/uploads/' . $filename . '.webp'),
             storage_path('app/public/uploads/' . $filename . '.jpg'),
+            storage_path('app/public/uploads/' . $filename . '.png'),
             storage_path('app/public/uploads/' . $filename . '.jpeg'),
         ];
 
@@ -1558,29 +1600,22 @@ class LegacyMobileApiController extends Controller
         }
 
         if (!$foundPath) {
-            $matches = glob(public_path('uploads/' . $filename . '*'));
-            if (!empty($matches) && file_exists($matches[0])) {
+            $matches = glob(public_path('uploads/' . $filename . '*')) 
+                    ?: glob(base_path('public_html/uploads/' . $filename . '*'))
+                    ?: glob(storage_path('app/public/uploads/' . $filename . '*'));
+            if (!empty($matches) && file_exists($matches[0]) && !is_dir($matches[0])) {
                 $foundPath = $matches[0];
             }
         }
 
         if (!$foundPath) {
-            $cleanName = htmlspecialchars(substr($filename, 0, 36));
-            $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">'
-                . '<rect width="600" height="400" fill="#0D1527" rx="16"/>'
-                . '<circle cx="300" cy="150" r="50" fill="#1A2744"/>'
-                . '<path d="M275 175l18-24 14 18 20-30 18 36z" fill="#3B82F6"/>'
-                . '<circle cx="330" cy="130" r="8" fill="#FBBF24"/>'
-                . '<text x="300" y="240" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#F8FAFC" text-anchor="middle">Attached Media Asset</text>'
-                . '<text x="300" y="270" font-family="system-ui, sans-serif" font-size="14" fill="#94A3B8" text-anchor="middle">' . $cleanName . '</text>'
-                . '<rect x="230" y="295" width="140" height="28" rx="14" fill="#1E2B45"/>'
-                . '<text x="300" y="314" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#FBBF24" text-anchor="middle">UAT ATTACHMENT</text>'
-                . '</svg>';
-
-            return response($svg, 200, [
-                'Content-Type' => 'image/svg+xml',
+            // 1x1 transparent PNG fallback with 404 status
+            // Never return SVG here because Flutter's Image.network throws native ImageCodecException on SVGs
+            $pixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+            return response($pixel, 404, [
+                'Content-Type' => 'image/png',
                 'Access-Control-Allow-Origin' => '*',
-                'Cache-Control' => 'public, max-age=3600',
+                'Cache-Control' => 'no-cache, no-store',
             ]);
         }
 
