@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NUPost – Login</title>
+<link rel="icon" type="image/png" href="{{ asset('assets/clearlogo.png') }}">
+<link rel="apple-touch-icon" href="{{ asset('assets/clearlogo.png') }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;600;700&family=Arimo:wght@400&display=swap" rel="stylesheet">
@@ -42,6 +44,15 @@ html, body { height: 100%; font-family: var(--font-inter); }
     border-radius: var(--radius-input); padding: 0 12px; font-size: 12px; outline: none; transition: border-color .15s;
 }
 .login__input:focus { border-color: var(--color-primary); }
+
+/* Hide browser-native password reveal button */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-contacts-auto-fill-button,
+input[type="password"]::-webkit-credentials-auto-fill-button {
+    display: none;
+}
+
 .login__input--password { font-family: var(--font-arimo); letter-spacing: 2px; }
 .remember-row { display: flex; align-items: center; gap: 8px; }
 .remember-row input[type="checkbox"] { display: none; }
@@ -101,7 +112,12 @@ html, body { height: 100%; font-family: var(--font-inter); }
             </div>
             <div class="login__field">
                 <label class="login__label">PASSWORD:</label>
-                <input class="login__input login__input--password" type="password" name="password" placeholder="••••••••" required>
+                <div style="position:relative;">
+                    <input class="login__input login__input--password" type="password" name="password" id="login-password" placeholder="••••••••" required style="padding-right: 40px;">
+                    <button type="button" onclick="togglePassword('login-password', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:#6b7280; display:flex; align-items:center; padding:0;">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
             <div class="remember-row">
                 <div class="remember-box" id="remember-box" onclick="toggleRemember()">
@@ -118,8 +134,8 @@ html, body { height: 100%; font-family: var(--font-inter); }
             Don't have an account? <a href="{{ route('register') }}">Sign Up</a>
         </div>
         <div style="margin-top:8px;font-size:12px;text-align:center;">
-    <a href="{{ route('password.forgot') }}" style="color:#6b7280;text-decoration:none;">Forgot Password?</a>
-</div>
+            <a href="{{ route('password.forgot') }}" style="color:#6b7280;text-decoration:none;">Forgot Password?</a>
+        </div>
         <div class="secure-badge">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -134,6 +150,18 @@ function toggleRemember() {
     const input = document.getElementById('remember-input');
     box.classList.toggle('checked');
     input.checked = box.classList.contains('checked');
+}
+
+function togglePassword(id, btn) {
+    const input = document.getElementById(id);
+    const svg = btn.querySelector('svg');
+    if (input.type === 'password') {
+        input.type = 'text';
+        svg.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+        input.type = 'password';
+        svg.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
 }
 </script>
 </body>
