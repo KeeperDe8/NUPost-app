@@ -54,20 +54,73 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   List<PlatformFile> _mediaFiles = [];
 
   final List<String> _categories = [
-    'Event',
-    'Announcement',
-    'News',
-    'Achievement',
-    'Promotion',
+    'Checking of Materials',
+    'Posting with Ready-Made PubMat',
+    'Template-Based PubMat',
+    'Standard PubMat',
+    'Multiple Collaterals / Tarpaulins',
+    'New Campaign / Creative Concept',
+    'Event Documentation',
   ];
 
   static Map<String, dynamic> getSlaInfo(String? category) {
     switch (category) {
+      case 'Checking of Materials':
+        return {
+          'turnaround': 'Up to 24 hours',
+          'minDays': 1,
+          'note':
+              'Review and validation of ready marketing and informational materials.',
+        };
+      case 'Posting with Ready-Made PubMat':
+        return {
+          'turnaround': 'Up to 24 hours',
+          'minDays': 1,
+          'note':
+              'Immediate scheduling of completed pubmats. Caption must be provided upon submission.',
+        };
+      case 'Template-Based PubMat':
+        return {
+          'turnaround': 'Up to 48 hours',
+          'minDays': 2,
+          'note':
+              'Design generation using official NU Lipa pre-approved templates (e.g. announcements, congratulatory, news articles, partnerships).',
+        };
+      case 'Standard PubMat':
+        return {
+          'turnaround': '2–4 working days',
+          'minDays': 3,
+          'note':
+              'Standard PubMat (2–4 days). Basic, non-templated promotional material created for a specific institutional event.',
+        };
+      case 'Multiple Collaterals / Tarpaulins':
+        return {
+          'turnaround': '5–10 working days',
+          'minDays': 5,
+          'note':
+              'Tarpaulins, print collateral packages, badges, brochures, and composite signage.',
+        };
+      case 'New Campaign / Creative Concept':
+        return {
+          'turnaround': '10–20 working days',
+          'minDays': 10,
+          'note':
+              'Comprehensive visual branding, campaign art direction, and theme conceptualization.',
+        };
+      case 'Event Documentation':
+        return {
+          'turnaround': '1 month prior to event',
+          'minDays': 30,
+          'note':
+              'On-site coverage, photo/video documentation booking, and media team deployment. Event coverage requires 30 days notice.',
+        };
+      // Fallback mappings for legacy categories still present in older records.
       case 'Event':
         return {
           'turnaround': '2–4 working days',
           'minDays': 3,
-          'note': 'Standard PubMat (2–4 days). Event coverage requires 30 days notice.',
+          'note':
+              'Standard PubMat (2–4 days). Event coverage requires 30 days notice.',
         };
       case 'Promotion':
         return {
@@ -92,27 +145,14 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           'turnaround': 'Up to 48 hours',
           'minDays': 2,
           'requiresMedia': true,
-          'note': 'Recognition pubmat (requires photo/certificate, min. 48h lead time)',
+          'note':
+              'Recognition pubmat (requires photo/certificate, min. 48h lead time)',
         };
-      // Fallback mappings for legacy/SLA classifications
-      case 'Checking of Materials':
       case 'Ready-Made PubMat':
         return {
           'turnaround': 'Up to 24 hours',
           'minDays': 1,
           'note': 'Review of ready materials (min. 24h lead time)',
-        };
-      case 'Template-Based PubMat':
-        return {
-          'turnaround': 'Up to 48 hours',
-          'minDays': 2,
-          'note': 'Announcements, news, articles (min. 48h lead time)',
-        };
-      case 'Standard PubMat':
-        return {
-          'turnaround': '2–4 working days',
-          'minDays': 3,
-          'note': 'Custom event promotional graphic (min. 3 days lead time)',
         };
       case 'Tarpaulin / Collaterals':
       case 'Multiple Collateral Materials / Tarpaulins':
@@ -122,17 +162,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           'note': 'Tarpaulins & print collaterals (min. 5 working days)',
         };
       case 'New Campaign Concept':
-      case 'New Campaign / Creative Concept':
         return {
           'turnaround': '10–20 working days',
           'minDays': 10,
           'note': 'Full campaign art direction & branding (min. 10 days)',
-        };
-      case 'Event Documentation':
-        return {
-          'turnaround': '1 month prior to event',
-          'minDays': 30,
-          'note': 'Booking media team coverage (min. 30 days advance notice)',
         };
       default:
         return {
@@ -473,33 +506,21 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     }
 
     // 6. Category-specific conditions
-    if (_selectedCategory == 'Achievement') {
+    // Ready-made pubmat requests must include the finished pubmat and a caption.
+    if (_selectedCategory == 'Posting with Ready-Made PubMat' ||
+        _selectedCategory == 'Ready-Made PubMat') {
       final hasMedia = _mediaFiles.isNotEmpty ||
           (widget.isEditing &&
               widget.initialData != null &&
               widget.initialData!['media_file'] != null &&
               widget.initialData!['media_file'].toString().trim().isNotEmpty);
       if (!hasMedia) {
-        errors.add('Achievement requests require at least one attached photo, award, or certificate of the achiever.');
-      }
-    }
-
-    if (_selectedCategory == 'Event' && desc.length < 25) {
-      errors.add('Event requests require detailed information in Description (e.g. event date/time, venue, target participants, and program flow).');
-    }
-
-    // Fallback condition for ready-made pubmat if legacy category is used
-    if (_selectedCategory == 'Ready-Made PubMat') {
-      final hasMedia = _mediaFiles.isNotEmpty ||
-          (widget.isEditing &&
-              widget.initialData != null &&
-              widget.initialData!['media_file'] != null &&
-              widget.initialData!['media_file'].toString().trim().isNotEmpty);
-      if (!hasMedia) {
-        errors.add('Ready-Made PubMat requests require at least one attached pubmat image or document.');
+        errors.add(
+            '$_selectedCategory requests require at least one attached pubmat image or document.');
       }
       if (_captionController.text.trim().isEmpty) {
-        errors.add('Ready-Made PubMat requests require a complete caption to be provided.');
+        errors.add(
+            '$_selectedCategory requests require a complete caption to be provided.');
       }
     }
 

@@ -86,7 +86,7 @@ class NetworkQueueManager {
 
   // ── Local Response Cache (Offline / Stale-While-Revalidate) ────────────────
 
-  String _cacheKey(String uri) => 'nupost_cache_${uri.hashCode}';
+  String _cacheKey(String uri) => 'nupost_cache_${uri.toString()}';
 
   /// Saves a successful JSON response to in-memory and persistent disk cache.
   Future<void> cacheResponse(String uri, Map<String, dynamic> data) async {
