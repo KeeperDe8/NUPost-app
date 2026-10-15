@@ -601,7 +601,6 @@ class LegacyMobileApiController extends Controller
                 ], 422);
             }
 
-            // 🛡️ ANTI-SPAM & SUBMISSION QUOTA GUARDRAILS
             $user = DB::table('users')->where('id', $userId)->first();
             if (!$user) {
                 return response()->json([
@@ -616,26 +615,7 @@ class LegacyMobileApiController extends Controller
 
             $table = $this->requestsTable();
 
-            // 1. Quota Check: Max 2 active pending requests per user
-            $activePendingCount = DB::table($table)
-                ->where(function($q) use ($userId, $user) {
-                    if (Schema::hasColumn($table, 'user_id')) {
-                        $q->where('user_id', $userId)->orWhere('requester', (string)($user->name ?? ''));
-                    } else {
-                        $q->where('requester', (string)($user->name ?? ''));
-                    }
-                })
-                ->whereIn('status', ['Pending', 'Pending Review', 'Under Review'])
-                ->count();
-
-            if ($activePendingCount >= 2) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Submission limit reached. You can only have up to 2 active pending requests at a time.',
-                ], 429);
-            }
-
-            // 2. Exact Duplicate Hash Check (within 24h)
+            // 🛡️ Exact Duplicate Hash Check (within 24h) to prevent submitting the same request twice
             $contentHash = md5(strtolower(trim($title)) . '|' . strtolower(trim($description)));
             if (Schema::hasColumn($table, 'description')) {
                 $recentDuplicates = DB::table($table)
@@ -651,33 +631,6 @@ class LegacyMobileApiController extends Controller
                             'message' => 'Duplicate submission detected. An identical request was submitted within the last 24 hours.',
                         ], 422);
                     }
-                }
-            }
-
-            // 3. AI Spam / Gibberish Pre-Check using lightweight Gemini Flash API
-            $apiKey = config('services.gemini.key') ?: env('GEMINI_API_KEY');
-            if ($apiKey) {
-                try {
-                    $aiPrompt = "Analyze this university social media request for spam, gibberish, or test text. Title: \"$title\". Description: \"$description\". Return ONLY valid JSON: {\"is_spam\": true or false, \"reason\": \"...\"}";
-                    $client = new \GuzzleHttp\Client(['timeout' => 5]);
-                    $aiRes = $client->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey, [
-                        'json' => [
-                            'contents' => [['parts' => [['text' => $aiPrompt]]]]
-                        ]
-                    ]);
-                    $aiData = json_decode($aiRes->getBody()->getContents(), true);
-                    $aiText = $aiData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-                    if (preg_match('/\{.*\}/s', $aiText, $match)) {
-                        $parsed = json_decode($match[0], true);
-                        if (!empty($parsed['is_spam']) && $parsed['is_spam'] === true) {
-                            return response()->json([
-                                'success' => false,
-                                'message' => 'Submission flagged as spam or test content by AI filter: ' . ($parsed['reason'] ?? 'Invalid content'),
-                            ], 422);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    Log::warning('AI Spam check failed: ' . $e->getMessage());
                 }
             }
 
