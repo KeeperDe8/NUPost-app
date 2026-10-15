@@ -910,6 +910,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         final status = (req['status'] ?? 'Pending Review').toString();
         final createdAt = (req['created_at'] ?? '').toString();
 
+        final isAtRisk = (req['is_at_risk'] == true);
+        final isDueSoon = (req['is_due_soon'] == true);
+        final slackDays = req['slack_days'] is int ? req['slack_days'] as int : int.tryParse('${req['slack_days']}') ?? 0;
+
         Color statusColor;
         switch (status) {
           case 'Approved':
@@ -978,26 +982,61 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         children: [
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 7,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6),
-                                  borderRadius: BorderRadius.circular(7),
-                                ),
-                                child: Text(
-                                  reqCode,
-                                  style: TextStyle(
-                                    fontFamily: 'DM Sans',
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 10,
-                                    color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF3D4A63),
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ),
+                               Container(
+                                 padding: const EdgeInsets.symmetric(
+                                   horizontal: 7,
+                                   vertical: 3,
+                                 ),
+                                 decoration: BoxDecoration(
+                                   color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE9EDF6),
+                                   borderRadius: BorderRadius.circular(7),
+                                 ),
+                                 child: Text(
+                                   reqCode,
+                                   style: TextStyle(
+                                     fontFamily: 'DM Sans',
+                                     fontWeight: FontWeight.w700,
+                                     fontSize: 10,
+                                     color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF3D4A63),
+                                     letterSpacing: 0.3,
+                                   ),
+                                 ),
+                               ),
+                               const SizedBox(width: 6),
+                               if (isAtRisk)
+                                 Container(
+                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                   decoration: BoxDecoration(
+                                     color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                     borderRadius: BorderRadius.circular(6),
+                                   ),
+                                   child: const Text(
+                                     '🚨 At Risk',
+                                     style: TextStyle(
+                                       fontFamily: 'DM Sans',
+                                       fontWeight: FontWeight.w700,
+                                       fontSize: 9.5,
+                                       color: Color(0xFFEF4444),
+                                     ),
+                                   ),
+                                 )
+                               else if (isDueSoon)
+                                 Container(
+                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                   decoration: BoxDecoration(
+                                     color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                     borderRadius: BorderRadius.circular(6),
+                                   ),
+                                   child: Text(
+                                     '⚡ Due in ${slackDays}d',
+                                     style: TextStyle(
+                                       fontFamily: 'DM Sans',
+                                       fontWeight: FontWeight.w700,
+                                       fontSize: 9.5,
+                                       color: Color(0xFFD97706),
+                                     ),
+                                   ),
+                                 ),
                               const Spacer(),
                               _buildStatusBadge(status),
                             ],
