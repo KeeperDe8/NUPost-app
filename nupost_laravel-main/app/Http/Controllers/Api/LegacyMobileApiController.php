@@ -2022,7 +2022,6 @@ class LegacyMobileApiController extends Controller
         }
 
         $rows = $query
-            ->orderByDesc('created_at')
             ->get(['id', 'request_id', 'title', 'requester', 'status', 'created_at', 'priority', 'platform', 'category', 'description', 'media_file', 'preferred_date', 'caption'])
             ->map(function ($r) {
                 $status = trim((string) ($r->status ?? ''));
@@ -2033,6 +2032,34 @@ class LegacyMobileApiController extends Controller
                     return rtrim($baseUrl, '/') . '/uploads/' . $file;
                 }, $mediaFiles);
 
+                // SLA Slack & Urgency Calculation
+                $category = (string) ($r->category ?? 'General');
+                $slaDays = match($category) {
+                    'Event Documentation' => 30,
+                    'New Campaign / Creative Concept' => 10,
+                    'Multiple Collaterals / Tarpaulins' => 5,
+                    'Standard PubMat' => 3,
+                    'Template-Based PubMat' => 2,
+                    default => 1,
+                };
+
+                $prefDate = $r->preferred_date ? \Carbon\Carbon::parse($r->preferred_date)->startOfDay() : now()->addDays(3);
+                $latestStart = $prefDate->copy()->subDays($slaDays);
+                $today = now()->startOfDay();
+                $slackDays = (int) $today->diffInDays($latestStart, false); // negative = overdue
+
+                $isAtRisk = $slackDays < 0;
+                $isDueSoon = $slackDays >= 0 && $slackDays <= 1;
+
+                // Priority weight for sorting: Urgent=0, High=1, Med=2, Low=3
+                $prioStr = strtolower(trim((string) ($r->priority ?? 'Low')));
+                $prioWeight = match($prioStr) {
+                    'urgent' => 0,
+                    'high' => 1,
+                    'medium' => 2,
+                    default => 3,
+                };
+
                 return [
                     'id' => (int) $r->id,
                     'request_id' => (string) ($r->request_id ?? ''),
@@ -2041,14 +2068,28 @@ class LegacyMobileApiController extends Controller
                     'status' => $status !== '' ? $status : 'Pending Review',
                     'priority' => (string) ($r->priority ?? 'Low'),
                     'platform' => (string) ($r->platform ?? 'Facebook'),
-                    'category' => (string) ($r->category ?? 'General'),
+                    'category' => $category,
                     'description' => (string) ($r->description ?? ''),
                     'preferred_date' => (string) ($r->preferred_date ?? ''),
                     'caption' => (string) ($r->caption ?? ''),
                     'created_at' => (string) ($r->created_at ?? ''),
                     'media_files' => $mediaFiles,
                     'media_urls' => $mediaUrls,
+                    'slack_days' => $slackDays,
+                    'is_at_risk' => $isAtRisk,
+                    'is_due_soon' => $isDueSoon,
+                    '_prio_weight' => $prioWeight,
                 ];
+            })
+            ->sort(function ($a, $b) {
+                // Sort by slack_days ascending (tighter/negative first), then prio weight, then created_at DESC
+                if ($a['slack_days'] !== $b['slack_days']) {
+                    return $a['slack_days'] <=> $b['slack_days'];
+                }
+                if ($a['_prio_weight'] !== $b['_prio_weight']) {
+                    return $a['_prio_weight'] <=> $b['_prio_weight'];
+                }
+                return strcmp($b['created_at'], $a['created_at']);
             })
             ->values();
 
