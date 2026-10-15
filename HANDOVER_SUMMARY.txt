@@ -275,3 +275,32 @@ automatically calculates SLA slack days and sorts the admin queue by urgency.
    automatically deploys the updated controller to https://nupost.site via SSH.
 ================================================================================
 
+================================================================================
+7. 24-HOUR EXACT DUPLICATE HASH CHECK PROTECTION
+================================================================================
+Status: Deployed to Nielqttt/nupost (main) and KeeperDe8/NUPost-app (main)
+Controllers:
+- Mobile API: app/Http/Controllers/Api/LegacyMobileApiController.php (createRequest)
+- Web Requestor: app/Http/Controllers/Requestor/RequestController.php (store)
+
+OBJECTIVE:
+Prevent accidental double submissions and spamming of identical requests
+within a 24-hour window.
+
+LOGIC:
+1. Normalize and compute MD5 hash of title and description:
+   $contentHash = md5(strtolower(trim($title)) . '|' . strtolower(trim($description)));
+
+2. Query recent non-rejected requests within last 24 hours:
+   $recentDuplicates = DB::table('post_requests')
+       ->where('status', '!=', 'Rejected')
+       ->where('created_at', '>=', now()->subHours(24))
+       ->get();
+
+3. Abort on exact match with HTTP 422 (or back with error on web):
+   "Duplicate submission detected. An identical request was submitted within the last 24 hours."
+
+4. No quotas or AI spam checks are enforced—only exact duplicate blocking.
+================================================================================
+
+

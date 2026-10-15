@@ -272,3 +272,36 @@ Sort before returning the JSON response:
 ### 5. Automated Hostinger Deployment
 Pushing commits to the `main` branch of `Nielqttt/nupost` triggers GitHub Actions (`.github/workflows/deploy.yml`) which syncs the changes to `https://nupost.site` via SSH.
 
+---
+
+## 7. 🛡️ 24-Hour Exact Duplicate Hash Check Protection
+
+> **Applied to:** Both Mobile API (`LegacyMobileApiController.php`) and Web Requestor (`RequestController.php`)  
+> **Status:** Live on `Nielqttt/nupost` (`main`) and `KeeperDe8/NUPost-app` (`main`)
+
+### Objective
+Prevent accidental spam or double submissions when a user submits identical request content multiple times within 24 hours.
+
+### Implementation Logic
+```php
+// 🛡️ Exact Duplicate Hash Check (within 24h)
+$contentHash = md5(strtolower(trim($title)) . '|' . strtolower(trim($description)));
+$recentDuplicates = DB::table('post_requests')
+    ->where('status', '!=', 'Rejected')
+    ->where('created_at', '>=', now()->subHours(24))
+    ->get();
+
+foreach ($recentDuplicates as $dup) {
+    $dupHash = md5(strtolower(trim($dup->title ?? '')) . '|' . strtolower(trim($dup->description ?? '')));
+    if ($dupHash === $contentHash) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Duplicate submission detected. An identical request was submitted within the last 24 hours.',
+        ], 422);
+    }
+}
+```
+- Only matches against non-rejected requests within the last 24 hours.
+- Does NOT apply arbitrary rate limits or quotas (users can still submit different requests freely).
+
+
