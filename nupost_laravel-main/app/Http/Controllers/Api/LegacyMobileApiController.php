@@ -615,7 +615,7 @@ class LegacyMobileApiController extends Controller
 
             $table = $this->requestsTable();
 
-            // 🛡️ Exact Duplicate Hash Check (within 24h) to prevent submitting the same request twice
+            // 🛡️ Exact Duplicate Hash Check (within 24h)
             $contentHash = md5(strtolower(trim($title)) . '|' . strtolower(trim($description)));
             if (Schema::hasColumn($table, 'description')) {
                 $recentDuplicates = DB::table($table)
@@ -632,10 +632,6 @@ class LegacyMobileApiController extends Controller
                         ], 422);
                     }
                 }
-            }
-
-            if ($err = $this->ensureRequestsTableExists()) {
-                return $err;
             }
 
             $mediaNames = [];
