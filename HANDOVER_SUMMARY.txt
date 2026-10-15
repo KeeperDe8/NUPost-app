@@ -1,0 +1,277 @@
+================================================================================
+NUPOST PROJECT HANDOVER & TECHNICAL MASTER SUMMARY
+================================================================================
+Target Audience: AI Agents & Developers
+Project: NUPost - Centralized Social Media Request Management System
+Client: NU Lipa Marketing Office
+Academic Capstone: NU Lipa - School of Architecture, Computing, and Engineering (2026)
+Production Website & API: https://nupost.site
+Production API Base: https://nupost.site/api
+Local Workspace Path: c:\src\nupost_app
+
+================================================================================
+1. GITHUB REPOSITORIES & ACCESS
+================================================================================
+
+1) MAIN / MOBILE REPOSITORY (Flutter App & Local Backend Monorepo):
+   - GitHub URL: https://github.com/KeeperDe8/NUPost-app.git
+   - Default Branch: main
+   - Local Path: c:\src\nupost_app
+   - Description: Contains the full Flutter mobile application (lib/), assets,
+     Android native Gradle configurations, release APKs, and the local backend
+     codebase (nupost_laravel-main/).
+   - Clone Command:
+     git clone https://github.com/KeeperDe8/NUPost-app.git
+
+2) WEB PRODUCTION REPOSITORY (Hostinger Live Server):
+   - GitHub URL: https://github.com/Nielqttt/nupost.git
+   - Default Branch: main
+   - Live URL: https://nupost.site
+   - Description: The live web application and API codebase hosted on Hostinger.
+     Automated GitHub Actions (.github/workflows/deploy.yml) triggers on every
+     push to the 'main' branch and automatically deploys via SSH directly to
+     Hostinger's public_html.
+   - Clone Command:
+     git clone https://github.com/Nielqttt/nupost.git
+
+================================================================================
+2. HOW TO BUILD, RUN & EXPORT THE SYSTEM
+================================================================================
+
+PREREQUISITES:
+- Flutter SDK: >= 3.x (Dart >= 3.10)
+- Java JDK: JDK 17 (recommended for Android Gradle Plugin 8.x)
+- Android SDK: API Level 21 through 34
+- PHP: >= 8.1 & Composer (for local backend development)
+- MySQL: >= 8.0
+
+--------------------------------------------------------------------------------
+A. FLUTTER APP SETUP & DEPENDENCIES
+--------------------------------------------------------------------------------
+1. Open PowerShell and navigate to the project directory:
+   cd c:\src\nupost_app
+
+2. Install dependencies:
+   flutter pub get
+
+--------------------------------------------------------------------------------
+B. RUNNING THE MOBILE APP (DEVELOPMENT / EMULATOR)
+--------------------------------------------------------------------------------
+Note: lib/services/api_service.dart already defaults directly to the production
+cloud backend (https://nupost.site/api).
+
+1. Run connected to Production Backend (Hostinger):
+   flutter run
+
+   Or explicitly:
+   flutter run --dart-define=API_BASE_URL=https://nupost.site/api
+
+2. Run connected to Localhost Laravel (Android Emulator):
+   flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
+
+--------------------------------------------------------------------------------
+C. HOW TO BUILD & EXPORT THE PRODUCTION RELEASE APK
+--------------------------------------------------------------------------------
+Run this command from c:\src\nupost_app:
+
+flutter build apk --release --dart-define=API_BASE_URL=https://nupost.site/api
+
+(Note: You can also simply run 'flutter build apk --release' because api_service.dart
+defaults to https://nupost.site/api).
+
+APK OUTPUT LOCATIONS:
+1. Standard Gradle Build Output:
+   c:\src\nupost_app\build\app\outputs\flutter-apk\app-release.apk
+
+2. Convenience Root Distribution Copies (in the project root folder):
+   c:\src\nupost_app\nupost-release.apk   (~25.36 MB)
+   c:\src\nupost_app\app-release.apk      (~25.36 MB)
+
+To refresh the root copies after a build, run:
+Copy-Item "c:\src\nupost_app\build\app\outputs\flutter-apk\app-release.apk" "c:\src\nupost_app\nupost-release.apk" -Force
+Copy-Item "c:\src\nupost_app\build\app\outputs\flutter-apk\app-release.apk" "c:\src\nupost_app\app-release.apk" -Force
+
+--------------------------------------------------------------------------------
+D. LOCAL BACKEND SETUP (LARAVEL)
+--------------------------------------------------------------------------------
+cd c:\src\nupost_app\nupost_laravel-main
+composer install
+cp .env.example .env
+php artisan key:generate
+
+# Set your DB_DATABASE, DB_USERNAME, DB_PASSWORD in .env
+php artisan migrate --seed
+php artisan serve
+# Runs locally at http://localhost:8000
+
+================================================================================
+3. SYSTEM ARCHITECTURE & INTEGRATIONS
+================================================================================
+
+1. MOBILE CLIENT (Flutter 3.x / Dart 3.10):
+   - Design System: Google Fonts DM Sans, custom NU Lipa Gold & Blue palette.
+   - Authentication: Persistent session store via SharedPreferences (SessionStore)
+     with 6-digit email OTP verification.
+   - Resilience: NetworkQueueManager with adaptive 6s/10s timeouts, sliding
+     window circuit breaker (60s), and stale-while-revalidate offline caching.
+   - Skeleton Loaders: Shimmer animations across all main screens.
+
+2. CLOUD BACKEND (Laravel REST API on Hostinger Cloud):
+   - Domain: https://nupost.site
+   - API Endpoint: https://nupost.site/api
+   - Server Environment: Apache with mod_rewrite, mod_headers, mod_mime, PHP 8.1.
+   - Automatic Deployment: Pushing to https://github.com/Nielqttt/nupost.git (main)
+     triggers GitHub Actions (.github/workflows/deploy.yml) which deploys
+     directly to Hostinger via SSH.
+
+3. EXTERNAL THIRD-PARTY SERVICES:
+   - Google Gemini API: Context-aware AI caption generation.
+   - Meta Graph API (v19+): Facebook post analytics (reach, engagement, impressions).
+
+================================================================================
+4. CRITICAL TECHNICAL GOTCHAS & APPLIED SOLUTIONS
+================================================================================
+
+1. TIMEZONE SYNCHRONIZATION (Asia/Manila / UTC+8):
+   - Issue: The MySQL database stores timestamps in UTC without a 'Z' or timezone
+     offset. Previously, dates displayed 8 hours behind, and notifications showed
+     "8 hours ago" right after submitting.
+   - Solution: Centralized in lib/utils/app_date_time_utils.dart.
+     Always use AppDateTimeUtils.parseServerDateTime(rawString) which detects
+     UTC and converts to device local time (.toLocal()).
+     Displayed submission format: 'Submitted YYYY-MM-DD HH:mm:ss' (Philippine Time).
+
+2. NOTIFICATION TAP DEBOUNCE & OPTIMISTIC UI:
+   - Issue: Rapid double/triple tapping a notification card caused slow loading
+     and opened duplicate screen instances.
+   - Solution: In lib/screens/notifications_screen.dart:
+     * Added '_isNavigating' guard to reject rapid duplicate taps.
+     * Implemented 0ms optimistic UI: notifications mark as read in local state
+       instantly, while API sync runs in the background with Future.wait.
+     * Styled the unread indicator as a centered vertical pill (width: 4, height: 56)
+       matching the Home Screen design.
+
+3. HOSTINGER MEDIA & IMAGE UPLOAD PIPELINE:
+   - Issue: Hostinger separates public_html and the Laravel app root. Images
+     uploaded from mobile could 404 or throw ImageCodecException in Flutter.
+   - Solution:
+     * In LegacyMobileApiController.php (createRequest / updateRequest), uploads
+       are written to public_path('uploads') and mirrored to
+       base_path('../public_html/uploads').
+     * Camera .jfif files are automatically normalized to .jpg on upload.
+     * Direct media endpoint: https://nupost.site/api/media.php?file=<filename>
+       searches public_html/uploads, public/uploads, and storage/app/public/uploads.
+     * If a file is missing, media.php returns a 1x1 transparent PNG fallback
+       so Flutter's Image.network never crashes.
+
+4. RE-SUBMISSION & REJECTION WORKFLOW:
+   - Admins can reject requests with an admin_feedback note.
+   - In RequestTrackingScreen, requestors see an Admin Rejection Reason card and
+     a "Re-Submit Request" button.
+   - Tapping it loads CreateRequestScreen in edit mode (isEdit: true), allowing
+     the user to update text/media and reset the status back to 'Pending' review.
+
+================================================================================
+5. DIRECTORY & KEY FILE MAP
+================================================================================
+
+c:\src\nupost_app\
+├── lib/
+│   ├── main.dart                          # App routes & entry point
+│   ├── main_shell.dart                    # Dynamic role shell (Requestor vs Admin)
+│   ├── app_bottom_nav.dart                # Bottom navigation bar
+│   ├── services/
+│   │   ├── api_service.dart               # REST API client (defaults to nupost.site/api)
+│   │   ├── session_store.dart             # Persistent user auth state
+│   │   └── network_queue_manager.dart     # Circuit breaker & offline cache
+│   ├── utils/
+│   │   └── app_date_time_utils.dart       # UTC -> Philippine Local Time converter
+│   ├── screens/
+│   │   ├── splash_screen.dart             # Session auto-login check
+│   │   ├── notifications_screen.dart      # Notifications with debounce & optimistic read
+│   │   ├── requests_screen.dart           # Request list with localized timestamps
+│   │   ├── create_request_screen.dart     # Submission & Re-submission form
+│   │   ├── request_tracking_screen.dart   # Status stepper & Admin Rejection Note
+│   │   ├── messages_screen.dart           # Chat threads & unread badges
+│   │   ├── post_calendar_screen.dart      # Posting schedule calendar
+│   │   └── admin/
+│   │       └── admin_dashboard_screen.dart # Admin management dashboard
+│   └── widgets/
+│       ├── floating_message_button.dart   # Floating message drawer
+│       ├── skeleton_loader.dart           # Shimmer loading placeholders
+│       └── sla_guidelines_sheet.dart      # SLA & posting policy modal
+├── nupost_laravel-main/                   # Embedded Laravel backend source
+├── app-release.apk                        # Production APK binary copy
+├── nupost-release.apk                     # Production APK binary copy
+├── pubspec.yaml                           # Flutter packages & assets
+└── README.md                              # Comprehensive capstone documentation
+================================================================================
+
+================================================================================
+6. BRIEF FOR WEB REPOSITORY AGENT (Nielqttt/nupost) - SLA SORTING & URGENCY
+================================================================================
+Target Repository: https://github.com/Nielqttt/nupost.git (Branch: main)
+Target File: app/Http/Controllers/Api/LegacyMobileApiController.php
+
+OBJECTIVE:
+Update the adminRequests endpoint in LegacyMobileApiController.php so that it
+automatically calculates SLA slack days and sorts the admin queue by urgency.
+
+1. SLA LEAD TIMES BY CATEGORY:
+   - 'Event Documentation'                  -> 30 days
+   - 'New Campaign / Creative Concept'     -> 10 days
+   - 'Multiple Collaterals / Tarpaulins'    -> 5 days
+   - 'Standard PubMat'                      -> 3 days
+   - 'Template-Based PubMat'                -> 2 days
+   - Default / General                      -> 1 day
+
+2. SLACK & URGENCY FORMULA (PHP / Carbon):
+   $category = (string) ($r->category ?? 'General');
+   $slaDays = match($category) {
+       'Event Documentation' => 30,
+       'New Campaign / Creative Concept' => 10,
+       'Multiple Collaterals / Tarpaulins' => 5,
+       'Standard PubMat' => 3,
+       'Template-Based PubMat' => 2,
+       default => 1,
+   };
+
+   $prefDate = $r->preferred_date ? \Carbon\Carbon::parse($r->preferred_date)->startOfDay() : now()->addDays(3);
+   $latestStart = $prefDate->copy()->subDays($slaDays);
+   $today = now()->startOfDay();
+   $slackDays = (int) $today->diffInDays($latestStart, false); // negative = overdue
+
+   $isAtRisk = $slackDays < 0;
+   $isDueSoon = $slackDays >= 0 && $slackDays <= 1;
+
+   $prioStr = strtolower(trim((string) ($r->priority ?? 'Low')));
+   $prioWeight = match($prioStr) {
+       'urgent' => 0,
+       'high' => 1,
+       'medium' => 2,
+       default => 3,
+   };
+
+3. RETURN FIELDS IN MAPPED ARRAY:
+   'slack_days'   => $slackDays,
+   'is_at_risk'   => $isAtRisk,
+   'is_due_soon'  => $isDueSoon,
+   '_prio_weight' => $prioWeight,
+
+4. SORTING LOGIC:
+   ->sort(function ($a, $b) {
+       if ($a['slack_days'] !== $b['slack_days']) {
+           return $a['slack_days'] <=> $b['slack_days'];
+       }
+       if ($a['_prio_weight'] !== $b['_prio_weight']) {
+           return $a['_prio_weight'] <=> $b['_prio_weight'];
+       }
+       return strcmp($b['created_at'], $a['created_at']);
+   })
+   ->values();
+
+5. DEPLOYMENT:
+   Once committed and pushed to 'main' on Nielqttt/nupost, GitHub Actions
+   automatically deploys the updated controller to https://nupost.site via SSH.
+================================================================================
+
