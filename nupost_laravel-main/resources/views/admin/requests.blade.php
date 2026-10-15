@@ -87,6 +87,28 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
 .date-text { font-size:11.5px; color:var(--ink-soft); white-space:nowrap; }
 .empty-state { padding:56px; text-align:center; color:var(--ink-faint); font-size:13px; }
 
+/* SLA BADGES & ALERTS */
+.sla-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    line-height: 1.3; white-space: nowrap;
+}
+.sla-chip--risk { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.sla-chip--soon { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.sla-chip--ok   { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+
+.sla-alert-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff1f2; border: 1px solid #fecdd3; border-radius: var(--radius-sm);
+    padding: 12px 18px; margin-bottom: 14px; font-size: 13px; color: #9f1239;
+}
+.btn-view-risk {
+    background: #e11d48; color: white !important; font-size: 12px; font-weight: 700;
+    padding: 6px 14px; border-radius: 8px; text-decoration: none; transition: background .15s;
+    white-space: nowrap;
+}
+.btn-view-risk:hover { background: #be123c; }
+
 /* PAGINATION */
 .pagination-wrap { display:flex; align-items:center; justify-content:space-between; padding:14px 22px; border-top:1px solid rgba(0,0,0,0.05); background:var(--cream); }
 .pagination-info { font-size:12.5px; color:var(--ink-soft); }
@@ -278,6 +300,12 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
     </div>
     <select name="filter" onchange="this.form.submit()">
         <option value="all" {{ $filter==='all'?'selected':'' }}>All Requests</option>
+        @if(($at_risk_count ?? 0) > 0)
+            <option value="at_risk" {{ $filter==='at_risk'?'selected':'' }}>⚠️ At Risk / Overdue ({{ $at_risk_count }})</option>
+        @endif
+        @if(($due_soon_count ?? 0) > 0)
+            <option value="due_soon" {{ $filter==='due_soon'?'selected':'' }}>⏰ Due Soon ({{ $due_soon_count }})</option>
+        @endif
         <option value="pending" {{ $filter==='pending'?'selected':'' }}>Pending Review</option>
         <option value="review" {{ $filter==='review'?'selected':'' }}>Under Review</option>
         <option value="approved" {{ $filter==='approved'?'selected':'' }}>Approved</option>
@@ -285,6 +313,7 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
         <option value="rejected" {{ $filter==='rejected'?'selected':'' }}>Rejected</option>
     </select>
     <select name="sort" onchange="this.form.submit()">
+        <option value="urgency" {{ $sort==='urgency'?'selected':'' }}>⚡ Urgency / SLA Slack</option>
         <option value="newest" {{ $sort==='newest'?'selected':'' }}>Newest First</option>
         <option value="oldest" {{ $sort==='oldest'?'selected':'' }}>Oldest First</option>
         <option value="priority" {{ $sort==='priority'?'selected':'' }}>By Priority</option>
@@ -293,13 +322,23 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         Search
     </button>
-    @if($search!==''||$filter!=='all')
+    @if($search!==''||$filter!=='all'||$sort!=='urgency')
         <a href="{{ route('admin.requests') }}" class="btn-reset">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             Reset
         </a>
     @endif
 </form>
+
+@if(($at_risk_count ?? 0) > 0 && $filter !== 'at_risk')
+<div class="sla-alert-banner">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">⚠️</span>
+        <span><strong>{{ $at_risk_count }} request{{ $at_risk_count > 1 ? 's are' : ' is' }} currently At Risk / Overdue SLA!</strong> Production start date has passed based on lead times.</span>
+    </div>
+    <a href="{{ route('admin.requests',['filter'=>'at_risk','sort'=>'urgency']) }}" class="btn-view-risk">View Overdue ({{ $at_risk_count }})</a>
+</div>
+@endif
 
 @if($search!=='')
 <div class="search-banner">
@@ -324,6 +363,7 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
                     <th>Requestor</th>
                     <th>Category</th>
                     <th>Priority</th>
+                    <th>SLA Slack & Urgency</th>
                     <th>Status</th>
                     <th>Date</th>
                     <th>Actions</th>
@@ -356,6 +396,25 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
                     <td style="font-weight:500;">{{ $req->requester }}</td>
                     <td style="color:var(--ink-soft);">{{ $req->category }}</td>
                     <td><span class="badge badge--{{ $pc }}">{{ strtoupper($req->priority) }}</span></td>
+                    <td>
+                        @if($req->is_at_risk)
+                            <div class="sla-chip sla-chip--risk" title="SLA Lead Time: {{ $req->sla_days }}d | Preferred: {{ $req->preferred_date ? \Carbon\Carbon::parse($req->preferred_date)->format('M j, Y') : 'N/A' }}">
+                                <span>⚠️</span>
+                                <span>Overdue ({{ abs($req->slack_days) }}d behind)</span>
+                            </div>
+                        @elseif($req->is_due_soon)
+                            <div class="sla-chip sla-chip--soon" title="SLA Lead Time: {{ $req->sla_days }}d | Preferred: {{ $req->preferred_date ? \Carbon\Carbon::parse($req->preferred_date)->format('M j, Y') : 'N/A' }}">
+                                <span>⏰</span>
+                                <span>Due Soon ({{ $req->slack_days === 0 ? 'Today' : '1d slack' }})</span>
+                            </div>
+                        @else
+                            <div class="sla-chip sla-chip--ok" title="SLA Lead Time: {{ $req->sla_days }}d | Preferred: {{ $req->preferred_date ? \Carbon\Carbon::parse($req->preferred_date)->format('M j, Y') : 'N/A' }}">
+                                <span>✓</span>
+                                <span>{{ $req->slack_days }}d slack</span>
+                            </div>
+                        @endif
+                        <div style="font-size:10px;color:var(--ink-faint);margin-top:2px;">Lead time: {{ $req->sla_days }}d</div>
+                    </td>
                     <td><span class="badge badge--{{ $sc }}">{{ $req->status }}</span></td>
                     <td class="date-text">{{ $req->created_at->format('M j, Y') }}</td>
                     <td>

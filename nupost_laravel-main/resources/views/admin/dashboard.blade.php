@@ -524,6 +524,15 @@ body { background: var(--cream) !important; }
                     <div class="hero-stat__lbl">Need Attention</div>
                 </div>
             </div>
+            @if(($at_risk ?? 0) > 0)
+            <a href="{{ route('admin.requests', ['filter' => 'at_risk', 'sort' => 'urgency']) }}" class="hero-stat" style="text-decoration:none;cursor:pointer;background:rgba(239,68,68,0.22);padding:6px 12px;border-radius:12px;border:1px solid rgba(239,68,68,0.4);">
+                <div class="hero-stat__dot" style="background:#f43f5e;"></div>
+                <div>
+                    <div class="hero-stat__num" style="color:#fecdd3;">{{ $at_risk }}</div>
+                    <div class="hero-stat__lbl" style="color:#ffe4e6;">At Risk (SLA)</div>
+                </div>
+            </a>
+            @endif
             <a href="{{ route('admin.reports.export') }}"
                style="margin-left:auto;display:inline-flex;align-items:center;gap:7px;padding:10px 18px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:12px;color:white;font-size:12.5px;font-weight:600;text-decoration:none;transition:background .15s;font-family:var(--font-body);"
                onmouseover="this.style.background='rgba(255,255,255,0.2)'"
@@ -763,7 +772,14 @@ body { background: var(--cream) !important; }
                     </div>
                     <div class="req-hab-info">
                         <div class="req-hab-title">{{ Str::limit($req->title,32) }}</div>
-                        <div class="req-hab-by">{{ $req->requester }} · {{ $req->created_at->format('M j, Y') }}</div>
+                        <div class="req-hab-by">
+                            {{ $req->requester }} · {{ $req->created_at->format('M j, Y') }}
+                            @if($req->is_at_risk)
+                                · <span style="color:#ef4444;font-weight:700;">⚠️ Overdue ({{ abs($req->slack_days) }}d)</span>
+                            @elseif($req->is_due_soon)
+                                · <span style="color:#d97706;font-weight:700;">⏰ Due soon</span>
+                            @endif
+                        </div>
                     </div>
                     <div class="req-hab-right">
                         <div class="req-hab-bar-wrap">

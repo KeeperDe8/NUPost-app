@@ -576,6 +576,25 @@
                 <div class="info-row"><span class="info-row__label">Submitted by</span><span class="info-row__value">{{ $request->requester }}</span></div>
                 <div class="info-row"><span class="info-row__label">Submitted on</span><span class="info-row__value">{{ $request->created_at->format('M j, Y g:i A') }}</span></div>
                 <div class="info-row"><span class="info-row__label">Category</span><span class="info-row__value">{{ $request->category ?? '—' }}</span></div>
+                <div class="info-row"><span class="info-row__label">SLA Lead Time</span><span class="info-row__value" style="font-weight:700;color:var(--navy);">{{ $request->sla_days }} day{{ $request->sla_days > 1 ? 's' : '' }}</span></div>
+                <div class="info-row"><span class="info-row__label">SLA Urgency</span>
+                    <span class="info-row__value">
+                        @if($request->is_at_risk)
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:11px;font-weight:700;border:1px solid #fecaca;">
+                                ⚠️ Overdue ({{ abs($request->slack_days) }}d behind)
+                            </span>
+                        @elseif($request->is_due_soon)
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#fffbeb;color:#d97706;font-size:11px;font-weight:700;border:1px solid #fde68a;">
+                                ⏰ Due Soon ({{ $request->slack_days === 0 ? 'Start Today' : '1d slack' }})
+                            </span>
+                        @else
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#ecfdf5;color:#059669;font-size:11px;font-weight:700;border:1px solid #a7f3d0;">
+                                ✓ On Track ({{ $request->slack_days }}d slack)
+                            </span>
+                        @endif
+                    </span>
+                </div>
+                <div class="info-row"><span class="info-row__label">Latest Start</span><span class="info-row__value">{{ $request->preferred_date ? \Carbon\Carbon::parse($request->preferred_date)->subDays($request->sla_days)->format('M j, Y') : '—' }}</span></div>
                 <div class="info-row"><span class="info-row__label">Priority</span><span class="info-row__value">{{ strtoupper($request->priority ?? 'Normal') }}</span></div>
                 <div class="info-row"><span class="info-row__label">Preferred Date</span><span class="info-row__value">{{ $request->preferred_date ? \Carbon\Carbon::parse($request->preferred_date)->format('M j, Y') : '—' }}</span></div>
                 <div class="info-row"><span class="info-row__label">Media Files</span><span class="info-row__value">{{ count($mediaFiles) }} file(s)</span></div>

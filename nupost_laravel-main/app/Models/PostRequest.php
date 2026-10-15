@@ -68,6 +68,52 @@ class PostRequest extends Model
         return array_filter(array_map('trim', explode(',', $this->platform ?? '')));
     }
 
+    // SLA Lead Time in days by Category
+    public function getSlaDaysAttribute(): int
+    {
+        return match((string) ($this->category ?? 'General')) {
+            'Event Documentation' => 30,
+            'New Campaign / Creative Concept' => 10,
+            'Multiple Collaterals / Tarpaulins' => 5,
+            'Standard PubMat' => 3,
+            'Template-Based PubMat' => 2,
+            default => 1,
+        };
+    }
+
+    // SLA Slack Days (positive = days remaining before production must start, negative = overdue)
+    public function getSlackDaysAttribute(): int
+    {
+        $prefDate = $this->preferred_date ? \Carbon\Carbon::parse($this->preferred_date)->startOfDay() : now()->addDays(3)->startOfDay();
+        $latestStart = $prefDate->copy()->subDays($this->sla_days);
+        $today = now()->startOfDay();
+        return (int) $today->diffInDays($latestStart, false);
+    }
+
+    // At risk if slack is negative
+    public function getIsAtRiskAttribute(): bool
+    {
+        return $this->slack_days < 0;
+    }
+
+    // Due soon if slack is 0 or 1 day
+    public function getIsDueSoonAttribute(): bool
+    {
+        return $this->slack_days >= 0 && $this->slack_days <= 1;
+    }
+
+    // Priority weight for sorting: Urgent=0, High=1, Medium=2, Low=3
+    public function getPrioWeightAttribute(): int
+    {
+        return match(strtolower(trim((string) ($this->priority ?? 'Low')))) {
+            'urgent' => 0,
+            'high' => 1,
+            'medium' => 2,
+            default => 3,
+        };
+    }
+
+
     // Boot: auto-generate request_id
     protected static function boot()
     {

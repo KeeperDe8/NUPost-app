@@ -19,7 +19,7 @@ class RequestManagementController extends Controller
     {
         $search = trim($request->input('search', ''));
         $filter = $request->input('filter', 'all');
-        $sort   = $request->input('sort', 'newest');
+        $sort   = $request->input('sort', 'urgency');
 
         // Stat counts
         $pending  = PostRequest::whereIn('status', ['Pending', 'Pending Review'])->count();
@@ -28,11 +28,27 @@ class RequestManagementController extends Controller
         $posted   = PostRequest::where('status', 'Posted')->count();
         $rejected = PostRequest::where('status', 'Rejected')->count();
 
+        // Formula for SLA Slack: (preferred_date - current_date) - sla_days
+        $slackSql = "DATEDIFF(COALESCE(preferred_date, DATE_ADD(CURRENT_DATE, INTERVAL 3 DAY)), CURRENT_DATE) - (CASE category WHEN 'Event Documentation' THEN 30 WHEN 'New Campaign / Creative Concept' THEN 10 WHEN 'Multiple Collaterals / Tarpaulins' THEN 5 WHEN 'Standard PubMat' THEN 3 WHEN 'Template-Based PubMat' THEN 2 ELSE 1 END)";
+
+        $at_risk_count = PostRequest::whereIn('status', ['Pending', 'Pending Review', 'Under Review'])
+            ->whereRaw("($slackSql) < 0")
+            ->count();
+        $due_soon_count = PostRequest::whereIn('status', ['Pending', 'Pending Review', 'Under Review'])
+            ->whereRaw("($slackSql) >= 0 AND ($slackSql) <= 1")
+            ->count();
+
         $query = PostRequest::query();
 
         if ($filter !== 'all') {
             if ($filter === 'pending') {
                 $query->whereIn('status', ['Pending', 'Pending Review']);
+            } elseif ($filter === 'at_risk') {
+                $query->whereIn('status', ['Pending', 'Pending Review', 'Under Review'])
+                      ->whereRaw("($slackSql) < 0");
+            } elseif ($filter === 'due_soon') {
+                $query->whereIn('status', ['Pending', 'Pending Review', 'Under Review'])
+                      ->whereRaw("($slackSql) >= 0 AND ($slackSql) <= 1");
             } else {
                 $status_map = [
                     'review'   => 'Under Review',
@@ -63,17 +79,24 @@ class RequestManagementController extends Controller
         if ($sort === 'oldest') {
             $query->orderBy('created_at', 'asc');
         } elseif ($sort === 'priority') {
-            $query->orderByRaw("FIELD(priority, 'Urgent', 'High', 'Medium', 'Low')");
-        } else {
+            $query->orderByRaw("FIELD(priority, 'Urgent', 'High', 'Medium', 'Low') ASC")
+                  ->orderBy('created_at', 'desc');
+        } elseif ($sort === 'newest') {
             $query->orderBy('created_at', 'desc');
+        } else {
+            // Default: Urgency / SLA Slack (tightest/overdue first, priority, then created_at desc)
+            $query->orderByRaw("($slackSql) ASC")
+                  ->orderByRaw("FIELD(priority, 'Urgent', 'High', 'Medium', 'Low') ASC")
+                  ->orderBy('created_at', 'desc');
         }
 
-        $requests = $query->get();
-        $total    = $requests->count();
+        $requests = $query->paginate(10)->withQueryString();
+        $total    = $query->toBase()->getCountForPagination();
 
         return view('admin.requests', compact(
             'requests', 'total', 'search', 'filter', 'sort',
-            'pending', 'review', 'approved', 'posted', 'rejected'
+            'pending', 'review', 'approved', 'posted', 'rejected',
+            'at_risk_count', 'due_soon_count'
         ));
     }
 
