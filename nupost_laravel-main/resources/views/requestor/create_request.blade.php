@@ -275,6 +275,61 @@
 }
 #media-input { display: none; }
 
+/* ── FILL FROM POSTER BUTTON ────────── */
+.btn-fill-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 18px;
+    background: linear-gradient(135deg, #002366 0%, #1e40af 100%);
+    color: #ffffff;
+    border: 1.5px solid rgba(59, 130, 246, 0.4);
+    border-radius: 9999px;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: var(--font, 'DM Sans', sans-serif);
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 35, 102, 0.25);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+.btn-fill-action:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+    border-color: #60a5fa;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+.btn-fill-action:active {
+    transform: translateY(0);
+}
+.btn-fill-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+[data-theme="dark"] .btn-fill-action {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    border-color: rgba(96, 165, 250, 0.5);
+    color: #f8fafc;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] .btn-fill-action:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    border-color: #93c5fd;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45);
+}
+@keyframes pulseFieldGreen {
+    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45); border-color: #22c55e; }
+    50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.2); border-color: #22c55e; }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+.field-highlight-pulse {
+    animation: pulseFieldGreen 1.2s ease-out 2 !important;
+}
+
 /* ── AI SECTION ─────────────────────── */
 .ai-section {
     background: white;
@@ -1066,11 +1121,23 @@
 
         {{-- SECTION 3: MEDIA --}}
         <div class="form-section">
-            <div class="section-head">
-                <div class="section-num">3</div>
-                <div>
-                    <div class="section-title-txt">Media Attachments</div>
-                    <div class="section-sub">Up to 10 images · Max 10MB each</div>
+            <div class="section-head" style="justify-content: space-between;">
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <div class="section-num">3</div>
+                    <div>
+                        <div class="section-title-txt">Media Attachments</div>
+                        <div class="section-sub">Up to 10 images · Max 10MB each</div>
+                    </div>
+                </div>
+                <div class="section-head-actions">
+                    <button type="button" 
+                            id="btn-fill-description" 
+                            class="btn-fill-action" 
+                            style="display:none;" 
+                            onclick="triggerFillFromPoster()"
+                            title="Auto-fill description or fix spelling and add missing details from poster">
+                        Fill
+                    </button>
                 </div>
             </div>
             <div class="section-body">
@@ -1384,24 +1451,142 @@ const mediaInput    = document.getElementById('media-input');
 const uploadPreviews = document.getElementById('upload-previews');
 const uploadZone    = document.getElementById('upload-zone');
 
-mediaInput.addEventListener('change', () => {
-    uploadPreviews.innerHTML = '';
-    const files = Array.from(mediaInput.files).slice(0, 10);
-    files.forEach(file => {
-        if (!file.type.startsWith('image/')) return;
-        const reader = new FileReader();
-        reader.onload = e => {
-            const wrap = document.createElement('div'); wrap.className = 'preview-wrap';
-            const img  = document.createElement('img'); img.src = e.target.result; img.className = 'preview-thumb';
-            const rm   = document.createElement('button'); rm.type = 'button'; rm.className = 'preview-remove'; rm.innerHTML = '×';
-            rm.onclick = () => wrap.remove();
-            wrap.appendChild(img); wrap.appendChild(rm);
-            uploadPreviews.appendChild(wrap);
-        };  
-        reader.readAsDataURL(file);
+function syncMediaUIState() {
+    const files = mediaInput && mediaInput.files ? Array.from(mediaInput.files) : [];
+    const hasImage = files.some(file => file.type && file.type.startsWith('image/'));
+    const fillBtn = document.getElementById('btn-fill-description');
+    if (fillBtn) {
+        fillBtn.style.display = hasImage ? 'inline-flex' : 'none';
+    }
+    if (uploadZone) {
+        uploadZone.style.display = files.length >= 10 ? 'none' : 'flex';
+    }
+}
+
+if (mediaInput) {
+    mediaInput.addEventListener('change', () => {
+        uploadPreviews.innerHTML = '';
+        const files = Array.from(mediaInput.files).slice(0, 10);
+        files.forEach((file, idx) => {
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const wrap = document.createElement('div'); wrap.className = 'preview-wrap';
+                const img  = document.createElement('img'); img.src = e.target.result; img.className = 'preview-thumb';
+                const rm   = document.createElement('button'); rm.type = 'button'; rm.className = 'preview-remove'; rm.innerHTML = '×';
+                rm.onclick = () => {
+                    wrap.remove();
+                    if (uploadPreviews.querySelectorAll('.preview-wrap').length === 0) {
+                        mediaInput.value = '';
+                        syncMediaUIState();
+                        if (typeof runPosterProofreader === 'function') runPosterProofreader();
+                    }
+                };
+                wrap.appendChild(img); wrap.appendChild(rm);
+                uploadPreviews.appendChild(wrap);
+            };  
+            reader.readAsDataURL(file);
+        });
+        syncMediaUIState();
     });
-    uploadZone.style.display = files.length >= 10 ? 'none' : 'flex';
-});
+}
+
+// Drag & drop support on uploadZone
+if (uploadZone && mediaInput) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, e => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadZone.style.borderColor = '#3b6ef5';
+            uploadZone.style.background = '#eff6ff';
+        }, false);
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, e => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadZone.style.borderColor = '';
+            uploadZone.style.background = '';
+        }, false);
+    });
+    uploadZone.addEventListener('drop', e => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length > 0) {
+            mediaInput.files = dt.files;
+            mediaInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+}
+
+// ── SMART FILL DESCRIPTION FROM POSTER ────────────────────────────
+async function triggerFillFromPoster() {
+    const btn = document.getElementById('btn-fill-description');
+    const descField = document.getElementById('desc-field');
+    const titleField = document.getElementById('title-field');
+    const catField = document.getElementById('cat-field');
+
+    if (!mediaInput || !mediaInput.files || mediaInput.files.length === 0) {
+        alert('Please attach a poster image first.');
+        return;
+    }
+
+    const files = Array.from(mediaInput.files);
+    const imageFile = files.find(f => f.type && f.type.startsWith('image/'));
+    if (!imageFile) {
+        alert('Please upload an image file (PNG/JPG/WEBP) to use Fill.');
+        return;
+    }
+
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 0.8s linear infinite;display:inline-block;"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/></svg> Filling...`;
+
+    try {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        formData.append('title', titleField ? titleField.value.trim() : '');
+        formData.append('description', descField ? descField.value.trim() : '');
+        formData.append('category', catField ? catField.value : '');
+        formData.append('_token', '{{ csrf_token() }}');
+
+        const res = await fetch('{{ route("ai.fill-description") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'AI could not read the poster image.');
+        }
+
+        if (descField && data.description) {
+            descField.value = data.description;
+            descField.dispatchEvent(new Event('input', { bubbles: true }));
+            descField.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // Smooth scroll & pulse green highlight
+            descField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            descField.classList.remove('field-highlight-pulse');
+            void descField.offsetWidth; // trigger reflow
+            descField.classList.add('field-highlight-pulse');
+            setTimeout(() => descField.classList.remove('field-highlight-pulse'), 2500);
+
+            // Re-run proofreader & update form progress
+            if (typeof runPosterProofreader === 'function') runPosterProofreader();
+            if (typeof updateProgress === 'function') updateProgress();
+        }
+
+    } catch (err) {
+        alert('Could not fill description: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    }
+}
 
 // ── CALENDAR LOAD INDICATOR ───────────────────────────────────────
 const dateInput  = document.getElementById('post-date-input');

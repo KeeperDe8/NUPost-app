@@ -57,6 +57,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   int _captionLength = 0;
   bool _isSubmitting = false;
   bool _isGeneratingCaption = false;
+  bool _isFillingDescription = false;
   bool _submitted = false;
   List<PlatformFile> _mediaFiles = [];
 
@@ -658,6 +659,92 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       AppSnackbar.show(context, 'AI unavailable. Used smart fallback caption.');
     } finally {
       if (mounted) setState(() => _isGeneratingCaption = false);
+    }
+  }
+
+  bool _isImageFile(PlatformFile f) {
+    final ext = (f.extension ?? '').toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].contains(ext)) return true;
+    final name = f.name.toLowerCase();
+    return name.endsWith('.jpg') ||
+        name.endsWith('.jpeg') ||
+        name.endsWith('.png') ||
+        name.endsWith('.webp') ||
+        name.endsWith('.gif');
+  }
+
+  Widget _buildFillButton() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(
+      height: 30,
+      child: ElevatedButton(
+        onPressed: _isFillingDescription ? null : _onFillDescription,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isDark ? const Color(0xFF1E3A8A) : const Color(0xFF002366),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+            side: BorderSide(
+              color: isDark
+                  ? const Color(0xFF60A5FA).withOpacity(0.5)
+                  : const Color(0xFF3B82F6).withOpacity(0.4),
+              width: 1.2,
+            ),
+          ),
+        ),
+        child: _isFillingDescription
+            ? const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                'Fill',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Future<void> _onFillDescription() async {
+    if (_isFillingDescription) return;
+    final imageFile = _mediaFiles.cast<PlatformFile?>().firstWhere(
+          (f) => f != null && _isImageFile(f),
+          orElse: () => null,
+        );
+    if (imageFile == null) {
+      AppSnackbar.show(context, 'Please attach an image poster first.', isError: true);
+      return;
+    }
+
+    setState(() => _isFillingDescription = true);
+    try {
+      final enhancedText = await ApiService.smartFillDescription(
+        mediaFile: imageFile,
+        title: _titleController.text.trim(),
+        currentDescription: _descriptionController.text.trim(),
+        category: _selectedCategory,
+      );
+      if (!mounted) return;
+      setState(() {
+        _descriptionController.text = enhancedText;
+      });
+      AppSnackbar.show(context, 'Description filled & enhanced from poster!');
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(context, 'Smart Fill: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isFillingDescription = false);
     }
   }
 
@@ -1924,6 +2011,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                       _SectionCard(
                         icon: Icons.perm_media_rounded,
                         title: 'Media Upload',
+                        action: _mediaFiles.any((f) => _isImageFile(f))
+                            ? _buildFillButton()
+                            : null,
                         children: [
                           _buildMediaUpload(),
                           if (_proofreadIssues.isNotEmpty)
@@ -3259,12 +3349,14 @@ class _SectionCard extends StatelessWidget {
   final String title;
   final List<Widget> children;
   final Color? accent;
+  final Widget? action;
 
   const _SectionCard({
     required this.icon,
     required this.title,
     required this.children,
     this.accent,
+    this.action,
   });
 
   @override
@@ -3299,7 +3391,7 @@ class _SectionCard extends StatelessWidget {
         children: [
           // Card header
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Row(
               children: [
                 Container(
@@ -3312,16 +3404,19 @@ class _SectionCard extends StatelessWidget {
                   child: Icon(icon, size: 17, color: color),
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    color: color,
-                    letterSpacing: -0.1,
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: color,
+                      letterSpacing: -0.1,
+                    ),
                   ),
                 ),
+                if (action != null) action!,
               ],
             ),
           ),

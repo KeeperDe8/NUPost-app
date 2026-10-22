@@ -365,6 +365,53 @@ class ApiService {
     }
   }
 
+  static Future<String> smartFillDescription({
+    required PlatformFile mediaFile,
+    String? title,
+    String? currentDescription,
+    String? category,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'fill_description.php', null);
+    try {
+      final request = http.MultipartRequest('POST', uri);
+      if (title != null) request.fields['title'] = title;
+      if (currentDescription != null) request.fields['description'] = currentDescription;
+      if (category != null) request.fields['category'] = category;
+
+      if (mediaFile.bytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            mediaFile.bytes!,
+            filename: mediaFile.name,
+          ),
+        );
+      } else if (mediaFile.path != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'image',
+            mediaFile.path!,
+            filename: mediaFile.name,
+          ),
+        );
+      }
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      final data = _parseResponse(
+        response,
+        uri: uri,
+        fallbackMessage: 'Smart Fill failed',
+      );
+      if (data['success'] == true && data['description'] != null) {
+        return (data['description'] as String).trim();
+      }
+      throw Exception(data['message']?.toString() ?? 'Could not read poster details.');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Network error during Smart Fill: $e');
+    }
+  }
+
 
   static Future<Map<String, dynamic>> fetchCalendar({
     required int userId,

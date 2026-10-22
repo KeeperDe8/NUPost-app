@@ -78,6 +78,8 @@ Route::middleware('auth.nupost:requestor')->prefix('requestor')->name('requestor
     Route::post('/requests/{id}/save-caption',     [RequestController::class, 'saveCaption'])->name('requests.save-caption');
     Route::post('/ai/suggest-category',            [RequestController::class, 'suggestCategory'])->name('ai.suggest-category');
     Route::post('/ai/proofread-poster',             [RequestController::class, 'proofreadPoster'])->name('ai.proofread-poster');
+    Route::post('/ai/fill-description',            [RequestController::class, 'fillDescriptionFromPoster'])->name('ai.fill-description');
+    Route::post('/api/requests/fill-description',  [RequestController::class, 'fillDescriptionFromPoster'])->name('api.requests.fill-description');
 
     // Notifications & Profile
     Route::get('/notifications',        [NotificationController::class, 'index'])->name('notifications');

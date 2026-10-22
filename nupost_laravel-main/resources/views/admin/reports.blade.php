@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Performance Analytics')
+@section('title', 'Reports')
 
 @section('head-styles')
 <style>
@@ -473,7 +473,7 @@ table.main-table td { padding: 12px 16px; font-size: 12.5px; vertical-align: mid
 {{-- PAGE HEADER --}}
 <div class="page-header">
     <div>
-        <h1>Performance Analytics</h1>
+        <h1>Reports</h1>
         <p>Request volume trends, Facebook & Meta analytics, and custom export reports</p>
     </div>
     <div class="header-actions">

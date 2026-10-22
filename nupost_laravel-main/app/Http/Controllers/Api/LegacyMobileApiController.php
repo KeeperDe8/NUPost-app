@@ -2878,5 +2878,154 @@ class LegacyMobileApiController extends Controller
             'issues'     => array_values(array_unique($issues)),
         ]);
     }
+
+    /**
+     * Smart Fill Description from Poster Image for Mobile
+     */
+    public function fillDescriptionFromPoster(Request $request): JsonResponse
+    {
+        $file = null;
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+        } elseif ($request->hasFile('media')) {
+            $media = $request->file('media');
+            $file = is_array($media) ? ($media[0] ?? null) : $media;
+        }
+
+        $base64 = null;
+        $mime = 'image/jpeg';
+
+        if ($file && $file->isValid()) {
+            $imageInfo = @getimagesize($file->getRealPath());
+            if ($imageInfo) {
+                $mime = $imageInfo['mime'] ?? 'image/jpeg';
+                $rawContent = file_get_contents($file->getRealPath());
+
+                if (function_exists('imagecreatefromstring') && strlen($rawContent) > 600000) {
+                    $srcImg = @imagecreatefromstring($rawContent);
+                    if ($srcImg) {
+                        $w = imagesx($srcImg);
+                        $h = imagesy($srcImg);
+                        $maxDim = 1200;
+                        if ($w > $maxDim || $h > $maxDim) {
+                            $ratio = min($maxDim / $w, $maxDim / $h);
+                            $newW = (int)($w * $ratio);
+                            $newH = (int)($h * $ratio);
+                            $dstImg = imagecreatetruecolor($newW, $newH);
+                            imagecopyresampled($dstImg, $srcImg, 0, 0, 0, 0, $newW, $newH, $w, $h);
+                            ob_start();
+                            imagejpeg($dstImg, null, 82);
+                            $compressed = ob_get_clean();
+                            imagedestroy($dstImg);
+                            imagedestroy($srcImg);
+                            if ($compressed) {
+                                $rawContent = $compressed;
+                                $mime = 'image/jpeg';
+                            }
+                        } else {
+                            imagedestroy($srcImg);
+                        }
+                    }
+                }
+                $base64 = base64_encode($rawContent);
+            }
+        } elseif ($request->filled('image_base64')) {
+            $rawB64 = (string) $request->input('image_base64');
+            if (preg_match('/^data:(image\/[a-zA-Z0-9\+\-\.]+);base64,(.+)$/', $rawB64, $matches)) {
+                $mime = $matches[1];
+                $base64 = $matches[2];
+            } else {
+                $base64 = $rawB64;
+            }
+        }
+
+        if (!$base64) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please upload or attach a poster image first before tapping Fill.',
+            ], 422);
+        }
+
+        $title = trim((string) $request->input('title', ''));
+        $currentDesc = trim((string) $request->input('description', ''));
+        $category = trim((string) $request->input('category', ''));
+
+        $apiKey = (string) env('GEMINI_API_KEY', '');
+        if ($apiKey === '' && class_exists(\App\Models\Setting::class)) {
+            $apiKey = (string) \App\Models\Setting::get('gemini_api_key', '');
+        }
+
+        if ($apiKey === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gemini API key is not configured.',
+            ], 500);
+        }
+
+        $prompt = "You are an expert editorial assistant for university publication materials. Examine this attached campus poster graphic.\n\n";
+        if ($title !== '') {
+            $prompt .= "Target Post Title: {$title}\n";
+        }
+        if ($category !== '') {
+            $prompt .= "Category: {$category}\n";
+        }
+        $prompt .= "User's Current Typed Description: " . ($currentDesc !== '' ? "{$currentDesc}" : "[EMPTY / NOT YET TYPED]") . "\n\n";
+
+        $prompt .= "TASK REQUIREMENTS:\n";
+        $prompt .= "1. CAREFULLY INSPECT THE POSTER: Read all text, event title, date(s), day of the week, time/schedule, venue/room, target audience, organizers, speakers, registration links/deadlines, and key instructions.\n";
+        $prompt .= "2. IF THE USER'S DESCRIPTION IS EMPTY OR VERY BRIEF:\n";
+        $prompt .= "   - Create a clean, comprehensive, professional description (2 to 3 well-written paragraphs or clear bulleted details) that captures the full announcement accurately.\n";
+        $prompt .= "3. IF THE USER ALREADY WROTE A DESCRIPTION:\n";
+        $prompt .= "   - PRESERVE the user's intent and tone.\n";
+        $prompt .= "   - FIX all spelling mistakes, grammar errors, and typos.\n";
+        $prompt .= "   - FACT-CHECK against the poster: If the user wrote the wrong date, day, venue, or misspelled speaker/faculty names, CORRECT them to match the poster.\n";
+        $prompt .= "   - INTEGRATE any critical missing details from the poster (such as exact venue, time, or call-to-action) seamlessly.\n";
+        $prompt .= "4. OUTPUT RULES:\n";
+        $prompt .= "   - Return ONLY the final description text.\n";
+        $prompt .= "   - Do NOT wrap in quotes, do NOT include conversational filler like 'Here is your description:', and do NOT add hashtags.";
+
+        try {
+            $response = Http::withoutVerifying()->timeout(25)->post(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={$apiKey}",
+                [
+                    'contents' => [
+                        [
+                            'parts' => [
+                                ['text' => $prompt],
+                                [
+                                    'inline_data' => [
+                                        'mime_type' => $mime,
+                                        'data'      => $base64,
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ],
+                    'generationConfig' => [
+                        'temperature'     => 0.2,
+                        'maxOutputTokens' => 800,
+                    ]
+                ]
+            );
+
+            if ($response->successful()) {
+                $candidateText = $response->json('candidates.0.content.parts.0.text');
+                if ($candidateText) {
+                    $cleanedText = trim($candidateText);
+                    return response()->json([
+                        'success'     => true,
+                        'description' => $cleanedText,
+                        'action'      => $currentDesc !== '' ? 'enhanced' : 'filled',
+                    ]);
+                }
+            }
+
+            $errMsg = $response->json('error.message') ?? 'AI service was unable to analyze the image.';
+            return response()->json(['success' => false, 'message' => $errMsg], 502);
+
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Server error: ' . $e->getMessage()], 500);
+        }
+    }
 }
 
