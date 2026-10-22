@@ -132,7 +132,6 @@ Route::middleware('auth.nupost:admin')->prefix('admin')->name('admin.')->group(f
     Route::post('/requests/{id}/generate-caption', [RequestManagementController::class, 'generateCaption'])->name('requests.generate-caption');
     Route::post('/requests/{id}/save-caption',     [RequestManagementController::class, 'saveCaption'])->name('requests.save-caption');
     Route::post('/requests/{id}/caption',          [RequestManagementController::class, 'updateCaption'])->name('requests.caption');
-    Route::post('/requests/{id}/ai-review',        [RequestManagementController::class, 'aiReviewRequest'])->name('requests.ai-review');
     Route::get('/requests/{id}/download/{filename}', [RequestManagementController::class, 'downloadFile'])->name('requests.download')->where('filename', '.*');
 });
 
