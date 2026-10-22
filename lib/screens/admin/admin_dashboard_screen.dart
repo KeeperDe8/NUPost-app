@@ -6,6 +6,7 @@ import '../../services/session_store.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../request_tracking_screen.dart';
+import 'admin_audit_logs_screen.dart';
 import '../../utils/app_date_time_utils.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -385,6 +386,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     // Top Action Icons
                     Row(
                       children: [
+                        // Audit Logs Button
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AdminAuditLogsScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.2),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.history_edu_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         // Admin Calendar Button
                         GestureDetector(
                           onTap: () => Navigator.pushNamed(context, '/calendar'),

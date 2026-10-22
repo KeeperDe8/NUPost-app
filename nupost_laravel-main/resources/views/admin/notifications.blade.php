@@ -204,7 +204,7 @@
                class="notif-row {{ $isUnread ? 'notif-row--unread' : '' }}"
                data-type="{{ $type }}"
                data-id="{{ $notifId }}"
-               onclick="markReadPage('{{ $notifId }}', this)">
+               onclick="markReadPage(event, '{{ $notifId }}', '{{ $link }}')">
 
                 <div class="n-icon {{ $iconClass }}">{!! $iconSvg !!}</div>
 
@@ -260,9 +260,11 @@ function filterNotifs(type, tabEl) {
 }
 
 // ── Mark single as read ──────────────────────────────────────────
-function markReadPage(id, el) {
-    if (!el.classList.contains('notif-row--unread')) return;
-
+function markReadPage(e, id, url) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     fetch(NOTIF_READ_URL, {
         method: 'POST',
         headers: {
@@ -271,13 +273,9 @@ function markReadPage(id, el) {
             'Accept': 'application/json'
         },
         body: JSON.stringify({ id })
-    }).then(() => {
-        el.classList.remove('notif-row--unread');
-        const dot = el.querySelector('.notif-unread-dot');
-        if (dot) dot.remove();
-        // Refresh bell badge too
-        if (typeof loadNotifications === 'function') loadNotifications();
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => {
+        if (url) window.location.href = url;
+    });
 }
 
 // ── Mark all as read ─────────────────────────────────────────────

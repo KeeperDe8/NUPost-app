@@ -16,6 +16,7 @@ class PostRequest extends Model
         'category',
         'priority',
         'status',
+        'admin_seen',
         'description',
         'platform',
         'caption',
@@ -25,6 +26,7 @@ class PostRequest extends Model
 
     protected $casts = [
         'preferred_date' => 'date',
+        'admin_seen'     => 'boolean',
     ];
 
     // Status constants

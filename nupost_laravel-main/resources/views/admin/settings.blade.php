@@ -96,13 +96,9 @@
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             Notifications
         </button>
-        <button class="settings-nav__item" onclick="navScrollTo(event,'kaye-token')">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-            Access Token
-        </button>
-        <button class="settings-nav__item" onclick="navScrollTo(event,'system')">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            System Info
+        <button class="settings-nav__item" onclick="navScrollTo(event,'ai-keys')">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zM8 12h8M12 8v8"/><path d="M9.5 9h.01M14.5 9h.01"/></svg>
+            AI & API Keys
         </button>
     </div>
 
@@ -191,102 +187,117 @@
             </div>
         </div>
 
-        {{-- ACCESS TOKEN --}}
-        <div class="sp" id="kaye-token">
+
+        {{-- AI & API CONFIGURATION --}}
+        <div class="sp" id="ai-keys">
             <div class="sp__head">
-                <div class="sp__title">Access Token</div>
-                <div class="sp__sub">Generate and manage secure dashboard access tokens (60-day validity)</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <div class="sp__title">✦ AI & API Configuration</div>
+                        <div class="sp__sub">Manage, copy, and test your Gemini and Groq API keys directly from the dashboard</div>
+                    </div>
+                    <span style="font-size:11px; padding:3px 10px; background:#e0e7ff; color:#3730a3; border-radius:20px; font-weight:700;">LIVE ENGINE</span>
+                </div>
             </div>
             <div class="sp__body">
-                <div style="background:var(--navy-pale);border:1.5px solid rgba(0,35,102,0.15);border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--navy);line-height:1.5;">
-                    Access is token-based with a strict <strong>60-day validity</strong>. This allows passwordless access to a dedicated dashboard. Once expired, a new token must be generated from this settings page.
+                <div style="background:var(--navy-pale);border:1.5px solid rgba(0,35,102,0.15);border-radius:12px;padding:14px 18px;margin-bottom:22px;font-size:13px;color:var(--navy);line-height:1.5;">
+                    💡 <strong>Smart Database Storage:</strong> Keys saved here are stored securely in the database and override the <code>.env</code> file. You can copy active keys to your clipboard at any time or update them directly without needing server terminal access!
                 </div>
 
-                @if($kayeToken)
-                    @php
-                        $isExpired = !$kayeToken->isValid();
-                        $loginUrl = url('/kaye/login/' . $kayeToken->token);
-                    @endphp
+                <form action="{{ route('admin.settings.ai-keys') }}" method="POST">
+                    @csrf
 
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px; margin-bottom:20px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                    {{-- GEMINI API KEY --}}
+                    <div class="field" style="margin-bottom:24px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                            <label style="margin-bottom:0;">Google Gemini API Key (Caption Generation)</label>
                             <div>
-                                <span style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Active Token Link</span>
-                            </div>
-                            <div>
-                                @if($isExpired)
-                                    <span style="font-size:11px; padding:2px 8px; background:#fee2e2; color:#dc2626; border-radius:20px; font-weight:700;">EXPIRED</span>
+                                @if(($geminiSource ?? '') === 'database')
+                                    <span style="font-size:10.5px; padding:2px 8px; background:#dcfce7; color:#16a34a; border-radius:12px; font-weight:700;">Stored in Database</span>
+                                @elseif(($geminiSource ?? '') === 'env')
+                                    <span style="font-size:10.5px; padding:2px 8px; background:#fef3c7; color:#d97706; border-radius:12px; font-weight:700;">Loaded from .env</span>
                                 @else
-                                    <span style="font-size:11px; padding:2px 8px; background:#dcfce7; color:#16a34a; border-radius:20px; font-weight:700;">ACTIVE</span>
+                                    <span style="font-size:10.5px; padding:2px 8px; background:#fee2e2; color:#dc2626; border-radius:12px; font-weight:700;">Not Configured</span>
                                 @endif
                             </div>
                         </div>
 
-                        <div style="display:flex; gap:10px; margin-bottom:14px;">
-                            <input type="text" id="kayeLinkInput" value="{{ $loginUrl }}" readonly style="background:#f1f5f9; cursor:text; flex-grow:1; font-family:monospace; font-size:12.5px;">
-                            <button type="button" onclick="copyKayeLink()" style="background:var(--navy); color:white; border:none; border-radius:10px; padding:0 16px; font-size:13px; font-weight:600; cursor:pointer;">Copy Link</button>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <div style="position:relative; flex:1; min-width:260px;">
+                                <input type="password" name="gemini_api_key" id="gemini_api_key_input"
+                                       value="{{ $geminiApiKey ?? '' }}"
+                                       placeholder="Paste your Gemini API key (e.g. AIzaSy...)"
+                                       style="padding-right:40px; font-family:monospace; font-size:13px;">
+                                <button type="button" onclick="toggleVisibility('gemini_api_key_input', this)"
+                                        style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px;" title="Show/Hide Key">
+                                    👁️
+                                </button>
+                            </div>
+                            <button type="button" onclick="copyApiKey('gemini_api_key_input', 'Gemini')"
+                                    style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1; border-radius:11px; padding:0 16px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+                                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                Copy Key
+                            </button>
+                            <button type="button" onclick="testApiKey('gemini')" id="btn-test-gemini"
+                                    style="background:var(--navy-pale); color:var(--navy); border:1px solid rgba(0,35,102,0.2); border-radius:11px; padding:0 16px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+                                ⚡ Test Connection
+                            </button>
+                        </div>
+                        <div id="gemini-test-result" style="display:none; font-size:12px; margin-top:8px; padding:8px 12px; border-radius:8px;"></div>
+                        <div class="field-hint">Used for automatic AI caption drafts on post requests. Get a free key at <a href="https://aistudio.google.com/" target="_blank" style="color:var(--navy-light); font-weight:600;">Google AI Studio</a>.</div>
+                    </div>
+
+                    {{-- GROQ API KEY --}}
+                    <div class="field" style="margin-bottom:24px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                            <label style="margin-bottom:0;">Groq API Key (Bulldog AI Assistant)</label>
+                            <div>
+                                @if(($groqSource ?? '') === 'database')
+                                    <span style="font-size:10.5px; padding:2px 8px; background:#dcfce7; color:#16a34a; border-radius:12px; font-weight:700;">Stored in Database</span>
+                                @elseif(($groqSource ?? '') === 'env')
+                                    <span style="font-size:10.5px; padding:2px 8px; background:#fef3c7; color:#d97706; border-radius:12px; font-weight:700;">Loaded from .env</span>
+                                @else
+                                    <span style="font-size:10.5px; padding:2px 8px; background:#fee2e2; color:#dc2626; border-radius:12px; font-weight:700;">Not Configured</span>
+                                @endif
+                            </div>
                         </div>
 
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:12.5px; color:#475569; padding-top:12px; border-top:1px dashed #e2e8f0;">
-                            <div>
-                                <strong>Generated on:</strong> {{ $kayeToken->created_at->format('M j, Y g:i A') }}
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <div style="position:relative; flex:1; min-width:260px;">
+                                <input type="password" name="groq_api_key" id="groq_api_key_input"
+                                       value="{{ $groqApiKey ?? '' }}"
+                                       placeholder="Paste your Groq API key (e.g. gsk_...)"
+                                       style="padding-right:40px; font-family:monospace; font-size:13px;">
+                                <button type="button" onclick="toggleVisibility('groq_api_key_input', this)"
+                                        style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px;" title="Show/Hide Key">
+                                    👁️
+                                </button>
                             </div>
-                            <div>
-                                <strong>Expires:</strong> {{ $kayeToken->expires_at->format('M j, Y g:i A') }} 
-                                <span style="color:#64748b; font-size:11.5px;">({{ \Carbon\Carbon::parse($kayeToken->expires_at)->diffForHumans() }})</span>
-                            </div>
+                            <button type="button" onclick="copyApiKey('groq_api_key_input', 'Groq')"
+                                    style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1; border-radius:11px; padding:0 16px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+                                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                Copy Key
+                            </button>
+                            <button type="button" onclick="testApiKey('groq')" id="btn-test-groq"
+                                    style="background:var(--navy-pale); color:var(--navy); border:1px solid rgba(0,35,102,0.2); border-radius:11px; padding:0 16px; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+                                ⚡ Test Connection
+                            </button>
                         </div>
+                        <div id="groq-test-result" style="display:none; font-size:12px; margin-top:8px; padding:8px 12px; border-radius:8px;"></div>
+                        <div class="field-hint">Powers Bulldog AI assistant on the dashboard. Get a free key at <a href="https://console.groq.com/" target="_blank" style="color:var(--navy-light); font-weight:600;">console.groq.com</a>.</div>
                     </div>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <form action="{{ route('admin.settings.kaye-token.generate') }}" method="POST">
-                            @csrf
-                            <button type="submit" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1; padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer;">Generate New Token</button>
-                        </form>
-                        <form action="{{ route('admin.settings.kaye-token.revoke') }}" method="POST">
-                            @csrf
-                            <button type="submit" style="background:#ef4444; color:white; border:none; padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer;">Revoke Access</button>
-                        </form>
+                    <div style="display:flex; justify-content:flex-end;">
+                        <button type="submit" style="background:var(--navy); color:white; border:none; border-radius:11px; padding:11px 24px; font-size:13.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Save AI Keys
+                        </button>
                     </div>
-                @else
-                    <div style="text-align:center; padding:30px 20px; border:1.5px dashed #cbd5e1; border-radius:12px; margin-bottom:20px; color:#64748b; font-size:13.5px;">
-                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin:0 auto 10px; color:#94a3b8; display:block;"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-                        No active token generated yet.
-                    </div>
-                    <form action="{{ route('admin.settings.kaye-token.generate') }}" method="POST">
-                        @csrf
-                        <button type="submit" style="background:var(--navy); color:white; border:none; padding:10px 20px; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer;">Generate Access Token</button>
-                    </form>
-                @endif
+                </form>
             </div>
         </div>
 
-        {{-- SYSTEM INFO --}}
-        <div class="sp" id="system">
-            <div class="sp__head">
-                <div class="sp__title">System Information</div>
-                <div class="sp__sub">Current environment and configuration</div>
-            </div>
-            <div class="sp__body">
-                <div class="sysinfo">
-                    <div class="sysinfo-row"><span class="sysinfo-label">Application</span><span class="sysinfo-value">NUPost — NU Lipa Social Media Request System</span></div>
-                    <div class="sysinfo-row"><span class="sysinfo-label">Laravel Version</span><span class="sysinfo-value">{{ app()->version() }}</span></div>
-                    <div class="sysinfo-row"><span class="sysinfo-label">PHP Version</span><span class="sysinfo-value">{{ PHP_VERSION }}</span></div>
-                    <div class="sysinfo-row"><span class="sysinfo-label">Environment</span><span class="sysinfo-value" style="color:{{ app()->environment('production')?'#10b981':'#f59e0b' }}">{{ ucfirst(app()->environment()) }}</span></div>
-                    <div class="sysinfo-row"><span class="sysinfo-label">Database</span><span class="sysinfo-value">{{ config('database.default') }} — {{ config('database.connections.mysql.database') }}</span></div>
-                    <div class="sysinfo-row"><span class="sysinfo-label">Mail Driver</span><span class="sysinfo-value">{{ config('mail.default') }} ({{ config('mail.mailers.smtp.host') }})</span></div>
-                    <div class="sysinfo-row"><span class="sysinfo-label">Total Requests</span><span class="sysinfo-value">{{ \App\Models\PostRequest::count() }}</span></div>
-                    <div class="sysinfo-row"><span class="sysinfo-label">Total Users</span><span class="sysinfo-value">{{ \App\Models\User::count() }}</span></div>
-                    <div class="sysinfo-row"><span class="sysinfo-label">Server Time</span><span class="sysinfo-value">{{ now()->format('F j, Y g:i A') }}</span></div>
-                    <div class="sysinfo-row">
-                        <span class="sysinfo-label">Gemini AI</span>
-                        <span class="sysinfo-value" style="color:{{ config('services.gemini.key')?'#10b981':'#ef4444' }}">
-                            {{ config('services.gemini.key')? '✅ Connected (gemini-flash-lite-latest)' : '❌ Not configured' }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
+
     </div>
 </div>
 
@@ -311,16 +322,85 @@ function navScrollTo(e, id){
     document.querySelectorAll('.settings-nav__item').forEach(el => el.classList.remove('active'));
     e.currentTarget.classList.add('active');
 }
-function copyKayeLink() {
-    const input = document.getElementById('kayeLinkInput');
-    if (input) {
+
+function toggleVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🔒';
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+    }
+}
+
+function copyApiKey(inputId, name) {
+    const input = document.getElementById(inputId);
+    if (!input || !input.value.trim()) {
+        alert('No ' + name + ' API key to copy. Please enter one first.');
+        return;
+    }
+    const val = input.value.trim();
+    navigator.clipboard.writeText(val).then(() => {
+        alert('Copied ' + name + ' API key to clipboard!\n\nYou can now paste it into .env or wherever needed.');
+    }).catch(() => {
+        const prevType = input.type;
+        input.type = 'text';
         input.select();
-        input.setSelectionRange(0, 99999);
-        navigator.clipboard.writeText(input.value).then(() => {
-            alert('Ms. Kaye\'s access link copied to clipboard!');
-        }).catch(err => {
-            console.error('Failed to copy: ', err);
+        document.execCommand('copy');
+        input.type = prevType;
+        alert('Copied ' + name + ' API key to clipboard!');
+    });
+}
+
+async function testApiKey(provider) {
+    const btn = document.getElementById('btn-test-' + provider);
+    const resultEl = document.getElementById(provider + '-test-result');
+    const input = document.getElementById(provider + '_api_key_input');
+    const key = input ? input.value.trim() : '';
+
+    if (!key) {
+        resultEl.style.display = 'block';
+        resultEl.style.background = '#fee2e2';
+        resultEl.style.color = '#dc2626';
+        resultEl.textContent = '⚠️ Please enter an API key first.';
+        return;
+    }
+
+    const origText = btn.innerHTML;
+    btn.innerHTML = '⏳ Testing…';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/admin/settings/test-' + provider, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF || document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: JSON.stringify({ [provider + '_api_key']: key })
         });
+        const data = await res.json();
+        resultEl.style.display = 'block';
+        if (data.success) {
+            resultEl.style.background = '#dcfce7';
+            resultEl.style.color = '#16a34a';
+            resultEl.textContent = '✅ ' + data.message;
+        } else {
+            resultEl.style.background = '#fee2e2';
+            resultEl.style.color = '#dc2626';
+            resultEl.textContent = '❌ ' + (data.message || data.error || 'Connection test failed.');
+        }
+    } catch (err) {
+        resultEl.style.display = 'block';
+        resultEl.style.background = '#fee2e2';
+        resultEl.style.color = '#dc2626';
+        resultEl.textContent = '❌ Network error during test: ' + err.message;
+    } finally {
+        btn.innerHTML = origText;
+        btn.disabled = false;
     }
 }
 setTimeout(()=>document.getElementById('toast')?.remove(), 3000);

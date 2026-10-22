@@ -812,7 +812,7 @@ async function sendComment() {
         btn.style.cursor = 'not-allowed';
     }
     try {
-        const res  = await fetch('/admin/requests/comment', {
+        const res  = await fetch('{{ route("admin.requests.comment") }}', {
             method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF,'Accept':'application/json'},
             body: JSON.stringify({ request_id: REQ_ID, message: msg })
         });

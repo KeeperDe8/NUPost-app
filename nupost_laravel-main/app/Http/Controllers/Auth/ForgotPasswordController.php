@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\OtpCode;
+use App\Models\OtpAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -27,8 +28,12 @@ class ForgotPasswordController extends Controller
         $user = User::where('email', $email)->first();
 
         if (!$user) {
-            // Don't reveal if email exists
-            return back()->with('success', 'If that email is registered, a reset code has been sent.');
+            // Simulated response to prevent email enumeration
+            session([
+                'reset_email'      => $email,
+                'reset_masked'     => $this->maskEmail($email),
+            ]);
+            return redirect()->route('password.verify')->with('success', 'If that email is registered, a reset code has been sent.');
         }
 
         $otp        = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -64,7 +69,7 @@ class ForgotPasswordController extends Controller
 
     public function verifyIndex()
     {
-        if (!session('reset_user_id')) {
+        if (!session('reset_email')) {
             return redirect()->route('password.forgot');
         }
         return view('auth.reset_verify');
@@ -72,11 +77,28 @@ class ForgotPasswordController extends Controller
 
     public function verifyOtp(Request $request)
     {
-        if (!session('reset_user_id')) {
+        if (!session('reset_email')) {
             return redirect()->route('password.forgot');
         }
 
+        $email = session('reset_email');
         $user_id = session('reset_user_id');
+
+        // Simulated validation fail for non-existent users
+        if (!$user_id) {
+            usleep(random_int(100000, 300000)); // timing attack countermeasure
+            return back()->with('error', 'Invalid or expired code. Please try again.');
+        }
+
+        $recent = OtpAttempt::where('user_id', $user_id)
+            ->where('success', false)
+            ->where('attempted_at', '>', now()->subMinutes(15))
+            ->count();
+
+        if ($recent >= 5) {
+            return back()->with('error', 'Too many failed attempts. Please wait 15 minutes.');
+        }
+
         $digits  = [];
         for ($i = 1; $i <= 6; $i++) {
             $digits[] = preg_replace('/\D/', '', $request->input("d$i", ''));
@@ -90,15 +112,19 @@ class ForgotPasswordController extends Controller
         $otp_row = OtpCode::where('user_id', $user_id)
             ->where('is_used', false)
             ->where('expires_at', '>', now())
+            ->orderByDesc('id')
             ->first();
 
         if ($otp_row && hash_equals($otp_row->otp_code, $entered_otp)) {
+            OtpAttempt::create(['user_id' => $user_id, 'success' => true, 'attempted_at' => now()]);
             $otp_row->update(['is_used' => true]);
             session(['reset_verified' => true]);
             return redirect()->route('password.reset');
         }
 
-        return back()->with('error', 'Invalid or expired code. Please try again.');
+        OtpAttempt::create(['user_id' => $user_id, 'success' => false, 'attempted_at' => now()]);
+        $remaining = max(0, 5 - ($recent + 1));
+        return back()->with('error', "Invalid or expired code. $remaining attempt(s) remaining.");
     }
 
     public function resetIndex()
@@ -152,6 +178,45 @@ class ForgotPasswordController extends Controller
         [$local, $domain] = explode('@', $email);
         $masked = substr($local, 0, 2) . str_repeat('*', max(strlen($local) - 3, 2)) . substr($local, -1);
         return $masked . '@' . $domain;
+    }
+
+    public function resendOtp()
+    {
+        if (!session('reset_email')) {
+            return redirect()->route('password.forgot');
+        }
+
+        $email = session('reset_email');
+        $user_id = session('reset_user_id');
+        $name = session('reset_name', 'User');
+
+        if (!$user_id) {
+            // Simulated success path to prevent email enumeration
+            return redirect()->route('password.verify')->with('success', 'A new code has been sent to your email.');
+        }
+
+        $otp        = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $expires_at = now()->addMinutes(10);
+
+        OtpCode::where('email', $email)->delete();
+        OtpCode::create([
+            'user_id'    => $user_id,
+            'email'      => $email,
+            'otp_code'   => $otp,
+            'expires_at' => $expires_at,
+        ]);
+
+        try {
+            Mail::send([], [], function ($message) use ($email, $name, $otp) {
+                $message->to($email, $name)
+                    ->subject('NUPost Password Reset Code')
+                    ->html($this->getResetEmailHtml($name, $otp));
+            });
+        } catch (\Exception $e) {
+            \Log::error('[NUPost] Reset resend email failed: ' . $e->getMessage());
+        }
+
+        return redirect()->route('password.verify')->with('success', 'A new code has been sent to your email.');
     }
 
     private function getResetEmailHtml(string $name, string $otp): string

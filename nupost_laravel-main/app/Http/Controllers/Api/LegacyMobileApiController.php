@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -21,6 +22,48 @@ class LegacyMobileApiController extends Controller
         }
 
         return 'requests';
+    }
+
+    private function cleanTextForComparison(string $text): string
+    {
+        $text = strtolower(trim($text));
+        $text = (string) preg_replace('/\b20[2-3]\d\b/', '', $text);
+        $text = (string) preg_replace('/\b(v\d+|part\s*\d+|copy|new|draft|edit|final)\b/i', '', $text);
+        $text = (string) preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
+        return trim((string) preg_replace('/\s+/', ' ', $text));
+    }
+
+    private function extractWordTokens(string $text): array
+    {
+        $clean = $this->cleanTextForComparison($text);
+        if ($clean === '') {
+            return [];
+        }
+        $stopWords = ['the', 'of', 'and', 'for', 'in', 'on', 'at', 'to', 'a', 'an', 'with', 'by'];
+        $words = array_values(array_filter(explode(' ', $clean), function ($w) use ($stopWords) {
+            return $w !== '' && !in_array($w, $stopWords);
+        }));
+        if (empty($words)) {
+            $words = array_values(array_filter(explode(' ', $clean)));
+        }
+        return $words;
+    }
+
+    private function tokenSortedText(string $text): string
+    {
+        $words = $this->extractWordTokens($text);
+        sort($words);
+        return implode(' ', $words);
+    }
+
+    private function tokenOverlapRatio(array $wordsA, array $wordsB): float
+    {
+        if (empty($wordsA) || empty($wordsB)) {
+            return 0.0;
+        }
+        $intersect = array_intersect($wordsA, $wordsB);
+        $maxCount = max(count($wordsA), count($wordsB));
+        return $maxCount > 0 ? (count($intersect) / $maxCount) * 100.0 : 0.0;
     }
 
     private function ensureRequestsTableExists(): ?JsonResponse
@@ -126,6 +169,10 @@ class LegacyMobileApiController extends Controller
                 'success' => false,
                 'message' => 'Please verify your email first',
             ], 403);
+        }
+
+        if (class_exists(\App\Models\AuditLog::class)) {
+            \App\Models\AuditLog::record($userRole === 'admin' ? 'admin_login' : 'user_login', $uId);
         }
 
         return response()->json([
@@ -601,38 +648,125 @@ class LegacyMobileApiController extends Controller
                 ], 422);
             }
 
-            $user = DB::table('users')->where('id', $userId)->first();
-            if (!$user) {
+            // Anti-spam cooldown check (prevents rapid-fire API request spamming)
+            $cooldownKey = 'post_req_cooldown_api_' . $userId;
+            if (!app()->runningUnitTests() && Cache::has($cooldownKey)) {
+                $expiresAt = (int) Cache::get($cooldownKey);
+                $remaining = max(1, $expiresAt - time());
                 return response()->json([
                     'success' => false,
-                    'message' => 'User not found',
-                ], 404);
+                    'message' => "Anti-spam protection: Please wait {$remaining} second(s) before submitting another request.",
+                ], 429);
             }
 
-            if ($err = $this->ensureRequestsTableExists()) {
-                return $err;
+            // Concurrency lock (prevents concurrent race conditions when clicking submit rapidly)
+            $lockKey = 'post_req_lock_api_' . $userId;
+            if (!Cache::add($lockKey, time(), now()->addSeconds(15))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A request submission is already in progress. Please wait a moment.',
+                ], 429);
             }
 
-            $table = $this->requestsTable();
+            try {
+                $user = DB::table('users')->where('id', $userId)->first();
+                if (!$user) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'User not found',
+                    ], 404);
+                }
 
-            // 🛡️ Exact Duplicate Hash Check (within 24h)
-            $contentHash = md5(strtolower(trim($title)) . '|' . strtolower(trim($description)));
-            if (Schema::hasColumn($table, 'description')) {
+                if ($err = $this->ensureRequestsTableExists()) {
+                    return $err;
+                }
+
+                $table = $this->requestsTable();
+                $cleanTitle = $this->cleanTextForComparison($title);
+                $cleanDesc  = $this->cleanTextForComparison($description);
+
+                // 4. Smart Fuzzy & Semantic Duplicate Detection (within 24h)
                 $recentDuplicates = DB::table($table)
                     ->where('status', '!=', 'Rejected')
                     ->where('created_at', '>=', now()->subHours(24))
                     ->get();
 
                 foreach ($recentDuplicates as $dup) {
-                    $dupHash = md5(strtolower(trim($dup->title ?? '')) . '|' . strtolower(trim($dup->description ?? '')));
-                    if ($dupHash === $contentHash) {
+                    $dupTitleRaw = trim((string) ($dup->title ?? ''));
+                    $dupDescRaw  = trim((string) ($dup->description ?? ''));
+                    $cleanDupTitle = $this->cleanTextForComparison($dupTitleRaw);
+                    $cleanDupDesc  = $this->cleanTextForComparison($dupDescRaw);
+
+                    $isSameUser = false;
+                    if (isset($dup->user_id) && $dup->user_id !== null) {
+                        $isSameUser = ((int) $dup->user_id === $userId);
+                    }
+                    if (!$isSameUser && !empty($user->name) && !empty($dup->requester)) {
+                        $isSameUser = (strcasecmp($dup->requester, $user->name) === 0);
+                    }
+
+                    // Token-sorted strings (handles word permutation / reordering, e.g. "College Week Ceremony" vs "College Ceremony Week")
+                    $sortedTitle = $this->tokenSortedText($title);
+                    $sortedDupTitle = $this->tokenSortedText($dupTitleRaw);
+                    $sortedMatch = ($sortedTitle !== '' && $sortedTitle === $sortedDupTitle);
+
+                    // Word tokens & overlap ratio
+                    $wordsTitle = $this->extractWordTokens($title);
+                    $wordsDupTitle = $this->extractWordTokens($dupTitleRaw);
+                    $tokenOverlap = $this->tokenOverlapRatio($wordsTitle, $wordsDupTitle);
+
+                    // Title normalized match (e.g. "College Week Ceremony 2026" vs "College Week Ceremony" OR "College Ceremony Week")
+                    $titleNormalizedMatch = ($cleanTitle !== '' && $cleanTitle === $cleanDupTitle) || $sortedMatch;
+
+                    $titleSim = 0.0;
+                    if (!$titleNormalizedMatch && $cleanTitle !== '' && $cleanDupTitle !== '') {
+                        $simRaw = 0.0;
+                        $simSorted = 0.0;
+                        similar_text($cleanTitle, $cleanDupTitle, $simRaw);
+                        similar_text($sortedTitle, $sortedDupTitle, $simSorted);
+                        $titleSim = max($simRaw, $simSorted, $tokenOverlap);
+                    } elseif ($titleNormalizedMatch) {
+                        $titleSim = 100.0;
+                    }
+
+                    $descSim = 0.0;
+                    if ($cleanDesc !== '' && $cleanDupDesc !== '') {
+                        if ($cleanDesc === $cleanDupDesc) {
+                            $descSim = 100.0;
+                        } else {
+                            similar_text($cleanDesc, $cleanDupDesc, $descSim);
+                        }
+                    }
+
+                    $isUserDuplicate = $isSameUser && (
+                        $titleNormalizedMatch ||
+                        $sortedMatch ||
+                        $titleSim >= 75.0 ||
+                        $tokenOverlap >= 75.0 ||
+                        $descSim >= 80.0 ||
+                        ($titleSim >= 60.0 && $descSim >= 60.0)
+                    );
+
+                    $isSystemDuplicate = (
+                        (($titleNormalizedMatch || $sortedMatch) && $descSim >= 75.0) ||
+                        (md5(strtolower($title) . '|' . strtolower($description)) === md5(strtolower($dupTitleRaw) . '|' . strtolower($dupDescRaw)))
+                    );
+
+                    if ($isUserDuplicate || $isSystemDuplicate) {
+                        $statusLabel = $dup->status ?: 'Pending Review';
+                        $existingTitleSnippet = strlen($dupTitleRaw) > 35 ? substr($dupTitleRaw, 0, 35) . '…' : $dupTitleRaw;
+
+                        $msg = "Duplicate request detected: A very similar request (\"{$existingTitleSnippet}\") was already submitted recently (Status: {$statusLabel}).";
+                        if ($isSameUser && in_array(strtolower($statusLabel), ['pending', 'pending review'])) {
+                            $msg .= " If you need to make changes, please edit your existing pending request instead of submitting a duplicate.";
+                        }
+
                         return response()->json([
                             'success' => false,
-                            'message' => 'Duplicate submission detected. An identical request was submitted within the last 24 hours.',
+                            'message' => $msg,
                         ], 422);
                     }
                 }
-            }
 
             $mediaNames = [];
             $files = $request->file('media', []);
@@ -788,6 +922,14 @@ class LegacyMobileApiController extends Controller
                 DB::table('notifications')->insert($userNotifPayload);
             }
 
+            if (!app()->runningUnitTests()) {
+                Cache::put($cooldownKey, time() + 8, now()->addSeconds(8));
+            }
+
+            if (class_exists(\App\Models\AuditLog::class)) {
+                \App\Models\AuditLog::record('post_request_created', $userId);
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -796,12 +938,15 @@ class LegacyMobileApiController extends Controller
                     'status' => 'Pending Review',
                 ],
             ], 201);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Request creation failed: ' . $e->getMessage(),
-            ], 500);
+        } finally {
+            Cache::forget($lockKey);
         }
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Request creation failed: ' . $e->getMessage(),
+        ], 500);
+    }
     }
 
     public function updateRequest(Request $request): JsonResponse
@@ -2217,6 +2362,13 @@ class LegacyMobileApiController extends Controller
                 }
             }
 
+            if (class_exists(\App\Models\AuditLog::class)) {
+                $auditAction = ($newStatus === 'Approved' || $newStatus === 'Posted')
+                    ? 'post_request_approved'
+                    : ($newStatus === 'Rejected' ? 'post_request_rejected' : 'post_request_status_updated');
+                \App\Models\AuditLog::record($auditAction);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => "Status updated to $newStatus",
@@ -2306,6 +2458,114 @@ class LegacyMobileApiController extends Controller
                 'rejected' => $rejected,
                 'users' => $usersCount,
                 'monthly' => $monthly,
+            ],
+        ], 200);
+    }
+
+    public function adminAuditLogs(Request $request): JsonResponse
+    {
+        $userId = (int) $request->query('user_id', 0);
+        $search = trim((string) $request->query('search', ''));
+        $category = trim((string) $request->query('category', 'all'));
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 20;
+
+        if ($userId <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'user_id is required',
+            ], 422);
+        }
+
+        $user = DB::table('users')->where('id', $userId)->first();
+        if (!$user || strtolower(trim((string) ($user->role ?? ''))) !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.',
+            ], 403);
+        }
+
+        if (!Schema::hasTable('audit_logs')) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'meta' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'total' => 0,
+                ],
+            ], 200);
+        }
+
+        $query = DB::table('audit_logs')
+            ->leftJoin('users', 'audit_logs.user_id', '=', 'users.id')
+            ->select([
+                'audit_logs.id',
+                'audit_logs.action_type',
+                'audit_logs.created_at',
+                'users.name as user_name',
+                'users.email as user_email',
+                'users.role as user_role',
+            ])
+            ->orderByDesc('audit_logs.created_at');
+
+        if ($category !== 'all' && $category !== '') {
+            if ($category === 'auth') {
+                $query->whereIn('audit_logs.action_type', ['user_login', 'admin_login', 'user_logout', 'admin_logout']);
+            } elseif ($category === 'requests') {
+                $query->whereIn('audit_logs.action_type', ['post_request_created', 'post_request_edited', 'post_request_approved', 'post_request_rejected']);
+            } elseif ($category === 'system') {
+                $query->whereIn('audit_logs.action_type', ['api_key_updated', 'settings_updated']);
+            }
+        }
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('audit_logs.action_type', 'like', "%{$search}%")
+                  ->orWhere('users.name', 'like', "%{$search}%")
+                  ->orWhere('users.email', 'like', "%{$search}%");
+            });
+        }
+
+        $total = $query->count();
+        $rows = $query->forPage($page, $perPage)->get();
+
+        $data = $rows->map(function ($row) {
+            $action = (string) ($row->action_type ?? 'action');
+            $label = ucwords(str_replace('_', ' ', $action));
+            if (str_contains($action, 'approved')) {
+                $label = 'Approved Post Request';
+            } elseif (str_contains($action, 'rejected')) {
+                $label = 'Rejected Post Request';
+            } elseif ($action === 'user_login' || $action === 'admin_login') {
+                $label = 'User Logged In';
+            } elseif ($action === 'post_request_created') {
+                $label = 'Submitted Post Request';
+            } elseif ($action === 'post_request_edited') {
+                $label = 'Edited Post Request';
+            }
+
+            $createdAt = $row->created_at ? \Carbon\Carbon::parse($row->created_at) : now();
+
+            return [
+                'id' => (int) $row->id,
+                'action_type' => $action,
+                'action_label' => $label,
+                'user_name' => (string) ($row->user_name ?: 'System User'),
+                'user_email' => (string) ($row->user_email ?: ''),
+                'user_role' => ucfirst((string) ($row->user_role ?: 'user')),
+                'created_at' => $createdAt->format('M d, Y • h:i A'),
+                'time_ago' => $createdAt->diffForHumans(),
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => max(1, (int) ceil($total / $perPage)),
+                'total' => $total,
             ],
         ], 200);
     }

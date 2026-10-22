@@ -1,9 +1,9 @@
 <?php
-
+ 
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-
+ 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -12,11 +12,20 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
 ->withMiddleware(function (Middleware $middleware): void {
+    $middleware->validateCsrfTokens(except: [
+        'logout',
+        '/logout',
+    ]);
+
     $middleware->alias([
-        'guest.nupost' => \App\Http\Middleware\GuestNupost::class,
-        'auth.nupost'  => \App\Http\Middleware\AuthNupost::class,
+        'guest.nupost'          => \App\Http\Middleware\GuestNupost::class,
+        'auth.nupost'           => \App\Http\Middleware\AuthNupost::class,
+        'auth.kaye'             => \App\Http\Middleware\AuthKaye::class,
+        'prevent-back-history'  => \App\Http\Middleware\PreventBackHistory::class,
     ]);
 })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            return redirect('/');
+        });
     })->create();

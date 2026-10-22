@@ -12,6 +12,9 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+temp_web_check/
+.kilo/
+lib/screens/Untitled-1.txt
 
 # IntelliJ related
 *.iml

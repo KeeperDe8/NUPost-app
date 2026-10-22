@@ -855,6 +855,73 @@
     </div>
 </div>
 
+{{-- SUBMISSION PREVIEW MODAL --}}
+<div class="sla-overlay" id="preview-overlay" style="display:none;">
+    <div class="sla-modal" style="max-width: 580px;">
+        <div class="sla-header">
+            <div class="sla-header-icon" style="background: rgba(30,79,216,0.18); border-color: rgba(30,79,216,0.35);">
+                <svg width="20" height="20" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+            <div class="sla-header-text">
+                <h2>Review Your Request <span class="sla-badge-policy" style="background:rgba(59,130,246,0.18);color:#93c5fd;border-color:rgba(59,130,246,0.3);">PREVIEW</span></h2>
+                <p>Please double-check all details below before final submission to Marketing.</p>
+            </div>
+        </div>
+        <div class="sla-body" style="padding: 16px 20px;">
+            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 18px; margin-bottom: 14px;">
+                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #94a3b8; margin-bottom: 6px;">Event / Post Title</div>
+                <div id="pv-title" style="font-size: 16px; font-weight: 800; color: #f8fafc; line-height: 1.4; word-break: break-word;"></div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);">
+                    <div>
+                        <div style="font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Category</div>
+                        <div id="pv-category" style="font-size: 13px; font-weight: 700; color: #fcd34d;"></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Priority</div>
+                        <div id="pv-priority" style="font-size: 13px; font-weight: 700;"></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Preferred Date</div>
+                        <div id="pv-date" style="font-size: 13px; font-weight: 700; color: #f8fafc;"></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;">Target Channels</div>
+                        <div id="pv-platforms" style="font-size: 13px; font-weight: 700; color: #60a5fa;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 12px;">
+                <div style="font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 6px;">Description</div>
+                <div id="pv-desc" style="font-size: 12.5px; color: #cbd5e1; line-height: 1.5; max-height: 80px; overflow-y: auto; white-space: pre-wrap;"></div>
+            </div>
+
+            <div id="pv-caption-wrap" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 12px; display:none;">
+                <div style="font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 6px;">Post Caption</div>
+                <div id="pv-caption" style="font-size: 12px; color: #94a3b8; line-height: 1.4; max-height: 80px; overflow-y: auto; white-space: pre-wrap; font-family: monospace;"></div>
+            </div>
+
+            <div id="pv-media-info" style="font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 8px;">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <span id="pv-media-count">No attachments</span>
+            </div>
+        </div>
+        <div class="sla-footer">
+            <div style="font-size: 11.5px; color: #94a3b8;">
+                Ready to submit?
+            </div>
+            <div class="sla-actions">
+                <button type="button" class="sla-btn-cancel" id="btn-close-preview">Edit Details</button>
+                <button type="button" class="sla-btn-proceed" id="btn-confirm-submit" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    Confirm & Submit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="create-page" id="create-page" style="display:none;">
 
     {{-- HERO CARD --}}
@@ -885,6 +952,7 @@
 
     <form method="POST" action="{{ route('requestor.requests.store') }}" enctype="multipart/form-data" id="create-form" class="form-body">
         @csrf
+        <input type="hidden" name="submission_token" id="submission-token" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
 
         {{-- SECTION 1: BASIC INFO --}}
         <div class="form-section">
@@ -918,9 +986,9 @@
                     </div>
                     <div class="field" style="margin-bottom:0;">
                         <label>Priority <span class="req">*</span></label>
-                        <select name="priority" required>
+                        <select name="priority" id="priority-field" required>
                             <option value="" disabled {{ !old('priority') ? 'selected' : '' }}>Select priority</option>
-                            @foreach(['Low','Medium','High','Urgent'] as $pri)
+                            @foreach(['Low','Medium','High'] as $pri)
                                 <option value="{{ $pri }}" {{ old('priority') === $pri ? 'selected' : '' }}>{{ $pri }}</option>
                             @endforeach
                         </select>
@@ -1054,7 +1122,7 @@
             <div class="form-actions__left">Fields marked <span>*</span> are required</div>
             <div class="actions-right">
                 <button type="button" class="btn-cancel" onclick="history.back()">Cancel</button>
-                <button type="submit" class="btn-submit">
+                <button type="submit" class="btn-submit" id="btn-submit-request">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     Submit Request
                 </button>
@@ -1124,12 +1192,31 @@ if (catField.value) updateSlaNote();
 // ── FIXED FOOTER ──────────────────────────────────────────────────
 const FIXED_FOOTER = "\n\nApply now and secure your place for the upcoming academic year: https://onlineapp.nu-lipa.edu.ph/quest/register.php\nExperience \u{1D60C}\u{1D625}\u{1D636}\u{1D624}\u{1D622}\u{1D635}\u{1D62A}\u{1D630}\u{1D62F} \u{1D61B}\u{1D629}\u{1D622}\u{1D635} \u{1D61E}\u{1D630}\u{1D633}\u{1D62C}\u{1D634}.\n#NULipa\n#EducationThatWorks";
 
-document.getElementById('create-form').addEventListener('submit', function(e) {
-    const submitBtn = this.querySelector('.btn-submit');
+const createForm = document.getElementById('create-form');
+const previewOverlay = document.getElementById('preview-overlay');
+const btnClosePreview = document.getElementById('btn-close-preview');
+const btnConfirmSubmit = document.getElementById('btn-confirm-submit');
 
-    // Prevent double submission
+function closePreviewModal() {
+    previewOverlay.style.display = 'none';
+}
+if (btnClosePreview) {
+    btnClosePreview.addEventListener('click', closePreviewModal);
+}
+previewOverlay.addEventListener('click', function(e) {
+    if (e.target === previewOverlay) closePreviewModal();
+});
+
+createForm.addEventListener('submit', function(e) {
+    // If submission is confirmed from modal, let it proceed
+    if (createForm.dataset.confirmed === 'true') {
+        return;
+    }
+
+    e.preventDefault();
+
+    const submitBtn = this.querySelector('.btn-submit');
     if (submitBtn.dataset.submitted === 'true') {
-        e.preventDefault();
         return;
     }
 
@@ -1148,6 +1235,27 @@ document.getElementById('create-form').addEventListener('submit', function(e) {
         titleErr.closest('.field').classList.remove('has-error');
     }
 
+    // Category
+    const catVal = document.getElementById('cat-field').value;
+    if (!catVal) {
+        alert('Please select a request category.');
+        hasError = true;
+    }
+
+    // Priority
+    const prioVal = document.getElementById('priority-field').value;
+    if (!prioVal) {
+        alert('Please select a priority level.');
+        hasError = true;
+    }
+
+    // Preferred date
+    const dateVal = document.getElementById('post-date-input').value;
+    if (!dateVal) {
+        alert('Please select a preferred post date.');
+        hasError = true;
+    }
+
     // Description min 15
     const descVal = document.getElementById('desc-field').value.trim();
     const descErr = document.getElementById('desc-error');
@@ -1161,36 +1269,91 @@ document.getElementById('create-form').addEventListener('submit', function(e) {
     }
 
     // At least one platform
-    const platforms = document.querySelectorAll('.platform-btn.selected');
-    if (platforms.length === 0) {
+    const selectedPlatforms = Array.from(document.querySelectorAll('.platform-btn.selected')).map(b => b.dataset.platform);
+    if (selectedPlatforms.length === 0) {
         hasError = true;
         alert('Please select at least one target platform.');
     }
 
     if (hasError) {
-        e.preventDefault();
         return;
     }
 
+    // Populate preview modal fields
+    document.getElementById('pv-title').textContent = titleVal;
+    document.getElementById('pv-category').textContent = catVal;
+
+    const pvPrio = document.getElementById('pv-priority');
+    pvPrio.textContent = prioVal;
+    if (prioVal === 'High') {
+        pvPrio.style.color = '#f87171';
+    } else if (prioVal === 'Medium') {
+        pvPrio.style.color = '#60a5fa';
+    } else {
+        pvPrio.style.color = '#94a3b8';
+    }
+
+    document.getElementById('pv-date').textContent = formatDateLabel(dateVal);
+    document.getElementById('pv-platforms').textContent = selectedPlatforms.join(', ');
+    document.getElementById('pv-desc').textContent = descVal;
+
+    const captionVal = document.getElementById('caption-field').value.trim();
+    const pvCaptionWrap = document.getElementById('pv-caption-wrap');
+    if (captionVal) {
+        pvCaptionWrap.style.display = 'block';
+        document.getElementById('pv-caption').textContent = captionVal;
+    } else {
+        pvCaptionWrap.style.display = 'none';
+    }
+
+    const filesCount = mediaInput.files ? mediaInput.files.length : 0;
+    document.getElementById('pv-media-count').textContent = filesCount > 0 ? `${filesCount} media file(s) attached` : 'No media attachments';
+
+    // Show preview modal
+    previewOverlay.style.display = 'flex';
+});
+
+btnConfirmSubmit.addEventListener('click', function() {
+    const submitBtn = createForm.querySelector('.btn-submit');
+
     // Append fixed footer to caption
-    const box     = document.getElementById('caption-field');
+    const box = document.getElementById('caption-field');
     const current = box.value.trim();
     if (current && !current.includes('onlineapp.nu-lipa.edu.ph')) {
         box.value = current + FIXED_FOOTER;
     }
 
-    // Lock the button
-    submitBtn.dataset.submitted = 'true';
-    submitBtn.disabled = true;
-    submitBtn.style.opacity = '0.6';
-    submitBtn.style.cursor = 'not-allowed';
-    submitBtn.innerHTML = `
+    btnConfirmSubmit.disabled = true;
+    btnConfirmSubmit.innerHTML = `
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" 
-             viewBox="0 0 24 24" style="animation:spin 1s linear infinite;display:inline-block;">
+             viewBox="0 0 24 24" style="animation:spin 1s linear infinite;display:inline-block;margin-right:6px;">
             <polyline points="23 4 23 10 17 10"/>
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-        Submitting...`;
+        </svg> Submitting...`;
+
+    submitBtn.dataset.submitted = 'true';
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.7';
+    submitBtn.style.cursor = 'not-allowed';
+
+    createForm.dataset.confirmed = 'true';
+    createForm.submit();
+});
+
+// Reset submit button state on back/forward browser navigation (bfcache)
+window.addEventListener('pageshow', function() {
+    const btn = document.getElementById('btn-submit-request');
+    if (btn) {
+        btn.dataset.submitted = 'false';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.innerHTML = `
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Submit Request`;
+    }
+    createForm.dataset.confirmed = 'false';
+    if (previewOverlay) previewOverlay.style.display = 'none';
 });
 
 // ── PLATFORM BUTTONS ──────────────────────────────────────────────

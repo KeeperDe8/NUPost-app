@@ -843,14 +843,14 @@ input[type="text"], input[type="email"], input[type="password"], input[type="sea
 
                 <!-- NOTIFICATION BELL -->
                 <div class="notif-wrap" id="notif-wrap">
-                    <button class="notif-btn" id="notif-btn" onclick="toggleNotif(event)">
+                    <button class="notif-btn" id="notif-btn" type="button" aria-label="Notifications" onclick="toggleNotif(event)">
                         <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                         <span class="notif-badge" id="notif-badge"></span>
                     </button>
                     <div class="notif-dropdown" id="notif-dropdown">
                         <div class="notif-head">
                             <div class="notif-head__title">Notifications <span id="notif-unread-label" style="font-size:11px;color:var(--text-muted);font-weight:400;"></span></div>
-                            <button class="notif-head__mark" onclick="markAllRead()">Mark all read</button>
+                            <button type="button" class="notif-head__mark" onclick="markAllRead(event)">Mark all read</button>
                         </div>
                         <div class="notif-list" id="notif-list">
                             <div class="notif-empty">
@@ -891,24 +891,33 @@ const NOTIF_FETCH_URL = '{{ route("requestor.notifications.fetch") }}';
 const NOTIF_READ_URL  = '{{ route("requestor.notifications.markread") }}';
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
 
-let notifOpen = false;
-
 function toggleNotif(e) {
-    e.stopPropagation();
-    notifOpen = !notifOpen;
-    document.getElementById('notif-dropdown').classList.toggle('open', notifOpen);
-    if (notifOpen) loadNotifications();
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const dd = document.getElementById('notif-dropdown');
+    if (!dd) return;
+    const willOpen = !dd.classList.contains('open');
+    dd.classList.toggle('open', willOpen);
+    if (willOpen) {
+        loadNotifications();
+    }
 }
 
 document.addEventListener('click', function(e) {
-    if (!document.getElementById('notif-wrap').contains(e.target)) {
-        notifOpen = false;
-        document.getElementById('notif-dropdown')?.classList.remove('open');
+    const wrap = document.getElementById('notif-wrap');
+    const dd = document.getElementById('notif-dropdown');
+    if (wrap && dd && !wrap.contains(e.target)) {
+        dd.classList.remove('open');
     }
 });
 
 function timeAgo(dateStr) {
-    const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    if (!dateStr) return 'Just now';
+    const parsed = new Date(String(dateStr).replace(' ', 'T'));
+    if (isNaN(parsed.getTime())) return 'Recently';
+    const diff = Math.floor((Date.now() - parsed.getTime()) / 1000);
     if (diff < 60)    return 'Just now';
     if (diff < 3600)  return Math.floor(diff/60) + 'm ago';
     if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
@@ -918,6 +927,9 @@ function timeAgo(dateStr) {
 function getIcon(type) {
     if (type === 'new_request' || type === 'request') return '<div class="notif-icon notif-icon--request">📄</div>';
     if (type === 'comment'     || type === 'reply')   return '<div class="notif-icon notif-icon--comment">💬</div>';
+    if (type === 'approved')   return '<div class="notif-icon notif-icon--approved">✅</div>';
+    if (type === 'rejected')   return '<div class="notif-icon notif-icon--rejected">❌</div>';
+    if (type === 'posted')     return '<div class="notif-icon notif-icon--posted">🚀</div>';
     return '<div class="notif-icon notif-icon--default">🔔</div>';
 }
 
@@ -934,27 +946,30 @@ function renderNotifications(notifs, unread) {
     // Badge
     const badge = document.getElementById('notif-badge');
     const dot   = document.getElementById('sb-notif-dot');
-    if (unread > 0) {
-        badge.textContent = unread > 99 ? '99+' : unread;
-        badge.classList.add('has-count');
-        if (dot) dot.style.display = 'block';
-    } else {
-        badge.classList.remove('has-count');
-        if (dot) dot.style.display = 'none';
+    if (badge) {
+        if (unread > 0) {
+            badge.textContent = unread > 99 ? '99+' : unread;
+            badge.classList.add('has-count');
+            if (dot) dot.style.display = 'block';
+        } else {
+            badge.classList.remove('has-count');
+            if (dot) dot.style.display = 'none';
+        }
     }
 
     const label = document.getElementById('notif-unread-label');
     if (label) label.textContent = unread > 0 ? `(${unread} new)` : '';
 
     const list = document.getElementById('notif-list');
+    if (!list) return;
     if (!notifs.length) {
         list.innerHTML = '<div class="notif-empty"><svg width="32" height="32" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><p>No notifications yet</p></div>';
         return;
     }
 
     list.innerHTML = notifs.slice(0, 12).map(n => {
-        const link = n.request_id ? `/requestor/requests/${n.request_id}/chat` : '/requestor/notifications';
-        return `<a href="${link}" class="notif-item ${!n.is_read ? 'unread' : ''}" onclick="markRead(${n.id}, this)">
+        const link = n.request_id ? `{{ url('requestor/requests') }}/${n.request_id}/chat` : '{{ route("requestor.notifications") }}';
+        return `<a href="${link}" class="notif-item ${!n.is_read ? 'unread' : ''}" onclick="handleRequestorNotifClick(event, ${n.id}, '${link}')">
             ${getIcon(n.type)}
             <div style="flex:1;min-width:0;">
                 <div class="notif-title">${esc(n.title)}</div>
@@ -965,23 +980,41 @@ function renderNotifications(notifs, unread) {
     }).join('');
 }
 
+function handleRequestorNotifClick(e, id, url) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    fetch(NOTIF_READ_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+        body: JSON.stringify({ id: id })
+    }).catch(() => {}).finally(() => {
+        if (url) window.location.href = url;
+    });
+}
+
 function markRead(id, el) {
     fetch(NOTIF_READ_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
         body: JSON.stringify({ id })
     }).then(() => {
-        el.classList.remove('unread');
+        if (el) el.classList.remove('unread');
         loadNotifications();
-    });
+    }).catch(() => {});
 }
 
-function markAllRead() {
+function markAllRead(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     fetch(NOTIF_READ_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
         body: JSON.stringify({ all: true })
-    }).then(() => loadNotifications());
+    }).then(() => loadNotifications()).catch(() => {});
 }
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

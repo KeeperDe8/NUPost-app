@@ -13,6 +13,11 @@ class RequestComment extends Model
         'sender_role',
         'sender_name',
         'message',
+        'admin_seen',
+    ];
+
+    protected $casts = [
+        'admin_seen' => 'boolean',
     ];
 
     public function postRequest()

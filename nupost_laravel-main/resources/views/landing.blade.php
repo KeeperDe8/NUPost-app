@@ -1,1130 +1,663 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NUPost | Social Media Request System</title>
+    <title>NUPost | National University Lipa Social Media Portal</title>
     <link rel="icon" type="image/png" href="{{ asset('assets/clearlogo.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('assets/clearlogo.png') }}">
-    <meta name="description" content="The official social media request platform for National University Lipa. Submit, track, and manage content requests seamlessly.">
-    
-    <!-- Prevent Flash of Unstyled Theme -->
+    <meta name="description" content="The official social media request and content management platform for National University Lipa.">
+
+    <!-- Prevent Theme Flash -->
     <script>
         (function() {
-            const savedTheme = localStorage.getItem('nupost-theme') || 'dark';
+            const savedTheme = localStorage.getItem('nupost-theme') || 'light';
             document.documentElement.setAttribute('data-theme', savedTheme);
         })();
     </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
-        /* ── Theme Tokens ── */
+        /* ── Base Color System (NU Navy & Gold Palette) ── */
         :root {
             --bg-page: #f8fafc;
-            --bg-surface: #ffffff;
-            --bg-surface-elevated: #ffffff;
+            --bg-card: #ffffff;
             --bg-subtle: #f1f5f9;
-            --bg-card-header: #f8fafc;
-            --border-subtle: rgba(0, 35, 102, 0.08);
-            --border-card: #e2e8f0;
-            --border-hover: rgba(0, 35, 102, 0.25);
+            --border: #e2e8f0;
+            --border-subtle: #edf2f7;
 
-            --text-primary: #0f172a;
-            --text-secondary: #475569;
+            --text-main: #0f172a;
+            --text-mid: #334155;
             --text-muted: #64748b;
+            --text-faint: #94a3b8;
 
-            --nav-bg: rgba(255, 255, 255, 0.95);
-            --nav-border: rgba(226, 232, 240, 0.8);
-            --nav-scrolled: #ffffff;
+            --nu-navy: #002366;
+            --nu-navy-hover: #001a4e;
+            --nu-navy-light: #0a358c;
+            --nu-navy-pale: #edf3fc;
 
-            --stat-border: #e2e8f0;
-            --shadow-card: 0 4px 14px rgba(0, 26, 78, 0.06);
-            --shadow-hover: 0 14px 30px -5px rgba(0, 26, 78, 0.12);
+            --nu-gold: #d97706;
+            --nu-gold-bg: #fef3c7;
+            --nu-gold-border: #fde68a;
 
-            --navy-950: #030d24;
-            --navy-900: #001a4e;
-            --navy-800: #002366;
-            --navy-700: #0d388c;
-            --navy-600: #1d4ed8;
-            --navy-50: #f0f4fd;
+            --status-green-bg: #ecfdf5;
+            --status-green-text: #059669;
+            --status-green-border: #a7f3d0;
 
-            --gold-500: #f59e0b;
-            --gold-400: #fbbf24;
-            --gold-300: #fcd34d;
+            --status-blue-bg: #eff6ff;
+            --status-blue-text: #2563eb;
+            --status-blue-border: #bfdbfe;
 
-            --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            --font-heading: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
 
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
-            --radius-full: 9999px;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
         }
 
         [data-theme="dark"] {
-            --bg-page: #040c1e;
-            --bg-surface: #081636;
-            --bg-surface-elevated: #0c1f4c;
-            --bg-subtle: #0a1b42;
-            --bg-card-header: #06112a;
-            --border-subtle: rgba(255, 255, 255, 0.08);
-            --border-card: rgba(30, 79, 216, 0.25);
-            --border-hover: rgba(245, 158, 11, 0.5);
+            --bg-page: #0b1329;
+            --bg-card: #111c38;
+            --bg-subtle: #172445;
+            --border: #1e2c4f;
+            --border-subtle: #192747;
 
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
+            --text-main: #f8fafc;
+            --text-mid: #cbd5e1;
+            --text-muted: #94a3b8;
+            --text-faint: #64748b;
 
-            --nav-bg: rgba(4, 12, 30, 0.95);
-            --nav-border: rgba(255, 255, 255, 0.08);
-            --nav-scrolled: #06122d;
+            --nu-navy: #1d4ed8;
+            --nu-navy-hover: #2563eb;
+            --nu-navy-light: #3b82f6;
+            --nu-navy-pale: rgba(29, 78, 216, 0.15);
 
-            --stat-border: rgba(255, 255, 255, 0.08);
-            --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.4);
-            --shadow-hover: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 25px rgba(30, 79, 216, 0.2);
+            --nu-gold: #f59e0b;
+            --nu-gold-bg: rgba(245, 158, 11, 0.12);
+            --nu-gold-border: rgba(245, 158, 11, 0.25);
 
-            --navy-50: rgba(13, 56, 140, 0.3);
-            --navy-950: #f8fafc;
-        }
+            --status-green-bg: rgba(16, 185, 129, 0.12);
+            --status-green-text: #34d399;
+            --status-green-border: rgba(16, 185, 129, 0.25);
 
-        /* ── Reset & Core ── */
-        *, *::before, *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            --status-blue-bg: rgba(59, 130, 246, 0.12);
+            --status-blue-text: #60a5fa;
+            --status-blue-border: rgba(59, 130, 246, 0.25);
+
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.35);
         }
 
         html {
             scroll-behavior: smooth;
-            font-size: 16px;
-            -webkit-text-size-adjust: 100%;
+        }
+
+        /* ── Reset ── */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            font-family: var(--font-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-page);
-            color: var(--text-primary);
+            color: var(--text-main);
             line-height: 1.6;
-            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeLegibility;
-            transition: background-color 0.25s ease, color 0.25s ease;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        /* ── Sleek Instant Top Progress Bar (YouTube-style feedback) ── */
+        [data-theme="dark"] body {
+            background-color: #040c1e;
+        }
+
+        /* ── Ambient Yellow & Blue Background (Hardware-Accelerated, Zero-Lag) ── */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+            transform: translate3d(0, 0, 0);
+            -webkit-transform: translate3d(0, 0, 0);
+            contain: strict;
+            will-change: transform;
+            background-image:
+                radial-gradient(circle 520px at 6% 6%, rgba(0, 35, 102, 0.20) 0%, rgba(29, 78, 216, 0.08) 45%, transparent 75%),
+                radial-gradient(circle 480px at 94% 8%, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.10) 45%, transparent 75%),
+                radial-gradient(circle 460px at 94% 50%, rgba(29, 78, 216, 0.16) 0%, rgba(0, 35, 102, 0.06) 45%, transparent 75%),
+                radial-gradient(circle 440px at 6% 56%, rgba(245, 158, 11, 0.20) 0%, rgba(251, 191, 36, 0.08) 45%, transparent 75%),
+                radial-gradient(circle 500px at 15% 94%, rgba(0, 35, 102, 0.18) 0%, rgba(29, 78, 216, 0.08) 45%, transparent 75%),
+                radial-gradient(circle 460px at 88% 92%, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.08) 45%, transparent 75%);
+        }
+
+        [data-theme="dark"] .ambient-bg {
+            background-color: #040c1e;
+            background-image:
+                radial-gradient(circle 520px at 6% 6%, rgba(29, 78, 216, 0.35) 0%, rgba(13, 56, 140, 0.18) 45%, transparent 75%),
+                radial-gradient(circle 480px at 94% 8%, rgba(245, 158, 11, 0.28) 0%, rgba(217, 119, 6, 0.12) 45%, transparent 75%),
+                radial-gradient(circle 460px at 94% 50%, rgba(37, 99, 235, 0.28) 0%, rgba(29, 78, 216, 0.12) 45%, transparent 75%),
+                radial-gradient(circle 440px at 6% 56%, rgba(245, 158, 11, 0.24) 0%, rgba(251, 191, 36, 0.10) 45%, transparent 75%),
+                radial-gradient(circle 500px at 15% 94%, rgba(29, 78, 216, 0.30) 0%, transparent 75%),
+                radial-gradient(circle 460px at 88% 92%, rgba(245, 158, 11, 0.26) 0%, rgba(217, 119, 6, 0.10) 45%, transparent 75%);
+        }
+
+        /* Page Stacking */
+        .site-header,
+        main,
+        .site-footer {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Page Loading Indicator */
         #np-page-progress {
             position: fixed;
             top: 0;
             left: 0;
             height: 3px;
             width: 0%;
-            background: linear-gradient(90deg, #002366 0%, #3b82f6 50%, #f59e0b 100%);
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
-            z-index: 9999999;
+            background: linear-gradient(90deg, #002366 0%, #1d4ed8 50%, #f59e0b 100%);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+            z-index: 99999;
             pointer-events: none;
-            transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+            transition: width 0.2s ease, opacity 0.2s ease;
             opacity: 0;
         }
 
-        /* Ambient Gradients */
-        .ambient-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        .ambient-glow {
-            position: absolute;
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translateZ(0);
-        }
-
-        .glow-top {
-            top: -120px;
-            right: -100px;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(29, 78, 216, 0.14) 0%, rgba(245, 158, 11, 0.06) 50%, transparent 70%);
-        }
-
-        .glow-bottom {
-            top: 600px;
-            left: -150px;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(13, 56, 140, 0.12) 0%, transparent 70%);
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: var(--font-heading);
-            color: var(--text-primary);
-            letter-spacing: -0.02em;
-            font-weight: 700;
-        }
-
-        .gradient-text {
-            background: linear-gradient(135deg, #3b82f6 0%, var(--gold-400) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* ── Navbar ── */
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: var(--nav-bg);
-            border-bottom: 1px solid var(--nav-border);
-            z-index: 1000;
-            transition: background-color 0.25s ease, box-shadow 0.25s ease;
-            transform: translateZ(0);
-        }
-
-        .navbar.scrolled {
-            background: var(--nav-scrolled);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-        }
-
-        .nav-container {
-            max-width: 1240px;
+        /* Container */
+        .container {
+            max-width: 1140px;
             margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 24px;
+            padding: 0 24px;
         }
 
-        .nav-brand {
+        /* ── Header & Navigation ── */
+        .site-header {
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        [data-theme="dark"] .site-header {
+            background-color: rgba(4, 12, 30, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .header-inner {
             display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
+        }
+
+        .brand-link {
+            display: inline-flex;
             align-items: center;
             text-decoration: none;
         }
 
-        .nav-brand img {
-            height: 44px;
+        .brand-logo {
+            height: 38px;
             width: auto;
-            object-fit: contain;
             display: block;
         }
 
-        .nav-menu {
+        .nav-links {
             display: flex;
             align-items: center;
             gap: 28px;
+            list-style: none;
         }
 
         .nav-link {
             text-decoration: none;
-            color: var(--text-secondary);
-            font-size: 0.925rem;
+            color: var(--text-muted);
+            font-size: 14px;
             font-weight: 500;
             transition: color 0.15s ease;
         }
 
         .nav-link:hover {
-            color: var(--gold-400);
+            color: var(--nu-navy);
         }
 
-        .nav-actions {
+        .nav-right {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .theme-toggle-btn {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-subtle);
-            color: var(--text-primary);
-            display: flex;
+        .theme-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
+            color: var(--text-muted);
             cursor: pointer;
-            transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+            transition: all 0.15s ease;
         }
 
-        .theme-toggle-btn:hover {
-            background: var(--bg-surface-elevated);
-            border-color: var(--gold-500);
-            transform: rotate(15deg);
+        .theme-btn:hover {
+            color: var(--text-main);
+            background-color: var(--bg-subtle);
         }
 
-        .sun-icon { display: none; color: var(--gold-400); }
-        .moon-icon { display: block; color: var(--navy-800); }
+        .theme-btn .sun-icon { display: none; }
+        .theme-btn .moon-icon { display: block; }
+        [data-theme="dark"] .theme-btn .sun-icon { display: block; }
+        [data-theme="dark"] .theme-btn .moon-icon { display: none; }
 
-        [data-theme="dark"] .sun-icon { display: block; }
-        [data-theme="dark"] .moon-icon { display: none; }
-
-        /* ── Buttons ── */
+        /* Buttons */
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            font-family: var(--font-main);
+            padding: 9px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
             font-weight: 600;
             text-decoration: none;
-            border-radius: var(--radius-full);
+            transition: all 0.15s ease;
             cursor: pointer;
-            border: none;
-            outline: none;
-            transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
-            will-change: transform;
+            border: 1px solid transparent;
+            white-space: nowrap;
         }
 
-        .btn-sm { padding: 8px 18px; font-size: 0.875rem; }
-        .btn-lg { padding: 13px 28px; font-size: 1rem; }
-
-        .btn-navy {
-            background: var(--navy-800);
+        .btn-primary {
+            background-color: #002366;
             color: #ffffff;
-            box-shadow: 0 4px 12px rgba(0, 35, 102, 0.2);
+            border-color: #002366;
         }
 
-        [data-theme="dark"] .btn-navy {
-            background: #1d4ed8;
+        .btn-primary:hover {
+            background-color: #001a4e;
+            border-color: #001a4e;
             color: #ffffff;
         }
 
-        .btn-navy:hover {
-            background: #1e40af;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(30, 64, 175, 0.35);
-            color: #ffffff;
+        [data-theme="dark"] .btn-primary {
+            background-color: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+
+        [data-theme="dark"] .btn-primary:hover {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: var(--text-main);
+            border-color: var(--border);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--bg-subtle);
+            border-color: var(--border);
         }
 
         .btn-gold {
-            background: var(--gold-500);
-            color: #030d24;
-            font-weight: 700;
-            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+            background-color: #d97706;
+            color: #ffffff;
+            border-color: #d97706;
         }
 
         .btn-gold:hover {
-            background: var(--gold-400);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
-            color: #030d24;
+            background-color: #b45309;
+            border-color: #b45309;
         }
 
-        .btn-subtle {
-            background: var(--bg-surface);
-            color: var(--text-primary);
-            border: 1px solid var(--border-card);
-        }
-
-        .btn-subtle:hover {
-            background: var(--bg-subtle);
-            border-color: var(--gold-400);
-            transform: translateY(-2px);
+        .btn-lg {
+            padding: 12px 22px;
+            font-size: 14.5px;
         }
 
         /* ── Hero Section ── */
-        .hero {
-            padding: 130px 24px 70px;
-            position: relative;
+        .hero-section {
+            padding: 72px 0 60px;
+            border-bottom: 1px solid var(--border);
+            background-color: transparent;
         }
 
-        .hero-container {
-            max-width: 1240px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1.05fr 0.95fr;
-            gap: 56px;
-            align-items: center;
+        [data-theme="dark"] .hero-section {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        .badge-live {
+        .hero-content {
+            max-width: 820px;
+        }
+
+        .institution-badge {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            padding: 5px 14px;
-            border-radius: var(--radius-full);
-            font-size: 0.8rem;
+            background-color: var(--nu-navy-pale);
+            color: var(--nu-navy);
+            border: 1px solid rgba(0, 35, 102, 0.12);
+            padding: 5px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
             font-weight: 600;
-            color: var(--text-primary);
-            box-shadow: var(--shadow-card);
             margin-bottom: 20px;
         }
 
-        .pulse-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #10b981;
+        [data-theme="dark"] .institution-badge {
+            color: #93c5fd;
+            border-color: rgba(147, 197, 253, 0.2);
         }
 
         .hero-title {
-            font-size: clamp(2.4rem, 4vw, 3.8rem);
-            line-height: 1.12;
-            margin-bottom: 18px;
-            letter-spacing: -0.03em;
-        }
-
-        .hero-lead {
-            font-size: clamp(1rem, 1.2vw, 1.15rem);
-            color: var(--text-secondary);
-            line-height: 1.65;
-            margin-bottom: 32px;
-            max-width: 540px;
-        }
-
-        .hero-cta-group {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            flex-wrap: wrap;
-            margin-bottom: 36px;
-        }
-
-        .trust-pills {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding-top: 14px;
-            border-top: 1px solid var(--border-card);
-            flex-wrap: wrap;
-        }
-
-        .trust-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.825rem;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-
-        .trust-check {
-            color: #10b981;
+            font-size: 40px;
             font-weight: 800;
-        }
-
-        /* ── Hero Right & Floating Showcase Window ── */
-        .hero-right {
-            position: relative;
-            padding: 30px 20px;
-            perspective: 1000px;
-        }
-
-        .demo-window {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-card);
-            overflow: hidden;
-            position: relative;
-            z-index: 2;
-            transition: box-shadow 0.3s ease, border-color 0.3s ease;
-        }
-
-        .demo-window:hover {
-            box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.35);
-            border-color: rgba(59, 130, 246, 0.35);
-        }
-
-        .demo-header {
-            background: var(--bg-card-header);
-            border-bottom: 1px solid var(--border-card);
-            padding: 12px 18px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .demo-dots {
-            display: flex;
-            gap: 6px;
-        }
-
-        .demo-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-        .demo-dot.red { background: #f87171; }
-        .demo-dot.yellow { background: #fbbf24; }
-        .demo-dot.green { background: #34d399; }
-
-        .demo-badge-interactive {
-            font-size: 0.725rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: var(--gold-400);
-            background: var(--navy-50);
-            padding: 3px 8px;
-            border-radius: 12px;
-        }
-
-        .demo-body {
-            padding: 20px;
-        }
-
-        .demo-tabs-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .demo-tabs-label .hint {
-            color: var(--gold-400);
-            text-transform: none;
-            font-weight: 600;
-        }
-
-        .demo-tabs {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
-            margin-bottom: 16px;
-            background: var(--bg-subtle);
-            padding: 4px;
-            border-radius: var(--radius-sm);
-        }
-
-        .demo-tab-btn {
-            border: none;
-            background: transparent;
-            padding: 7px;
-            font-family: var(--font-main);
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.15s, color 0.15s;
-        }
-
-        .demo-tab-btn.active {
-            background: var(--bg-surface-elevated);
-            color: var(--gold-400);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .demo-card-preview {
-            background: var(--bg-surface-elevated);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-md);
-            padding: 16px;
-            margin-bottom: 14px;
-        }
-
-        .preview-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 10px;
-        }
-
-        .preview-org {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .preview-avatar {
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
-            background: var(--navy-700);
-            color: #ffffff;
-            font-size: 0.775rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .preview-org-meta h5 {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .preview-org-meta p {
-            font-size: 0.725rem;
-            color: var(--text-muted);
-        }
-
-        .status-chip {
-            display: inline-flex;
-            align-items: center;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.725rem;
-            font-weight: 700;
-        }
-
-        .chip-approved { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
-        .chip-review { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-        .chip-scheduled { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-
-        .preview-caption-box {
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-card);
-            border-radius: 8px;
-            padding: 10px;
-            position: relative;
-            margin-bottom: 12px;
-            min-height: 60px;
-        }
-
-        .preview-caption-box .ai-tag {
-            position: absolute;
-            top: -8px;
-            right: 10px;
-            background: #1e3a8a;
-            color: var(--gold-300);
-            font-size: 0.65rem;
-            font-weight: 700;
-            padding: 1px 6px;
-            border-radius: 8px;
-        }
-
-        .demo-caption-text {
-            font-size: 0.8rem;
-            color: var(--text-primary);
-            line-height: 1.45;
-            transition: opacity 0.15s ease;
-        }
-
-        .preview-bottom-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.725rem;
-        }
-
-        .preview-platforms {
-            display: flex;
-            gap: 6px;
-        }
-
-        .platform-pill {
-            background: var(--bg-card-header);
-            border: 1px solid var(--border-subtle);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-
-        .preview-media-badge {
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .demo-interactive-action {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--bg-card-header);
-            padding: 8px 12px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border-card);
-        }
-
-        .demo-interactive-action span {
-            font-size: 0.775rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .btn-sparkle {
-            background: var(--navy-800);
-            color: #ffffff;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 0.15s ease, background 0.15s ease;
-        }
-
-        [data-theme="dark"] .btn-sparkle {
-            background: #1d4ed8;
-        }
-
-        .btn-sparkle:hover, .btn-sparkle-active {
-            background: var(--gold-500) !important;
-            color: #030d24 !important;
-            transform: scale(1.03);
-        }
-
-        /* ── Modern Minimal Badges ── */
-        .float-tag {
-            position: absolute;
-            background: var(--bg-surface);
-            border-radius: var(--radius-md);
-            padding: 8px 14px;
-            box-shadow: var(--shadow-card);
-            border: 1px solid var(--border-card);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            z-index: 4;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            transition: border-color 0.2s ease, transform 0.2s ease;
-        }
-
-        .float-tag:hover {
-            transform: translateY(-2px);
-            border-color: rgba(59, 130, 246, 0.4);
-        }
-
-        .float-tag-1 {
-            top: 6px;
-            right: -10px;
-        }
-
-        .float-tag-2 {
-            bottom: 6px;
-            left: -10px;
-        }
-
-        .float-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-        }
-
-        .float-meta h6 {
-            font-size: 0.775rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .float-meta p {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-        }
-
-        /* ── Stats Section ── */
-        .stats-section {
-            padding: 20px 24px;
-            margin-bottom: 40px;
-        }
-
-        .stats-card-wrapper {
-            max-width: 1100px;
-            margin: 0 auto;
-            background: var(--bg-surface);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-lg);
-            padding: 28px 32px;
-            box-shadow: var(--shadow-card);
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-        }
-
-        .stat-box {
-            text-align: center;
-            position: relative;
-        }
-
-        .stat-box:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            top: 15%;
-            right: 0;
-            height: 70%;
-            width: 1px;
-            background: var(--stat-border);
-        }
-
-        .stat-value {
-            font-family: var(--font-heading);
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            line-height: 1;
-            margin-bottom: 4px;
-        }
-
-        .stat-value span {
-            color: var(--gold-400);
-        }
-
-        .stat-name {
-            font-size: 0.825rem;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-
-        /* ── Bento Grid Section ── */
-        .features-section {
-            padding: 60px 24px;
-        }
-
-        .section-head {
-            text-align: center;
-            max-width: 640px;
-            margin: 0 auto 44px;
-        }
-
-        .section-tag {
-            display: inline-block;
-            background: var(--navy-50);
-            color: var(--gold-400);
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            padding: 4px 12px;
-            border-radius: var(--radius-full);
-            margin-bottom: 12px;
-            border: 1px solid var(--border-subtle);
-        }
-
-        .section-headline {
-            font-size: clamp(1.8rem, 3vw, 2.6rem);
             line-height: 1.2;
-            margin-bottom: 12px;
+            color: var(--text-main);
+            letter-spacing: -0.6px;
+            margin-bottom: 18px;
         }
 
-        .section-desc {
-            font-size: 0.975rem;
-            color: var(--text-secondary);
-        }
-
-        .bento-grid {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 20px;
-            max-width: 1140px;
-            margin: 0 auto;
-        }
-
-        .bento-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-lg);
-            padding: 30px 26px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
-            box-shadow: var(--shadow-card);
-        }
-
-        .bento-card:hover {
-            transform: translateY(-6px);
-            border-color: var(--gold-400);
-            box-shadow: var(--shadow-hover);
-        }
-
-        .bento-col-8 { grid-column: span 8; }
-        .bento-col-4 { grid-column: span 4; }
-
-        .bento-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            margin-bottom: 16px;
-        }
-
-        .bento-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .bento-text {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.55;
-            margin-bottom: 20px;
-        }
-
-        .bento-visual-ai {
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-md);
-            padding: 14px;
-        }
-
-        .ai-prompt-chip {
-            display: inline-block;
-            background: var(--bg-card-header);
-            border: 1px solid var(--border-subtle);
-            font-size: 0.725rem;
-            font-weight: 600;
-            padding: 2px 7px;
-            border-radius: 4px;
-            margin-bottom: 6px;
-            color: var(--gold-400);
-        }
-
-        .ai-output-stream {
-            font-size: 0.8rem;
-            color: var(--text-primary);
-            line-height: 1.45;
-        }
-
-        .ai-output-stream .cursor {
-            display: inline-block;
-            width: 4px;
-            height: 12px;
-            background: var(--gold-500);
-            margin-left: 2px;
-            vertical-align: middle;
-        }
-
-        .bento-visual-timeline {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: relative;
-            padding: 10px 0;
-        }
-
-        .bento-visual-timeline::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 8px;
-            right: 8px;
-            height: 2px;
-            background: var(--border-card);
-            z-index: 1;
-        }
-
-        .timeline-step-dot {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: var(--bg-surface);
-            border: 2px solid var(--border-card);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            font-weight: 700;
+        .hero-desc {
+            font-size: 16.5px;
             color: var(--text-muted);
-            position: relative;
-            z-index: 2;
+            line-height: 1.65;
+            margin-bottom: 30px;
+            max-width: 700px;
         }
 
-        .timeline-step-dot.done {
-            background: #10b981;
-            border-color: #10b981;
-            color: #ffffff;
-        }
-
-        .timeline-step-dot.active {
-            background: var(--gold-500);
-            border-color: var(--gold-500);
-            color: #030d24;
-        }
-
-        .bento-visual-chat {
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-md);
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .chat-bubble-mini {
-            padding: 6px 10px;
-            border-radius: 10px;
-            font-size: 0.725rem;
-            max-width: 90%;
-            line-height: 1.35;
-        }
-
-        .chat-bubble-mini.admin {
-            background: #1d4ed8;
-            color: #ffffff;
-            align-self: flex-start;
-        }
-
-        .chat-bubble-mini.user {
-            background: var(--bg-surface-elevated);
-            color: var(--text-primary);
-            align-self: flex-end;
-            border: 1px solid var(--border-card);
-        }
-
-        .bento-calendar-preview {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-        }
-
-        .cal-mini-day {
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-sm);
-            padding: 10px;
-            text-align: center;
-        }
-
-        .cal-mini-day.active {
-            background: var(--bg-surface-elevated);
-            border-color: var(--gold-500);
-        }
-
-        .day-num {
-            display: block;
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: var(--text-primary);
-        }
-
-        .day-dot {
-            display: inline-block;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            margin: 2px 0 4px;
-        }
-
-        .bg-amber { background: var(--gold-500); }
-        .bg-blue { background: #3b82f6; }
-        .bg-green { background: #10b981; }
-
-        .day-label {
-            display: block;
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* ── 3-Step Process ── */
-        .process-section {
-            padding: 70px 24px;
-        }
-
-        .steps-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        .step-card-modern {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-lg);
-            padding: 32px 26px;
-            box-shadow: var(--shadow-card);
-            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
-        }
-
-        .step-card-modern:hover {
-            transform: translateY(-6px);
-            border-color: var(--gold-400);
-        }
-
-        .step-number-badge {
-            font-family: var(--font-heading);
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--gold-400);
-            line-height: 1;
-            margin-bottom: 16px;
+        .hero-actions {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 34px;
+            flex-wrap: wrap;
         }
 
-        .step-number-badge svg {
-            color: var(--text-secondary);
-            opacity: 0.4;
-        }
-
-        .step-card-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .step-card-text {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            line-height: 1.55;
-        }
-
-        /* ── FAQ Section ── */
-        .faq-section {
-            padding: 70px 24px;
-            max-width: 820px;
-            margin: 0 auto;
-        }
-
-        .faq-list {
+        .hero-features-list {
             display: flex;
             flex-direction: column;
             gap: 12px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            max-width: 700px;
+        }
+
+        .feature-check-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13.5px;
+            color: var(--text-mid);
+        }
+
+        .feature-check-icon {
+            color: #059669;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        /* ── Steps / Process Section ── */
+        .section-block {
+            padding: 64px 0;
+            background-color: transparent;
+        }
+
+        .section-alt {
+            background-color: rgba(255, 255, 255, 0.65);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        [data-theme="dark"] .section-alt {
+            background-color: rgba(17, 28, 56, 0.60);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .section-header {
+            margin-bottom: 40px;
+        }
+
+        .section-tag {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--nu-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+
+        .section-title {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.4px;
+            margin-bottom: 8px;
+        }
+
+        .section-lead {
+            font-size: 14.5px;
+            color: var(--text-muted);
+            max-width: 600px;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .step-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: rgba(217, 119, 6, 0.35);
+        }
+
+        [data-theme="dark"] .step-card {
+            background-color: var(--bg-card);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        [data-theme="dark"] .step-card:hover {
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        .step-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background-color: var(--nu-navy-pale);
+            color: var(--nu-navy);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .step-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .step-desc {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        /* ── Categories Grid ── */
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+        }
+
+        .category-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .category-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: rgba(0, 35, 102, 0.3);
+        }
+
+        [data-theme="dark"] .category-card {
+            background-color: var(--bg-card);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        [data-theme="dark"] .category-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+
+        .category-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .category-card p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* ── Guidelines Section ── */
+        .guidelines-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        [data-theme="dark"] .guidelines-card {
+            background-color: var(--bg-card);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .guidelines-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+        }
+
+        .guideline-col h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .guideline-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .guideline-list li {
+            font-size: 13.5px;
+            color: var(--text-mid);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            line-height: 1.5;
+        }
+
+        .bullet-dot {
+            color: var(--nu-navy);
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        /* ── FAQ Section ── */
+        .faq-accordion {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .faq-accordion {
+            background-color: var(--bg-card);
+            border-color: rgba(255, 255, 255, 0.08);
         }
 
         .faq-item {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-card);
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            transition: border-color 0.15s ease;
+            border-bottom: 1px solid var(--border);
         }
 
-        .faq-item.open {
-            border-color: var(--gold-400);
+        .faq-item:last-child {
+            border-bottom: none;
         }
 
         .faq-question {
+            width: 100%;
             padding: 18px 22px;
+            background: none;
+            border: none;
+            text-align: left;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
             cursor: pointer;
-            font-size: 0.975rem;
-            font-weight: 700;
-            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .faq-question:hover {
+            background-color: var(--bg-subtle);
         }
 
         .faq-chevron {
             width: 18px;
             height: 18px;
-            color: var(--gold-400);
+            color: var(--text-muted);
             transition: transform 0.2s ease;
-            flex-shrink: 0;
         }
 
         .faq-item.open .faq-chevron {
@@ -1132,1157 +665,505 @@
         }
 
         .faq-answer {
-            display: none;
             padding: 0 22px 18px;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 13.5px;
+            color: var(--text-muted);
             line-height: 1.6;
+            display: none;
         }
 
         .faq-item.open .faq-answer {
             display: block;
         }
 
-        /* ── CTA Banner ── */
-        .cta-wrapper {
-            padding: 40px 24px 80px;
-        }
-
-        .cta-box {
-            max-width: 1100px;
-            margin: 0 auto;
-            background: linear-gradient(135deg, #020917 0%, #071536 60%, #0d2a6b 100%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-xl);
-            padding: 60px 32px;
-            text-align: center;
-            box-shadow: var(--shadow-card);
-        }
-
-        .cta-box h2 {
-            font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+        /* ── Call to Action Banner ── */
+        .cta-banner {
+            background: linear-gradient(135deg, #002366 0%, #0a358c 60%, #001a4e 100%);
             color: #ffffff;
-            margin-bottom: 14px;
+            border-radius: var(--radius-lg);
+            padding: 44px 36px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 32px;
+            box-shadow: 0 10px 30px rgba(0, 35, 102, 0.25);
+            margin: 40px 0 60px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
-        .cta-box p {
-            font-size: 1.05rem;
-            color: rgba(255, 255, 255, 0.75);
-            max-width: 560px;
-            margin: 0 auto 30px;
+        [data-theme="dark"] .cta-banner {
+            background: linear-gradient(135deg, #091a42 0%, #0f2b6b 60%, #040c1e 100%);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .cta-text h3 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .cta-text p {
+            font-size: 14.5px;
+            color: rgba(255, 255, 255, 0.85);
+            max-width: 520px;
         }
 
         .cta-actions {
             display: flex;
-            justify-content: center;
-            gap: 14px;
-            flex-wrap: wrap;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .btn-white {
+            background-color: #ffffff;
+            color: #002366;
+            border-color: #ffffff;
+        }
+
+        .btn-white:hover {
+            background-color: #f1f5f9;
+            color: #001a4e;
         }
 
         /* ── Footer ── */
-        .footer-modern {
-            background: #020817;
-            color: rgba(255, 255, 255, 0.6);
-            padding: 56px 24px 28px;
+        .site-footer {
+            background-color: rgba(255, 255, 255, 0.90);
+            border-top: 1px solid var(--border);
+            padding: 40px 0 30px;
+        }
+
+        [data-theme="dark"] .site-footer {
+            background-color: rgba(4, 12, 30, 0.90);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        .footer-top {
-            max-width: 1100px;
-            margin: 0 auto;
+        .footer-grid {
             display: flex;
             justify-content: space-between;
-            gap: 40px;
+            align-items: flex-start;
             flex-wrap: wrap;
-            margin-bottom: 40px;
+            gap: 28px;
+            margin-bottom: 30px;
         }
 
-        .footer-brand-block {
-            max-width: 340px;
+        .footer-brand {
+            max-width: 380px;
         }
 
-        .footer-logo-wrap img {
-            height: 44px;
+        .footer-logo {
+            height: 34px;
             width: auto;
-            filter: brightness(1.2);
             margin-bottom: 12px;
         }
 
-        .footer-tagline {
-            font-size: 0.875rem;
+        .footer-desc {
+            font-size: 13px;
+            color: var(--text-muted);
             line-height: 1.55;
         }
 
-        .footer-nav-groups {
+        .footer-nav {
             display: flex;
-            gap: 48px;
-            flex-wrap: wrap;
+            gap: 40px;
         }
 
-        .footer-group h4 {
-            font-size: 0.8rem;
+        .footer-col h5 {
+            font-size: 13px;
             font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 12px;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #ffffff;
-            margin-bottom: 14px;
+            letter-spacing: 0.5px;
         }
 
-        .footer-group ul {
+        .footer-col ul {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
-        .footer-group a {
-            color: rgba(255, 255, 255, 0.65);
+        .footer-col a {
+            font-size: 13px;
+            color: var(--text-muted);
             text-decoration: none;
-            font-size: 0.875rem;
             transition: color 0.15s ease;
         }
 
-        .footer-group a:hover {
-            color: var(--gold-400);
+        .footer-col a:hover {
+            color: var(--nu-navy);
         }
 
         .footer-bottom {
-            max-width: 1100px;
-            margin: 0 auto;
             padding-top: 24px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.775rem;
+            font-size: 12px;
+            color: var(--text-faint);
             flex-wrap: wrap;
             gap: 12px;
         }
 
-        /* ── Comprehensive Responsive System (Phones & Tablets) ── */
-        @media (max-width: 1200px) {
-            .hero-container {
-                gap: 40px;
-            }
-            .float-tag-1 {
-                right: -6px;
-                top: -8px;
-            }
-            .float-tag-2 {
-                left: -6px;
-                bottom: -8px;
-            }
-        }
-
-        /* ── Tablets (Landscape & Portrait: 641px - 1024px) ── */
-        @media (max-width: 1024px) {
-            .nav-menu {
-                gap: 16px;
-            }
-            .nav-link {
-                font-size: 0.85rem;
-            }
-        }
-
-        @media (max-width: 992px) {
-            .nav-menu {
-                display: none;
-            }
-
-            .nav-container {
-                padding: 12px 20px;
-            }
-
-            .hero {
-                padding: 110px 20px 48px;
-            }
-
-            .hero-container {
-                grid-template-columns: 1fr;
-                text-align: center;
-                gap: 36px;
-            }
-
-            .hero-lead {
-                margin-left: auto;
-                margin-right: auto;
-                max-width: 560px;
-            }
-
-            .hero-cta-group, .trust-pills {
-                justify-content: center;
-            }
-
-            .hero-right {
-                max-width: 520px;
-                margin: 0 auto;
-                width: 100%;
-                padding: 18px 10px;
-            }
-
-            .float-tag {
-                transform: scale(0.88);
-            }
-            .float-tag-1 {
-                right: -2px;
-                top: -6px;
-            }
-            .float-tag-2 {
-                left: -2px;
-                bottom: -6px;
-            }
-
-            .stats-section {
-                padding: 10px 20px;
-            }
-
-            .stats-card-wrapper {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-                padding: 24px 20px;
-            }
-
-            .stat-box:nth-child(2)::after {
-                display: none;
-            }
-
-            .features-section, .process-section, .faq-section {
-                padding: 60px 20px;
-            }
-
-            .section-headline {
-                font-size: 2.1rem;
-            }
-
-            .bento-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-
-            .bento-col-8, .bento-col-4 {
-                grid-column: span 1;
-            }
-
-            .steps-container {
-                grid-template-columns: 1fr;
-                max-width: 480px;
-                margin: 0 auto;
-                gap: 18px;
-            }
-
-            .cta-wrapper {
-                padding: 40px 20px;
-            }
-
-            .cta-box {
-                padding: 44px 28px;
-                text-align: center;
-            }
-
-            .cta-box h2 {
-                font-size: 2.1rem;
-            }
-
-            .footer-modern {
-                padding: 48px 20px 28px;
-            }
-
-            .footer-top {
-                flex-direction: column;
-                gap: 32px;
-            }
-
-            .footer-nav-groups {
-                gap: 40px;
-            }
-        }
-
-        /* ── Mobile Phones (320px - 640px) ── */
-        @media (max-width: 640px) {
-            .nav-container {
-                padding: 10px 14px;
-            }
-
-            .nav-brand img {
-                height: 36px;
-            }
-
-            .nav-actions {
-                gap: 6px;
-            }
-
-            .theme-toggle-btn {
-                width: 34px;
-                height: 34px;
-            }
-
-            .btn-sm {
-                padding: 6px 12px;
-                font-size: 0.775rem;
-            }
-
-            .hero {
-                padding: 85px 16px 36px;
-            }
-
-            .badge-live {
-                font-size: 0.75rem;
-                padding: 4px 10px;
-                margin-bottom: 14px;
-            }
-
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
             .hero-title {
-                font-size: 2.1rem;
-                line-height: 1.15;
-                letter-spacing: -0.02em;
-                margin-bottom: 14px;
+                font-size: 32px;
             }
-
-            .hero-lead {
-                font-size: 0.925rem;
-                line-height: 1.55;
-                margin-bottom: 22px;
+            .steps-grid {
+                grid-template-columns: 1fr;
             }
-
-            .hero-cta-group {
+            .categories-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .guidelines-grid {
+                grid-template-columns: 1fr;
+            }
+            .cta-banner {
                 flex-direction: column;
-                width: 100%;
-                gap: 10px;
-                margin-bottom: 24px;
+                align-items: flex-start;
             }
-
-            .hero-cta-group .btn {
-                width: 100%;
-                justify-content: center;
-                padding: 12px 20px;
-                font-size: 0.95rem;
-            }
-
-            .trust-pills {
-                gap: 8px 12px;
-                justify-content: center;
-                font-size: 0.75rem;
-            }
-
-            .trust-item {
-                font-size: 0.75rem;
-            }
-
-            .hero-right {
-                padding: 10px 0;
-                max-width: 100%;
-            }
-
-            .float-tag {
+            .nav-links {
                 display: none;
             }
+        }
 
-            .demo-window {
-                border-radius: var(--radius-md);
+        @media (max-width: 600px) {
+            .categories-grid {
+                grid-template-columns: 1fr;
             }
-
-            .demo-body {
-                padding: 14px 12px;
-            }
-
-            .demo-tabs-label {
-                font-size: 0.7rem;
-                margin-bottom: 6px;
-            }
-
-            .demo-tabs {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 4px;
-                padding: 3px;
-                margin-bottom: 12px;
-            }
-
-            .demo-tab-btn {
-                padding: 6px 4px;
-                font-size: 0.725rem;
-            }
-
-            .demo-card-preview {
-                padding: 14px 12px;
-                border-radius: 12px;
-            }
-
-            .preview-avatar {
-                width: 32px;
-                height: 32px;
-                font-size: 0.75rem;
-            }
-
-            .preview-org-meta h5 {
-                font-size: 0.8rem;
-                line-height: 1.25;
-            }
-
-            .preview-org-meta p {
-                font-size: 0.675rem;
-            }
-
-            .status-chip {
-                font-size: 0.65rem;
-                padding: 2px 7px;
-            }
-
-            .preview-caption-box {
-                padding: 10px 12px;
-                font-size: 0.78rem;
-                line-height: 1.45;
-                margin: 10px 0;
-            }
-
-            .preview-bottom-bar {
-                gap: 6px;
-                flex-wrap: wrap;
-            }
-
-            .platform-pill {
-                font-size: 0.675rem;
-                padding: 2px 6px;
-            }
-
-            .preview-media-badge {
-                font-size: 0.675rem;
-            }
-
-            .demo-interactive-action {
+            .hero-actions {
                 flex-direction: column;
                 align-items: stretch;
-                gap: 8px;
-                text-align: center;
             }
-
-            .demo-interactive-action span {
-                font-size: 0.725rem;
-            }
-
-            .btn-sparkle {
-                width: 100%;
-                padding: 8px 12px;
-                font-size: 0.75rem;
-            }
-
-            .stats-section {
-                padding: 10px 14px;
-                margin-bottom: 24px;
-            }
-
-            .stats-card-wrapper {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 14px 10px;
-                padding: 18px 12px;
-                border-radius: var(--radius-md);
-            }
-
-            .stat-value {
-                font-size: 1.7rem;
-            }
-
-            .stat-name {
-                font-size: 0.725rem;
-            }
-
-            .stat-box::after {
-                display: none !important;
-            }
-
-            .features-section, .process-section, .faq-section {
-                padding: 45px 16px;
-            }
-
-            .section-tag {
-                font-size: 0.725rem;
-                padding: 3px 10px;
-            }
-
-            .section-headline {
-                font-size: 1.75rem;
-                line-height: 1.2;
-            }
-
-            .section-desc {
-                font-size: 0.9rem;
-            }
-
-            .bento-card {
-                padding: 20px 16px;
-                border-radius: var(--radius-md);
-            }
-
-            .bento-title {
-                font-size: 1.15rem;
-            }
-
-            .bento-text {
-                font-size: 0.85rem;
-                line-height: 1.5;
-            }
-
-            .bento-visual-ai {
-                padding: 12px;
-            }
-
-            .ai-prompt-chip {
-                font-size: 0.675rem;
-            }
-
-            .ai-output-stream {
-                font-size: 0.78rem;
-            }
-
-            .bento-calendar-preview {
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .step-card-modern {
-                padding: 22px 16px;
-                border-radius: var(--radius-md);
-            }
-
-            .step-card-title {
-                font-size: 1.15rem;
-            }
-
-            .step-card-text {
-                font-size: 0.85rem;
-            }
-
-            .faq-list {
-                gap: 10px;
-            }
-
-            .faq-question {
-                padding: 14px 16px;
-                font-size: 0.875rem;
-            }
-
-            .faq-answer {
-                padding: 0 16px 14px;
-                font-size: 0.825rem;
-            }
-
-            .cta-wrapper {
-                padding: 36px 16px;
-            }
-
-            .cta-box {
-                padding: 32px 18px;
-                border-radius: var(--radius-md);
-                text-align: center;
-            }
-
-            .cta-box h2 {
-                font-size: 1.65rem;
-                line-height: 1.25;
-            }
-
-            .cta-box p {
-                font-size: 0.9rem;
-                margin-bottom: 22px;
-            }
-
             .cta-actions {
                 flex-direction: column;
                 width: 100%;
-                gap: 10px;
             }
-
             .cta-actions .btn {
                 width: 100%;
-                padding: 12px 20px;
-                font-size: 0.95rem;
-                justify-content: center;
-            }
-
-            .footer-modern {
-                padding: 36px 16px 20px;
-            }
-
-            .footer-top {
-                flex-direction: column;
-                gap: 24px;
-            }
-
-            .footer-nav-groups {
-                flex-direction: column;
-                gap: 18px;
-            }
-
-            .footer-bottom {
-                flex-direction: column;
-                text-align: center;
-                gap: 8px;
-                font-size: 0.725rem;
-            }
-        }
-
-        /* ── Extra Small Phones (<= 380px) ── */
-        @media (max-width: 380px) {
-            .nav-actions .btn-subtle {
-                display: none;
-            }
-
-            .hero-title {
-                font-size: 1.85rem;
-            }
-
-            .stat-value {
-                font-size: 1.45rem;
             }
         }
     </style>
 </head>
 <body>
+
     <div id="np-page-progress"></div>
 
-    <div class="ambient-bg" aria-hidden="true">
-        <div class="ambient-glow glow-top"></div>
-        <div class="ambient-glow glow-bottom"></div>
-    </div>
+    <!-- ── Ambient Yellow & Blue Background (Light & Dark Mode) ── -->
+    <div class="ambient-bg" aria-hidden="true"></div>
 
-    <!-- ── NAVBAR ── -->
-    <header class="navbar" id="navbar">
-        <div class="nav-container">
-            <a href="/" class="nav-brand">
-                <img src="{{ asset('assets/nupostlogo.png') }}" alt="NUPost Logo" width="130" height="42">
+    <!-- ── Header ── -->
+    <header class="site-header">
+        <div class="container header-inner">
+            <a href="{{ route('landing') }}" class="brand-link">
+                <img src="{{ asset('assets/nupostlogo.png') }}" alt="NUPost Logo" class="brand-logo">
             </a>
-            
-            <nav class="nav-menu">
-                <a href="#features" class="nav-link">Features</a>
-                <a href="#how-it-works" class="nav-link">Process</a>
-                <a href="#demo" class="nav-link">Interactive Demo</a>
+
+            <nav class="nav-links">
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#categories" class="nav-link">Request Types</a>
+                <a href="#guidelines" class="nav-link">Guidelines</a>
                 <a href="#faq" class="nav-link">FAQ</a>
             </nav>
 
-            <div class="nav-actions">
-                <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle Theme" title="Toggle Dark/Light Mode">
-                    <svg class="sun-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"></circle>
-                        <line x1="12" y1="1" x2="12" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="23"></line>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                        <line x1="1" y1="12" x2="3" y2="12"></line>
-                        <line x1="21" y1="12" x2="23" y2="12"></line>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                    </svg>
-                    <svg class="moon-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                    </svg>
+            <div class="nav-right">
+                <button id="themeToggle" class="theme-btn" aria-label="Toggle Theme" title="Toggle theme">
+                    <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 </button>
 
-                <a href="{{ route('login') }}" class="btn btn-sm btn-subtle">Sign In</a>
-                <a href="{{ route('register') }}" class="btn btn-sm btn-gold">Get Started</a>
+                <a href="{{ route('login') }}" class="btn btn-outline">Sign In</a>
+                <a href="{{ route('register') }}" class="btn btn-primary">Create Account</a>
             </div>
         </div>
     </header>
 
     <main>
-        <!-- ── HERO SECTION ── -->
-        <section class="hero" id="hero">
-            <div class="hero-container">
-                
-                <div class="hero-left">
-                    <div class="badge-live">
-                        <span class="pulse-dot"></span>
-                        <span>Official NU Lipa Platform</span>
+        <!-- ── Hero Section ── -->
+        <section class="hero-section">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="institution-badge">
+                        <span>National University Lipa</span> &bull; <span>Marketing Office</span>
                     </div>
-                    
+
                     <h1 class="hero-title">
-                        Request. Track.<br>
-                        <span class="gradient-text">Post. NU Post.</span>
+                        Social Media Request & Content Portal
                     </h1>
-                    
-                    <p class="hero-lead">
-                        The all-in-one social media request platform built for NU Lipa departments and student organizations. From idea to approved publication in minutes.
+
+                    <p class="hero-desc">
+                        The official system for academic departments, student organizations, and faculty to submit pubmats, announcements, and event publications for National University Lipa social media channels.
                     </p>
-                    
-                    <div class="hero-cta-group">
-                        <a href="{{ route('login') }}" class="btn btn-lg btn-navy">
-                            <span>Submit a Request</span>
-                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+
+                    <div class="hero-actions">
+                        <a href="{{ route('login') }}" class="btn btn-lg btn-primary">
+                            <span>Submit a Post Request</span>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                         </a>
-                        <a href="#demo" class="btn btn-lg btn-subtle">
-                            <span>Try Live Simulator</span>
+                        <a href="{{ route('register') }}" class="btn btn-lg btn-outline">
+                            <span>Register Organization</span>
                         </a>
                     </div>
-                    
-                    <div class="trust-pills">
-                        <div class="trust-item">
-                            <span class="trust-check">✓</span>
-                            <span>AI Caption Generation</span>
-                        </div>
-                        <div class="trust-item">
-                            <span class="trust-check">✓</span>
-                            <span>Direct Admin Feedback</span>
-                        </div>
-                        <div class="trust-item">
-                            <span class="trust-check">✓</span>
-                            <span>Live Status Tracking</span>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Right Column: Interactive Simulator with Levitating Floating Badges -->
-                <div class="hero-right" id="demo">
-                    <!-- Floating Badge 1 -->
-                    <div class="float-tag float-tag-1">
-                        <div class="float-icon" style="background:rgba(34,197,94,0.15);color:#4ade80;">
-                            <svg width="18" height="18" fill="none" stroke="#22c55e" stroke-width="2.2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <div class="hero-features-list">
+                        <div class="feature-check-item">
+                            <span class="feature-check-icon">✓</span>
+                            <span>Standard 3 to 5 business day review and approval turnaround</span>
                         </div>
-                        <div class="float-meta">
-                            <h6>Rapid Review</h6>
-                            <p>Average &lt; 24h turnaround</p>
+                        <div class="feature-check-item">
+                            <span class="feature-check-icon">✓</span>
+                            <span>Direct editorial coordination and revision messaging with Marketing</span>
                         </div>
-                    </div>
-
-                    <!-- Simulator Window -->
-                    <div class="demo-window">
-                        <div class="demo-header">
-                            <div class="demo-dots">
-                                <span class="demo-dot red"></span>
-                                <span class="demo-dot yellow"></span>
-                                <span class="demo-dot green"></span>
-                            </div>
-                            <div class="demo-badge-interactive">
-                                <span>Live Preview</span>
-                            </div>
-                        </div>
-
-                        <div class="demo-body">
-                            <div class="demo-tabs-label">
-                                <span>Select Post Category</span>
-                                <span class="hint">Click to test live preview</span>
-                            </div>
-
-                            <div class="demo-tabs">
-                                <button class="demo-tab-btn active" data-type="event">Event</button>
-                                <button class="demo-tab-btn" data-type="sports">Sports</button>
-                                <button class="demo-tab-btn" data-type="org">Notice</button>
-                            </div>
-
-                            <!-- Live Card Preview -->
-                            <div class="demo-card-preview">
-                                <div class="preview-top">
-                                    <div class="preview-org">
-                                        <div class="preview-avatar" id="demoAvatar">NU</div>
-                                        <div class="preview-org-meta">
-                                            <h5 id="demoTitle">College of Computing — Tech Summit 2026</h5>
-                                            <p id="demoOrg">Target Date: May 24, 2026 • 2:00 PM</p>
-                                        </div>
-                                    </div>
-                                    <span class="status-chip chip-approved" id="demoStatus">Approved</span>
-                                </div>
-
-                                <div class="preview-caption-box">
-                                    <span class="ai-tag"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:3px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Gemini AI</span>
-                                    <p id="demoCaption" class="demo-caption-text">
-                                        "Gear up for innovation! Join us at the NU Lipa Tech Summit 2026. Explore hands-on AI workshops and keynote talks from industry leaders. #NULipa #TechSummit2026 #NationalUniversity"
-                                    </p>
-                                </div>
-
-                                <div class="preview-bottom-bar">
-                                    <div class="preview-platforms">
-                                        <span class="platform-pill">Facebook</span>
-                                        <span class="platform-pill">Instagram</span>
-                                    </div>
-                                    <div class="preview-media-badge">
-                                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> 3 Assets Attached
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="demo-interactive-action">
-                                <span id="demoActionHint">Need captions? Let AI assist:</span>
-                                <button type="button" class="btn-sparkle" id="btnGenCaption">
-                                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align:-1px;margin-right:5px;"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Regenerate AI Caption
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Floating Badge 2 -->
-                    <div class="float-tag float-tag-2">
-                        <div class="float-icon" style="background:rgba(59,130,246,0.15);color:#60a5fa;">
-                            <svg width="18" height="18" fill="none" stroke="#3b82f6" stroke-width="2.2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        </div>
-                        <div class="float-meta">
-                            <h6>Verified NU Accounts</h6>
-                            <p>Role-based access control</p>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- ── STATS SECTION ── -->
-        <section class="stats-section">
-            <div class="stats-card-wrapper">
-                <div class="stat-box">
-                    <div class="stat-value">100<span>%</span></div>
-                    <div class="stat-name">Paperless Requests</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-value">< <span>24h</span></div>
-                    <div class="stat-name">Fast Turnaround</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-value">3<span>+</span></div>
-                    <div class="stat-name">Channels Published</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-value">24<span>/7</span></div>
-                    <div class="stat-name">Real-Time Tracking</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ── BENTO FEATURES SECTION ── -->
-        <section class="features-section" id="features">
-            <div class="section-head">
-                <div class="section-tag">Powerful Features</div>
-                <h2 class="section-headline">Everything needed to streamline campus communication</h2>
-                <p class="section-desc">Designed specifically for the NU Lipa Marketing Office, academic departments, and institutional offices.</p>
-            </div>
-
-            <div class="bento-grid">
-                <div class="bento-card bento-col-8">
-                    <div>
-                        <div class="bento-icon" style="background:rgba(245,158,11,0.15);color:#fbbf24;">
-                            <svg width="22" height="22" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                        </div>
-                        <h3 class="bento-title">AI-Powered Social Media Captioning</h3>
-                        <p class="bento-text">Stuck on what to write? Our integrated Gemini AI crafts tailored, engaging captions with relevant hashtags and event highlights in seconds.</p>
-                    </div>
-                    <div class="bento-visual-ai">
-                        <span class="ai-prompt-chip">Prompt: Campus Intramurals 2026 Announcement</span>
-                        <div class="ai-output-stream">
-                            "Unleash the Bulldog spirit! Are you ready to champion your college? Intramurals 2026 kickstarts this Monday at the Main Gymnasium. Be there, be proud!"<span class="cursor"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bento-card bento-col-4">
-                    <div>
-                        <div class="bento-icon" style="background:rgba(59,130,246,0.15);color:#60a5fa;">
-                            <svg width="22" height="22" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                        </div>
-                        <h3 class="bento-title">Live Tracking</h3>
-                        <p class="bento-text">Know exactly when your post is queued, in review, or published.</p>
-                    </div>
-                    <div class="bento-visual-timeline">
-                        <div class="timeline-step-dot done" title="Submitted">✓</div>
-                        <div class="timeline-step-dot done" title="Review">✓</div>
-                        <div class="timeline-step-dot active" title="Approved">●</div>
-                        <div class="timeline-step-dot" title="Posted">4</div>
-                    </div>
-                </div>
-
-                <div class="bento-card bento-col-4">
-                    <div>
-                        <div class="bento-icon" style="background:rgba(168,85,247,0.15);color:#c084fc;">
-                            <svg width="22" height="22" fill="none" stroke="#a855f7" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        </div>
-                        <h3 class="bento-title">Admin Feedback</h3>
-                        <p class="bento-text">Direct 1-on-1 comments per request for fast revisions and creative approval.</p>
-                    </div>
-                    <div class="bento-visual-chat">
-                        <div class="chat-bubble-mini admin">"Please upload the high-res poster format!"</div>
-                        <div class="chat-bubble-mini user">"Done! Attached the 4K PNG file."</div>
-                    </div>
-                </div>
-
-                <div class="bento-card bento-col-8">
-                    <div>
-                        <div class="bento-icon" style="background:rgba(34,197,94,0.15);color:#4ade80;">
-                            <svg width="22" height="22" fill="none" stroke="#22c55e" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        </div>
-                        <h3 class="bento-title">Conflict-Free Visual Calendar</h3>
-                        <p class="bento-text">Prevent overlapping promotions and schedule posts strategically across official social channels with our interactive schedule grid.</p>
-                    </div>
-                    <div class="bento-calendar-preview">
-                        <div class="cal-mini-day active">
-                            <span class="day-num">18</span>
-                            <span class="day-dot bg-amber"></span>
-                            <span class="day-label">General Assembly</span>
-                        </div>
-                        <div class="cal-mini-day">
-                            <span class="day-num">19</span>
-                            <span class="day-dot bg-blue"></span>
-                            <span class="day-label">Quiz Bee</span>
-                        </div>
-                        <div class="cal-mini-day">
-                            <span class="day-num">20</span>
-                            <span class="day-dot bg-green"></span>
-                            <span class="day-label">Bulldog Sports</span>
+                        <div class="feature-check-item">
+                            <span class="feature-check-icon">✓</span>
+                            <span>Conflict-free calendar scheduling across official social media pages</span>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- ── 3-STEP PROCESS SECTION ── -->
-        <section class="process-section" id="how-it-works">
-            <div class="section-head">
-                <div class="section-tag">Streamlined Flow</div>
-                <h2 class="section-headline">From Submission to Social Media in 3 Steps</h2>
-                <p class="section-desc">No complicated paper forms. Everything is tracked digitally in real time.</p>
-            </div>
-
-            <div class="steps-container">
-                <div class="step-card-modern">
-                    <div class="step-number-badge">
-                        <span>01</span>
-                        <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                    </div>
-                    <h3 class="step-card-title">Create Request</h3>
-                    <p class="step-card-text">Provide event details, select posting dates, target channels, and upload your graphic assets or pubmats.</p>
+        <!-- ── How It Works Section ── -->
+        <section class="section-block" id="how-it-works">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-tag">Process</div>
+                    <h2 class="section-title">How the Request Workflow Works</h2>
+                    <p class="section-lead">A straightforward, transparent 3-step submission and publication process.</p>
                 </div>
 
-                <div class="step-card-modern">
-                    <div class="step-number-badge">
-                        <span>02</span>
-                        <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-num">1</div>
+                        <h3 class="step-title">Submit Details</h3>
+                        <p class="step-desc">Provide event details, caption copy, target social media channels, target date, and upload your high-resolution publicity materials.</p>
                     </div>
-                    <h3 class="step-card-title">Review & Refine</h3>
-                    <p class="step-card-text">The Marketing Office verifies brand guidelines, polishes captions with AI, and coordinates via direct chat.</p>
-                </div>
 
-                <div class="step-card-modern">
-                    <div class="step-number-badge">
-                        <span>03</span>
-                        <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                    <div class="step-card">
+                        <div class="step-num">2</div>
+                        <h3 class="step-title">Marketing Review</h3>
+                        <p class="step-desc">The Marketing Office verifies brand standards, checks scheduling conflicts, and coordinates revisions with you through direct messaging.</p>
                     </div>
-                    <h3 class="step-card-title">Publish & Monitor</h3>
-                    <p class="step-card-text">Content goes live on scheduled channels. Monitor post reach, engagement, and confirmed status.</p>
-                </div>
-            </div>
-        </section>
 
-        <!-- ── FAQ SECTION ── -->
-        <section class="faq-section" id="faq">
-            <div class="section-head">
-                <div class="section-tag">Frequently Asked Questions</div>
-                <h2 class="section-headline">Got Questions? We have answers.</h2>
-            </div>
-
-            <div class="faq-list">
-                <div class="faq-item open">
-                    <div class="faq-question">
-                        <span>Who can submit posting requests?</span>
-                        <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div class="faq-answer">
-                        Any recognized student organization, academic department, faculty member, or office head with a verified NU Lipa email address can submit and manage requests.
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>How far in advance should I submit my post request?</span>
-                        <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div class="faq-answer">
-                        We recommend submitting requests at least 3–5 business days before your target posting date to ensure proper marketing review, branding compliance, and optimal scheduling.
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question">
-                        <span>How does the AI caption generator work?</span>
-                        <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div class="faq-answer">
-                        When creating or editing a request, simply click "Generate AI Caption". Our integrated AI analyzes your title, event context, and target platforms to produce catchy, professional captions and hashtags in seconds.
+                    <div class="step-card">
+                        <div class="step-num">3</div>
+                        <h3 class="step-title">Official Publication</h3>
+                        <p class="step-desc">Once approved, your post is queued and published on official NU Lipa social media channels with live confirmation and logs.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- ── CTA BANNER ── -->
-        <section class="cta-wrapper">
-            <div class="cta-box">
-                <h2>Ready to publish your next campus event?</h2>
-                <p>Join student leaders and department officers who organize and schedule social media campaigns seamlessly with NUPost.</p>
-                <div class="cta-actions">
-                    <a href="{{ route('register') }}" class="btn btn-lg btn-gold">Create an Account</a>
-                    <a href="{{ route('login') }}" class="btn btn-lg btn-subtle" style="color:#ffffff;background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.2);">Sign In to Platform</a>
+        <!-- ── Request Categories ── -->
+        <section class="section-block section-alt" id="categories">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-tag">Categories</div>
+                    <h2 class="section-title">Types of Supported Requests</h2>
+                    <p class="section-lead">Select the appropriate category when submitting your publication request.</p>
+                </div>
+
+                <div class="categories-grid">
+                    <div class="category-card">
+                        <h4>Ready-Made PubMats</h4>
+                        <p>Pre-designed posters and collateral following institutional branding standards.</p>
+                    </div>
+                    <div class="category-card">
+                        <h4>Event Announcements</h4>
+                        <p>General assemblies, academic seminars, webinars, and college-wide activities.</p>
+                    </div>
+                    <div class="category-card">
+                        <h4>Materials Checking</h4>
+                        <p>Preliminary review of design drafts and copy prior to official dissemination.</p>
+                    </div>
+                    <div class="category-card">
+                        <h4>Event Documentation</h4>
+                        <p>Photo coverage, post-activity highlights, and student achievement recognition.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Guidelines Section ── -->
+        <section class="section-block" id="guidelines">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-tag">Guidelines</div>
+                    <h2 class="section-title">Submission Requirements</h2>
+                    <p class="section-lead">Please review these basic requirements before submitting a post request.</p>
+                </div>
+
+                <div class="guidelines-card">
+                    <div class="guidelines-grid">
+                        <div class="guideline-col">
+                            <h4>
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <span>Lead Time & Timelines</span>
+                            </h4>
+                            <ul class="guideline-list">
+                                <li><span class="bullet-dot">&bull;</span> Submit requests at least 3 to 5 business days prior to your preferred posting date.</li>
+                                <li><span class="bullet-dot">&bull;</span> Urgent advisories and emergency notices are prioritized on a case-by-case basis.</li>
+                                <li><span class="bullet-dot">&bull;</span> Revisions requested by Marketing should be resolved promptly to avoid schedule delays.</li>
+                            </ul>
+                        </div>
+
+                        <div class="guideline-col">
+                            <h4>
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                <span>File Quality & Formats</span>
+                            </h4>
+                            <ul class="guideline-list">
+                                <li><span class="bullet-dot">&bull;</span> High-resolution PNG or JPG formats (minimum 1080x1080px for square posts).</li>
+                                <li><span class="bullet-dot">&bull;</span> Ensure official NU Lipa and organization logos are clear and un-distorted.</li>
+                                <li><span class="bullet-dot">&bull;</span> Text in graphics must be legible on mobile devices.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── FAQ Section ── -->
+        <section class="section-block section-alt" id="faq">
+            <div class="container">
+                <div class="section-header">
+                    <div class="section-tag">FAQ</div>
+                    <h2 class="section-title">Frequently Asked Questions</h2>
+                    <p class="section-lead">Answers to common questions regarding post requests and marketing review.</p>
+                </div>
+
+                <div class="faq-accordion">
+                    <div class="faq-item open">
+                        <button type="button" class="faq-question">
+                            <span>Who is eligible to submit requests on NUPost?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div class="faq-answer">
+                            Any recognized student organization, academic department, college council, faculty member, or administrative office of National University Lipa with an active account may submit requests.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button type="button" class="faq-question">
+                            <span>How long does the review and approval take?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div class="faq-answer">
+                            Standard review takes 24 to 48 hours. If adjustments are required (such as branding guidelines or caption polishing), the Marketing Office will coordinate directly with you through the request chat.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button type="button" class="faq-question">
+                            <span>Can I edit my request after submitting?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div class="faq-answer">
+                            Yes. While your request is in "Pending Review" status, you can update details, replace attachments, or message the admin directly from your dashboard instead of creating duplicate requests.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button type="button" class="faq-question">
+                            <span>What social media platforms are supported?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div class="faq-answer">
+                            Requests can be targeted to the official National University Lipa Facebook Page, Instagram, and campus digital bulletin channels depending on content scope and audience.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Call to Action Banner -->
+                <div class="cta-banner">
+                    <div class="cta-text">
+                        <h3>Ready to submit your post request?</h3>
+                        <p>Sign in with your university account or register your organization to submit and track publication requests.</p>
+                    </div>
+                    <div class="cta-actions">
+                        <a href="{{ route('login') }}" class="btn btn-lg btn-white">Sign In to NUPost</a>
+                        <a href="{{ route('register') }}" class="btn btn-lg btn-gold">Create Account</a>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- ── FOOTER ── -->
-    <footer class="footer-modern">
-        <div class="footer-top">
-            <div class="footer-brand-block">
-                <div class="footer-logo-wrap">
-                    <img src="{{ asset('assets/Title.png') }}" alt="NUPost Title Logo" height="50">
+    <!-- ── Footer ── -->
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <img src="{{ asset('assets/nupostlogo.png') }}" alt="NUPost Logo" class="footer-logo">
+                    <p class="footer-desc">
+                        The official social media request and content management system of National University Lipa. Supporting campus communication, student achievements, and institutional news.
+                    </p>
                 </div>
-                <p class="footer-tagline">The official social media request and management system for National University Lipa.</p>
-            </div>
-            
-            <div class="footer-nav-groups">
-                <div class="footer-group">
-                    <h4>Navigation</h4>
-                    <ul>
-                        <li><a href="#hero">Overview</a></li>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#how-it-works">Process Flow</a></li>
-                        <li><a href="#faq">FAQ</a></li>
-                    </ul>
-                </div>
-                <div class="footer-group">
-                    <h4>Account</h4>
-                    <ul>
-                        <li><a href="{{ route('login') }}">Sign In</a></li>
-                        <li><a href="{{ route('register') }}">Create Account</a></li>
-                        <li><a href="{{ route('password.forgot') }}">Forgot Password</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
 
-        <div class="footer-bottom">
-            <span>&copy; {{ date('Y') }} NU Lipa Marketing Office. All rights reserved.</span>
-            <span>National University Lipa • Education That Works</span>
+                <div class="footer-nav">
+                    <div class="footer-col">
+                        <h5>Navigation</h5>
+                        <ul>
+                            <li><a href="#how-it-works">How It Works</a></li>
+                            <li><a href="#categories">Request Types</a></li>
+                            <li><a href="#guidelines">Guidelines</a></li>
+                            <li><a href="#faq">FAQ</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col">
+                        <h5>Portal Access</h5>
+                        <ul>
+                            <li><a href="{{ route('login') }}">Sign In</a></li>
+                            <li><a href="{{ route('register') }}">Register Account</a></li>
+                            <li><a href="{{ route('password.forgot') }}">Reset Password</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <span>&copy; {{ date('Y') }} National University Lipa &bull; Marketing & Communications Office. All rights reserved.</span>
+                <span>Education That Works &bull; Lipa City, Batangas</span>
+            </div>
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Theme toggle
             const themeToggle = document.getElementById('themeToggle');
-            themeToggle.addEventListener('click', () => {
-                const current = document.documentElement.getAttribute('data-theme') || 'dark';
-                const next = current === 'dark' ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-theme', next);
-                localStorage.setItem('nupost-theme', next);
-            });
-
-            const navbar = document.getElementById('navbar');
-            window.addEventListener('scroll', () => {
-                if (window.scrollY > 30) {
-                    navbar.classList.add('scrolled');
-                } else {
-                    navbar.classList.remove('scrolled');
-                }
-            }, { passive: true });
-
-            const demoData = {
-                event: {
-                    avatar: "CS",
-                    title: "College of Computing — Tech Summit 2026",
-                    org: "Target Date: May 24, 2026 • 2:00 PM",
-                    status: "Approved",
-                    statusClass: "chip-approved",
-                    captions: [
-                        '"Gear up for innovation! Join us at the NU Lipa Tech Summit 2026. Explore hands-on AI workshops and keynote talks from industry leaders. #NULipa #TechSummit2026"',
-                        '"Code, build, and lead! The future of technology unfolds at NU Lipa Tech Summit 2026. Free admission for all students! #BulldogPride #CCIT"',
-                        '"Level up your digital skills! Join our interactive workshop tracks this May 24th at the Multipurpose Hall. Register now! #NUPost #NULipa"'
-                    ]
-                },
-                sports: {
-                    avatar: "ATH",
-                    title: "Bulldogs Athletics — University Games 2026",
-                    org: "Target Date: June 02, 2026 • 9:00 AM",
-                    status: "Scheduled",
-                    statusClass: "chip-scheduled",
-                    captions: [
-                        '"Hear the Bulldogs roar! Catch our varsity teams in action at the Southern Luzon University Games. Let\'s bring home the championship! #GoBulldogs #NUAthletics"',
-                        '"Game day ready! Support our athletes as they defend the court this Tuesday. Gates open at 8:00 AM. Wear your Gold & Blue! #BulldogPride"',
-                        '"Unstoppable spirit, unmatched energy! Watch the livestreams right here on our official Facebook page. #NULipaSports"'
-                    ]
-                },
-                org: {
-                    avatar: "OAA",
-                    title: "Office of Academic Affairs — General Assembly",
-                    org: "Target Date: May 28, 2026 • 10:00 AM",
-                    status: "Under Review",
-                    statusClass: "chip-review",
-                    captions: [
-                        '"Your voice, your community! Join the Annual Academic General Assembly. Submit your agenda items and hear key institutional updates. #NULipa #OneNU"',
-                        '"Transparency in action! All academic chairs and office representatives are invited to our term review this Thursday. #NULipa"',
-                        '"Lead the institutional change! Check the link in bio for the complete assembly agenda and open forum guidelines. #AcademicLeadership"'
-                    ]
-                }
-            };
-
-            let currentType = 'event';
-            let captionIndex = 0;
-
-            const tabButtons = document.querySelectorAll('.demo-tab-btn');
-            const demoAvatar = document.getElementById('demoAvatar');
-            const demoTitle = document.getElementById('demoTitle');
-            const demoOrg = document.getElementById('demoOrg');
-            const demoStatus = document.getElementById('demoStatus');
-            const demoCaption = document.getElementById('demoCaption');
-            const btnGenCaption = document.getElementById('btnGenCaption');
-
-            function updateDemo(type) {
-                currentType = type;
-                captionIndex = 0;
-                const data = demoData[type];
-                
-                demoAvatar.textContent = data.avatar;
-                demoTitle.textContent = data.title;
-                demoOrg.textContent = data.org;
-                demoStatus.textContent = data.status;
-                demoStatus.className = 'status-chip ' + data.statusClass;
-                
-                typeWriterText(demoCaption, data.captions[0]);
-            }
-
-            function typeWriterText(element, text) {
-                element.style.opacity = '0.5';
-                setTimeout(() => {
-                    element.textContent = text;
-                    element.style.opacity = '1';
-                }, 150);
-            }
-
-            tabButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    tabButtons.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    updateDemo(btn.dataset.type);
-                });
-            });
-
-            if (btnGenCaption) {
-                btnGenCaption.addEventListener('click', () => {
-                    const data = demoData[currentType];
-                    captionIndex = (captionIndex + 1) % data.captions.length;
-                    btnGenCaption.classList.add('btn-sparkle-active');
-                    typeWriterText(demoCaption, data.captions[captionIndex]);
-                    setTimeout(() => {
-                        btnGenCaption.classList.remove('btn-sparkle-active');
-                    }, 400);
+            if (themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    const current = document.documentElement.getAttribute('data-theme') || 'light';
+                    const next = current === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-theme', next);
+                    localStorage.setItem('nupost-theme', next);
                 });
             }
 
+            // Minimal FAQ accordion
             const faqItems = document.querySelectorAll('.faq-item');
             faqItems.forEach(item => {
                 const question = item.querySelector('.faq-question');
-                question.addEventListener('click', () => {
-                    const isOpen = item.classList.contains('open');
-                    faqItems.forEach(other => other.classList.remove('open'));
-                    if (!isOpen) {
-                        item.classList.add('open');
-                    }
-                });
+                if (question) {
+                    question.addEventListener('click', () => {
+                        const isOpen = item.classList.contains('open');
+                        faqItems.forEach(other => other.classList.remove('open'));
+                        if (!isOpen) {
+                            item.classList.add('open');
+                        }
+                    });
+                }
             });
         });
-    </script>
-    <!-- instant.page: Pre-fetches pages on link hover for 0ms navigation -->
-    <script src="//instant.page/5.2.0" type="module" integrity="sha384-jnZyxPjiipYXnSU0Rck6V38m2BQHTEXv80QwJuJChhxLMgkE4g++aD4IVFzpBc1z"></script>
-    <script>
-        // Instant visual feedback on link clicks (YouTube style top bar)
+
+        // Instant top bar feedback on link clicks
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a');
             if (!link || !link.href) return;

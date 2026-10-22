@@ -1,0 +1,230 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\PostRequest;
+use App\Models\RequestComment;
+use App\Models\Notification;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
+class NotificationController extends Controller
+{
+    private function getAdminId(): ?int
+    {
+        $adminId = session('admin_id');
+        if (!$adminId && session('admin_email')) {
+            $adminId = User::where('email', session('admin_email'))->value('id');
+        }
+        if (!$adminId && auth()->check() && (auth()->user()->role ?? '') === 'admin') {
+            $adminId = auth()->id();
+        }
+        return $adminId ? (int) $adminId : null;
+    }
+
+    // ── Full notifications page ──────────────────────────────────
+    public function index()
+    {
+        $notifications = $this->collectAllAdminNotifications(50);
+        return view('admin.notifications', compact('notifications'));
+    }
+
+    // ── AJAX: fetch admin notifications for bell dropdown ─────────
+    public function fetch()
+    {
+        $all = $this->collectAllAdminNotifications(15);
+        $unread_count = $all->where('is_read', false)->count();
+
+        return response()->json([
+            'notifications' => $all->take(15)->values(),
+            'unread_count'  => $unread_count,
+        ]);
+    }
+
+    private function collectAllAdminNotifications(int $limit = 30)
+    {
+        $adminId   = $this->getAdminId();
+        $adminIds  = User::where('role', 'admin')->pluck('id')->toArray();
+        if ($adminId && !in_array($adminId, $adminIds)) {
+            $adminIds[] = $adminId;
+        }
+
+        $hasReqCol = \Illuminate\Support\Facades\Schema::hasColumn('notifications', 'request_id');
+
+        $notifications = collect();
+        $seenRequests  = [];
+        $seenComments  = [];
+
+        // 1. All notifications targeted to admin or global system alerts
+        $dbNotifs = Notification::where(function ($q) use ($adminId, $adminIds) {
+                if ($adminId) {
+                    $q->where('user_id', $adminId)
+                      ->orWhereNull('user_id')
+                      ->orWhere('user_id', 0);
+                } else {
+                    $q->whereIn('user_id', $adminIds)
+                      ->orWhereNull('user_id')
+                      ->orWhere('user_id', 0);
+                }
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+
+        foreach ($dbNotifs as $n) {
+            $reqId = $hasReqCol ? $n->request_id : null;
+            if ($reqId) {
+                if ($n->type === 'new_request') {
+                    $seenRequests[$reqId] = true;
+                }
+                if ($n->type === 'comment' || $n->type === 'message') {
+                    $seenComments[$reqId] = true;
+                }
+            }
+            $notifications->push([
+                'id'         => 'notif_' . $n->id,
+                'title'      => $n->title,
+                'message'    => $n->message,
+                'type'       => $n->type ?: 'system',
+                'is_read'    => (bool) $n->is_read,
+                'request_id' => $reqId,
+                'created_at' => $n->created_at,
+            ]);
+        }
+
+        // 2. Any recent comments from requestors
+        $new_comments = RequestComment::where('sender_role', 'requestor')
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+
+        foreach ($new_comments as $c) {
+            $isUnread = !($c->admin_seen ?? false);
+            // If already represented as unread in notifications table, skip duplicate
+            if (!empty($seenComments[$c->request_id]) && !$isUnread) {
+                continue;
+            }
+            // Check if exact comment already captured
+            $alreadyExists = $notifications->contains(function ($item) use ($c) {
+                return $item['type'] === 'comment' && ($item['request_id'] ?? null) == $c->request_id && (bool)$item['is_read'] === (bool)($c->admin_seen ?? false);
+            });
+            if ($alreadyExists) {
+                continue;
+            }
+
+            $notifications->push([
+                'id'         => 'cmt_' . $c->id,
+                'title'      => 'Reply from ' . $c->sender_name,
+                'message'    => Str::limit($c->message, 80),
+                'type'       => 'comment',
+                'is_read'    => !$isUnread,
+                'request_id' => $c->request_id,
+                'created_at' => $c->created_at,
+            ]);
+            $seenComments[$c->request_id] = true;
+        }
+
+        // 3. Any recent requests
+        $new_requests = PostRequest::orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+
+        foreach ($new_requests as $r) {
+            $isUnread = !($r->admin_seen ?? false);
+            if (!empty($seenRequests[$r->id]) && !$isUnread) {
+                continue;
+            }
+            $alreadyExists = $notifications->contains(function ($item) use ($r) {
+                return $item['type'] === 'new_request' && ($item['request_id'] ?? null) == $r->id;
+            });
+            if ($alreadyExists) {
+                continue;
+            }
+
+            $notifications->push([
+                'id'         => 'req_' . $r->id,
+                'title'      => 'New Request: ' . $r->title,
+                'message'    => $r->requester . ' submitted a new post request.',
+                'type'       => 'new_request',
+                'is_read'    => !$isUnread,
+                'request_id' => $r->id,
+                'created_at' => $r->created_at,
+            ]);
+            $seenRequests[$r->id] = true;
+        }
+
+        return $notifications->sortByDesc('created_at')->values();
+    }
+
+    // ── AJAX: mark as read ────────────────────────────────────────
+    public function markRead(Request $request)
+    {
+        $adminId   = $this->getAdminId();
+        $adminIds  = User::where('role', 'admin')->pluck('id')->toArray();
+        if ($adminId && !in_array($adminId, $adminIds)) {
+            $adminIds[] = $adminId;
+        }
+        $hasReqCol = \Illuminate\Support\Facades\Schema::hasColumn('notifications', 'request_id');
+
+        if ($request->input('all')) {
+            PostRequest::where('admin_seen', false)->update(['admin_seen' => true]);
+            RequestComment::where('sender_role', 'requestor')
+                ->where('admin_seen', false)
+                ->update(['admin_seen' => true]);
+            Notification::where(function ($q) use ($adminId, $adminIds) {
+                if ($adminId) {
+                    $q->where('user_id', $adminId)
+                      ->orWhereNull('user_id')
+                      ->orWhere('user_id', 0);
+                } else {
+                    $q->whereIn('user_id', $adminIds)
+                      ->orWhereNull('user_id')
+                      ->orWhere('user_id', 0);
+                }
+            })->where('is_read', false)->update(['is_read' => true]);
+        } elseif ($id = $request->input('id')) {
+            if (str_starts_with($id, 'req_')) {
+                $reqId = str_replace('req_', '', $id);
+                PostRequest::where('id', $reqId)->update(['admin_seen' => true]);
+                if ($hasReqCol) {
+                    Notification::where('request_id', $reqId)->where('type', 'new_request')->update(['is_read' => true]);
+                }
+            } elseif (str_starts_with($id, 'cmt_')) {
+                $cmtId = str_replace('cmt_', '', $id);
+                $comment = RequestComment::find($cmtId);
+                if ($comment) {
+                    $comment->update(['admin_seen' => true]);
+                    if ($hasReqCol) {
+                        Notification::where('request_id', $comment->request_id)->whereIn('type', ['comment', 'message'])->update(['is_read' => true]);
+                    }
+                }
+            } elseif (str_starts_with($id, 'notif_')) {
+                $notifId = str_replace('notif_', '', $id);
+                $notif = Notification::find($notifId);
+                if ($notif) {
+                    $notif->update(['is_read' => true]);
+                    $reqId = $hasReqCol ? $notif->request_id : null;
+                    if ($reqId) {
+                        PostRequest::where('id', $reqId)->update(['admin_seen' => true]);
+                        RequestComment::where('request_id', $reqId)->where('sender_role', 'requestor')->update(['admin_seen' => true]);
+                    }
+                }
+            } else {
+                $notif = Notification::find($id);
+                if ($notif) {
+                    $notif->update(['is_read' => true]);
+                    $reqId = $hasReqCol ? $notif->request_id : null;
+                    if ($reqId) {
+                        PostRequest::where('id', $reqId)->update(['admin_seen' => true]);
+                        RequestComment::where('request_id', $reqId)->where('sender_role', 'requestor')->update(['admin_seen' => true]);
+                    }
+                }
+            }
+        }
+
+        return response()->json(['success' => true]);
+    }
+}

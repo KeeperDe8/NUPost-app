@@ -176,7 +176,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     }
   }
 
-  final List<String> _priorities = ['Low', 'Medium', 'High', 'Urgent'];
+  final List<String> _priorities = ['Low', 'Medium', 'High'];
 
   final Map<String, IconData> _platformIcons = {
     'Facebook': Icons.facebook_rounded,
@@ -643,6 +643,22 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       if (confirmed != true) return;
     }
 
+    if (!mounted) return;
+
+    final proceedWithSubmission = await _showSubmissionPreviewSheet(
+      context: context,
+      title: _titleController.text.trim(),
+      description: _descriptionController.text.trim(),
+      category: _selectedCategory!,
+      priority: _selectedPriority!,
+      preferredDate: _selectedDate!,
+      platforms: platforms,
+      caption: _captionController.text.trim(),
+      mediaFiles: _mediaFiles,
+    );
+    if (proceedWithSubmission != true) return;
+    if (!mounted) return;
+
     setState(() => _isSubmitting = true);
     try {
       final preferredDate =
@@ -741,14 +757,531 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       MainShell.switchTo(context, 0);
     } catch (e) {
       if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        e.toString().replaceFirst('Exception: ', ''),
-        isError: true,
-      );
+      final rawError = e.toString().replaceFirst('Exception: ', '').trim();
+      if (rawError.toLowerCase().contains('duplicate request detected') ||
+          rawError.toLowerCase().contains('duplicate submission')) {
+        _showDuplicateErrorDialog(rawError);
+      } else {
+        AppSnackbar.show(
+          context,
+          rawError,
+          isError: true,
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Future<bool?> _showSubmissionPreviewSheet({
+    required BuildContext context,
+    required String title,
+    required String description,
+    required String category,
+    required String priority,
+    required DateTime preferredDate,
+    required List<String> platforms,
+    required String caption,
+    required List<PlatformFile> mediaFiles,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sla = getSlaInfo(category);
+    final dateStr = '${preferredDate.year}-${preferredDate.month.toString().padLeft(2, '0')}-${preferredDate.day.toString().padLeft(2, '0')}';
+
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0D1526) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(
+              color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 30,
+                offset: const Offset(0, -8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B82F6).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.25)),
+                      ),
+                      child: const Icon(
+                        Icons.visibility_outlined,
+                        color: Color(0xFF3B82F6),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Review Request',
+                                style: TextStyle(
+                                  fontFamily: 'DM Sans',
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF3B82F6).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3)),
+                                ),
+                                child: const Text(
+                                  'PREVIEW',
+                                  style: TextStyle(
+                                    fontFamily: 'DM Sans',
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 9,
+                                    letterSpacing: 0.5,
+                                    color: Color(0xFF60A5FA),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Please double-check all details before submission',
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 12,
+                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Divider(
+                height: 1,
+                color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF131D31) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              description,
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontSize: 13,
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildPreviewPill(
+                              label: 'CATEGORY',
+                              value: category,
+                              subtitle: sla['turnaround']?.toString() ?? '',
+                              isDark: isDark,
+                              accentColor: const Color(0xFFF59E0B),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildPreviewPill(
+                              label: 'PRIORITY',
+                              value: priority,
+                              subtitle: 'Priority level',
+                              isDark: isDark,
+                              accentColor: priority == 'High'
+                                  ? const Color(0xFFEF4444)
+                                  : priority == 'Medium'
+                                      ? const Color(0xFF3B82F6)
+                                      : const Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildPreviewPill(
+                              label: 'PREFERRED DATE',
+                              value: dateStr,
+                              subtitle: 'Target release',
+                              isDark: isDark,
+                              accentColor: const Color(0xFF3B82F6),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildPreviewPill(
+                              label: 'PLATFORMS',
+                              value: platforms.join(', '),
+                              subtitle: '${platforms.length} channel(s)',
+                              isDark: isDark,
+                              accentColor: const Color(0xFF8B5CF6),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      if (mediaFiles.isNotEmpty) ...[
+                        Text(
+                          'ATTACHMENTS (${mediaFiles.length})',
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11,
+                            letterSpacing: 0.6,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: mediaFiles.map((f) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF162032) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.image_outlined, size: 14, color: Color(0xFF3B82F6)),
+                                  const SizedBox(width: 6),
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 160),
+                                    child: Text(
+                                      f.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontFamily: 'DM Sans',
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      if (caption.isNotEmpty) ...[
+                        Text(
+                          'CAPTION PREVIEW',
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11,
+                            letterSpacing: 0.6,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF091122) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Text(
+                            caption,
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 12,
+                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0B1426) : const Color(0xFFF8FAFC),
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: Text(
+                          'Back to Edit',
+                          style: TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        icon: const Icon(Icons.check_rounded, size: 18),
+                        label: const Text(
+                          'Confirm & Submit',
+                          style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w800),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPreviewPill({
+    required String label,
+    required String value,
+    required String subtitle,
+    required bool isDark,
+    required Color accentColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131D31) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1E2B45) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontWeight: FontWeight.w800,
+              fontSize: 9.5,
+              letterSpacing: 0.5,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+              color: accentColor,
+            ),
+          ),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 10.5,
+                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showDuplicateErrorDialog(String message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      useRootNavigator: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: isDark ? const BorderSide(color: Color(0xFF1E2B45)) : BorderSide.none,
+        ),
+        backgroundColor: isDark ? const Color(0xFF131D31) : Colors.white,
+        titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 10),
+        contentPadding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+        actionsPadding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+        title: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.copy_all_rounded,
+                color: Color(0xFFF59E0B),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Duplicate Detected',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 13.5,
+            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+            height: 1.45,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Close',
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w700,
+                color: isDark ? const Color(0xFF8E9BAE) : const Color(0xFF9AA3B2),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              MainShell.switchTo(context, 1);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF002366),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text(
+              'View My Requests',
+              style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showValidationErrorsDialog(List<String> errors) {

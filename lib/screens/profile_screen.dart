@@ -10,6 +10,7 @@ import 'account_security_screen.dart';
 import 'notification_settings_screen.dart';
 import 'help_center_screen.dart';
 import 'terms_guidelines_screen.dart';
+import 'admin/admin_audit_logs_screen.dart';
 import '../widgets/sla_guidelines_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -517,6 +518,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: _MenuCard(
                           items: [
+                            if (SessionStore.isAdmin)
+                              _MenuItem(
+                                icon: Icons.history_rounded,
+                                label: 'Activity History',
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const AdminAuditLogsScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
                             _MenuItem(
                               icon: Icons.shield_outlined,
                               label: 'Account Security',

@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../services/session_store.dart';
 import '../services/app_memory_cache.dart';
 import 'request_tracking_screen.dart';
+import 'message_thread_screen.dart';
 import '../utils/app_date_time_utils.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -238,7 +239,20 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       }
       final latest = group.latest;
       if (_isMsg(latest.type)) {
-        await Navigator.of(context).pushNamed('/messages');
+        if (latest.requestId != null && latest.requestId! > 0) {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => MessageThreadScreen(
+                requestId: latest.requestId!,
+                requestCode: 'REQ-${latest.requestId}',
+                requestTitle: latest.title,
+                requestStatus: latest.requestStatus ?? 'Pending Review',
+              ),
+            ),
+          );
+        } else {
+          await Navigator.of(context).pushNamed('/messages');
+        }
       } else if (latest.requestId != null && latest.requestId! > 0) {
         await _openTracking(latest);
       } else if (_isTracking(latest.type)) {
@@ -877,6 +891,10 @@ class _NotifCard extends StatelessWidget {
       case 'comment':
       case 'message':
         return const Color(0xFF3B82F6);
+      case 'new_request':
+        return const Color(0xFFF59E0B);
+      case 'api_key':
+        return const Color(0xFF6366F1);
       case 'review':
       case 'under_review':
       case 'received':
@@ -904,6 +922,10 @@ class _NotifCard extends StatelessWidget {
       case 'comment':
       case 'message':
         return Icons.chat_bubble_rounded;
+      case 'new_request':
+        return Icons.assignment_turned_in_outlined;
+      case 'api_key':
+        return Icons.key_rounded;
       case 'review':
       case 'under_review':
       case 'received':

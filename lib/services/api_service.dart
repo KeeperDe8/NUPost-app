@@ -738,4 +738,24 @@ class ApiService {
       fallbackMessage: 'Failed to load admin analytics',
     );
   }
+
+  static Future<Map<String, dynamic>> fetchAdminAuditLogs({
+    required int userId,
+    String search = '',
+    String category = 'all',
+    int page = 1,
+  }) async {
+    final params = <String, String>{
+      'user_id': '$userId',
+      'page': '$page',
+    };
+    if (search.isNotEmpty) params['search'] = search;
+    if (category.isNotEmpty && category != 'all') params['category'] = category;
+
+    final uri = _buildUri(_baseUrl, 'admin_audit_logs.php', params);
+    return _getJson(
+      uri,
+      fallbackMessage: 'Failed to load audit logs',
+    );
+  }
 }

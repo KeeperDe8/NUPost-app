@@ -77,6 +77,7 @@ class ProfileController extends Controller
             }
             $filename = 'avatar_' . $user_id . '_' . time() . '.' . $file->getClientOriginalExtension();
             $file->move(public_path('uploads'), $filename);
+            \App\Services\ImageOptimizer::optimize(public_path('uploads/' . $filename));
             $data['profile_photo'] = $filename;
         }
 
