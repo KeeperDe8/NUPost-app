@@ -293,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            'Welcome back 👋',
+                            'Welcome back',
                             style: TextStyle(
                               fontFamily: 'DM Sans',
                               fontSize: 13,

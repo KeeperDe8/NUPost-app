@@ -882,6 +882,12 @@ class _NotifCard extends StatelessWidget {
     }
 
     switch (n.type.toLowerCase()) {
+      case 'overdue':
+      case 'sla_overdue':
+        return const Color(0xFFEF4444);
+      case 'due_soon':
+      case 'sla_due':
+        return const Color(0xFFF59E0B);
       case 'approved':
         return const Color(0xFF10B981);
       case 'rejected':
@@ -913,6 +919,12 @@ class _NotifCard extends StatelessWidget {
       return Icons.assignment_outlined;
     }
     switch (t) {
+      case 'overdue':
+      case 'sla_overdue':
+        return Icons.warning_amber_rounded;
+      case 'due_soon':
+      case 'sla_due':
+        return Icons.access_time_rounded;
       case 'approved':
         return Icons.check_circle_rounded;
       case 'rejected':

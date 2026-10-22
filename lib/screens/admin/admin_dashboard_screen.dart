@@ -370,7 +370,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Hello, $adminName 👋',
+                            'Hello, $adminName',
                             style: const TextStyle(
                               fontFamily: 'DM Sans',
                               fontWeight: FontWeight.w900,
@@ -1040,7 +1040,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                      borderRadius: BorderRadius.circular(6),
                                    ),
                                    child: const Text(
-                                     '🚨 At Risk',
+                                     'At Risk',
                                      style: TextStyle(
                                        fontFamily: 'DM Sans',
                                        fontWeight: FontWeight.w700,
@@ -1057,7 +1057,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                      borderRadius: BorderRadius.circular(6),
                                    ),
                                    child: Text(
-                                     '⚡ Due in ${slackDays}d',
+                                     'Due in ${slackDays}d',
                                      style: TextStyle(
                                        fontFamily: 'DM Sans',
                                        fontWeight: FontWeight.w700,

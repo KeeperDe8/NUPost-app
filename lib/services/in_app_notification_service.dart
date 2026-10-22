@@ -192,7 +192,13 @@ class _FloatingHeadsUpBannerState extends State<_FloatingHeadsUpBanner>
     Color iconColor = Colors.white;
 
     final lower = widget.type.toLowerCase();
-    if (lower.contains('approved') || lower.contains('posted')) {
+    if (lower.contains('overdue')) {
+      iconData = Icons.warning_amber_rounded;
+      iconBg = const Color(0xFFEF4444);
+    } else if (lower.contains('due')) {
+      iconData = Icons.access_time_rounded;
+      iconBg = const Color(0xFFF59E0B);
+    } else if (lower.contains('approved') || lower.contains('posted')) {
       iconData = Icons.check_circle_rounded;
       iconBg = const Color(0xFF05C46B);
     } else if (lower.contains('review') || lower.contains('pending')) {
@@ -200,6 +206,9 @@ class _FloatingHeadsUpBannerState extends State<_FloatingHeadsUpBanner>
       iconBg = const Color(0xFFF59E0B);
     } else if (lower.contains('admin')) {
       iconData = Icons.shield_rounded;
+      iconBg = const Color(0xFF1D4ED8);
+    } else if (lower.contains('request')) {
+      iconData = Icons.assignment_outlined;
       iconBg = const Color(0xFF1D4ED8);
     }
 
