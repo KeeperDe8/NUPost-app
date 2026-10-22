@@ -190,18 +190,28 @@ class NotificationController extends Controller
     public function markRead(Request $request)
     {
         $hasReqCol = \Illuminate\Support\Facades\Schema::hasColumn('notifications', 'request_id');
+        $hasPostReqSeen = \Illuminate\Support\Facades\Schema::hasColumn('post_requests', 'admin_seen');
+        $hasCommentSeen = \Illuminate\Support\Facades\Schema::hasColumn('request_comments', 'admin_seen');
 
         if ($request->input('all')) {
-            // Mark all requests as seen with NULL safety
-            PostRequest::where(function ($q) {
-                $q->where('admin_seen', false)->orWhereNull('admin_seen');
-            })->update(['admin_seen' => true]);
+            // Mark all requests as seen with NULL safety if column exists
+            if ($hasPostReqSeen) {
+                try {
+                    PostRequest::where(function ($q) {
+                        $q->where('admin_seen', false)->orWhereNull('admin_seen');
+                    })->update(['admin_seen' => true]);
+                } catch (\Throwable $e) {}
+            }
 
-            // Mark all requestor comments as seen with NULL safety
-            RequestComment::where('sender_role', 'requestor')
-                ->where(function ($q) {
-                    $q->where('admin_seen', false)->orWhereNull('admin_seen');
-                })->update(['admin_seen' => true]);
+            // Mark all requestor comments as seen with NULL safety if column exists
+            if ($hasCommentSeen) {
+                try {
+                    RequestComment::where('sender_role', 'requestor')
+                        ->where(function ($q) {
+                            $q->where('admin_seen', false)->orWhereNull('admin_seen');
+                        })->update(['admin_seen' => true]);
+                } catch (\Throwable $e) {}
+            }
 
             // Mark all notifications as read with NULL safety
             Notification::where(function ($q) {
@@ -211,7 +221,9 @@ class NotificationController extends Controller
         } elseif ($id = $request->input('id')) {
             if (str_starts_with($id, 'req_') || str_starts_with($id, 'sla_overdue_') || str_starts_with($id, 'sla_due_')) {
                 $reqId = preg_replace('/^(req_|sla_overdue_|sla_due_)/', '', $id);
-                PostRequest::where('id', $reqId)->update(['admin_seen' => true]);
+                if ($hasPostReqSeen) {
+                    try { PostRequest::where('id', $reqId)->update(['admin_seen' => true]); } catch (\Throwable $e) {}
+                }
                 if ($hasReqCol) {
                     Notification::where('request_id', $reqId)->update(['is_read' => true]);
                 }
@@ -219,7 +231,9 @@ class NotificationController extends Controller
                 $cmtId = str_replace('cmt_', '', $id);
                 $comment = RequestComment::find($cmtId);
                 if ($comment) {
-                    $comment->update(['admin_seen' => true]);
+                    if ($hasCommentSeen) {
+                        try { $comment->update(['admin_seen' => true]); } catch (\Throwable $e) {}
+                    }
                     if ($hasReqCol) {
                         Notification::where('request_id', $comment->request_id)->update(['is_read' => true]);
                     }
@@ -231,8 +245,12 @@ class NotificationController extends Controller
                     $notif->update(['is_read' => true]);
                     $reqId = $hasReqCol ? $notif->request_id : null;
                     if ($reqId) {
-                        PostRequest::where('id', $reqId)->update(['admin_seen' => true]);
-                        RequestComment::where('request_id', $reqId)->where('sender_role', 'requestor')->update(['admin_seen' => true]);
+                        if ($hasPostReqSeen) {
+                            try { PostRequest::where('id', $reqId)->update(['admin_seen' => true]); } catch (\Throwable $e) {}
+                        }
+                        if ($hasCommentSeen) {
+                            try { RequestComment::where('request_id', $reqId)->where('sender_role', 'requestor')->update(['admin_seen' => true]); } catch (\Throwable $e) {}
+                        }
                     }
                 }
             } else {
@@ -241,8 +259,12 @@ class NotificationController extends Controller
                     $notif->update(['is_read' => true]);
                     $reqId = $hasReqCol ? $notif->request_id : null;
                     if ($reqId) {
-                        PostRequest::where('id', $reqId)->update(['admin_seen' => true]);
-                        RequestComment::where('request_id', $reqId)->where('sender_role', 'requestor')->update(['admin_seen' => true]);
+                        if ($hasPostReqSeen) {
+                            try { PostRequest::where('id', $reqId)->update(['admin_seen' => true]); } catch (\Throwable $e) {}
+                        }
+                        if ($hasCommentSeen) {
+                            try { RequestComment::where('request_id', $reqId)->where('sender_role', 'requestor')->update(['admin_seen' => true]); } catch (\Throwable $e) {}
+                        }
                     }
                 }
             }

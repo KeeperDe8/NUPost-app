@@ -681,16 +681,38 @@ class RequestController extends Controller
                 return redirect()->route('requestor.requests.chat', $id);
             }
 
-            RequestComment::create([
+            // Ensure admin_seen column exists if possible without crashing
+            try {
+                if (!\Illuminate\Support\Facades\Schema::hasColumn('request_comments', 'admin_seen')) {
+                    \Illuminate\Support\Facades\Schema::table('request_comments', function (\Illuminate\Database\Schema\Blueprint $table) {
+                        $table->boolean('admin_seen')->default(false)->nullable();
+                    });
+                }
+            } catch (\Throwable $e) {}
+
+            try {
+                if (!\Illuminate\Support\Facades\Schema::hasColumn('post_requests', 'admin_seen')) {
+                    \Illuminate\Support\Facades\Schema::table('post_requests', function (\Illuminate\Database\Schema\Blueprint $table) {
+                        $table->boolean('admin_seen')->default(false)->nullable();
+                    });
+                }
+            } catch (\Throwable $e) {}
+
+            $commentData = [
                 'request_id'  => $id,
                 'sender_role' => 'requestor',
                 'sender_name' => $user_name ?: ($req->requester ?: 'Requestor'),
                 'message'     => $message,
-                'admin_seen'  => false,
-            ]);
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('request_comments', 'admin_seen')) {
+                $commentData['admin_seen'] = false;
+            }
+            RequestComment::create($commentData);
 
-            // Mark post request as needing attention
-            $req->update(['admin_seen' => false]);
+            // Mark post request as needing attention if column exists
+            if (\Illuminate\Support\Facades\Schema::hasColumn('post_requests', 'admin_seen')) {
+                $req->update(['admin_seen' => false]);
+            }
 
             RequestActivity::create([
                 'request_id' => $id,
@@ -736,13 +758,16 @@ class RequestController extends Controller
             try {
                 $assistantReply = $this->generateAssistantFaqReply($message);
                 if ($assistantReply) {
-                    RequestComment::create([
+                    $asstData = [
                         'request_id'  => $id,
                         'sender_role' => 'admin',
                         'sender_name' => 'NUPost Assistant (AI)',
                         'message'     => $assistantReply,
-                        'admin_seen'  => true,
-                    ]);
+                    ];
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('request_comments', 'admin_seen')) {
+                        $asstData['admin_seen'] = true;
+                    }
+                    RequestComment::create($asstData);
                 }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('[NUPost] Chat assistant reply error: ' . $e->getMessage());
