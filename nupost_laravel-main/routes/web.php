@@ -258,6 +258,10 @@ Route::post('/api/generate-caption', function (Request $request) {
     }
 })->middleware('auth.nupost:requestor');
 
+Route::post('/ai/fill-description', [\App\Http\Controllers\Requestor\RequestController::class, 'fillDescriptionFromPoster'])
+    ->middleware('auth.nupost:requestor')
+    ->name('ai.fill-description');
+
 
 Route::post('/api/bulldog-chat', function (Illuminate\Http\Request $request) {
 

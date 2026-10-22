@@ -1549,7 +1549,7 @@ async function triggerFillFromPoster() {
         formData.append('category', catField ? catField.value : '');
         formData.append('_token', '{{ csrf_token() }}');
 
-        const res = await fetch('{{ route("ai.fill-description") }}', {
+        const res = await fetch('/ai/fill-description', {
             method: 'POST',
             body: formData,
             headers: {
