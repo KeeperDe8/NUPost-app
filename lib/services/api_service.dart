@@ -301,6 +301,71 @@ class ApiService {
     throw Exception('No caption text returned by AI');
   }
 
+  static Future<Map<String, dynamic>> suggestCategory({
+    required String title,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'suggest_category.php', null);
+    try {
+      final json = await _postJson(uri, {
+        'title': title,
+      }, fallbackMessage: 'Failed to suggest category');
+      return json;
+    } catch (_) {
+      return {'success': false};
+    }
+  }
+
+  static Future<Map<String, dynamic>> proofreadPoster({
+    required String title,
+    String? description,
+    String? postDate,
+    PlatformFile? mediaFile,
+  }) async {
+    final uri = _buildUri(_baseUrl, 'proofread_poster.php', null);
+    try {
+      if (mediaFile != null && (mediaFile.path != null || mediaFile.bytes != null)) {
+        final request = http.MultipartRequest('POST', uri);
+        request.fields['title'] = title;
+        if (description != null) request.fields['description'] = description;
+        if (postDate != null) request.fields['post_date'] = postDate;
+
+        if (mediaFile.bytes != null) {
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'image',
+              mediaFile.bytes!,
+              filename: mediaFile.name,
+            ),
+          );
+        } else if (mediaFile.path != null) {
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'image',
+              mediaFile.path!,
+              filename: mediaFile.name,
+            ),
+          );
+        }
+        final streamed = await request.send();
+        final response = await http.Response.fromStream(streamed);
+        return _parseResponse(
+          response,
+          uri: uri,
+          fallbackMessage: 'Poster proofreading failed',
+        );
+      } else {
+        return await _postJson(uri, {
+          'title': title,
+          'description': description ?? '',
+          'post_date': postDate ?? '',
+        }, fallbackMessage: 'Poster proofreading failed');
+      }
+    } catch (_) {
+      return {'success': false, 'issues': []};
+    }
+  }
+
+
   static Future<Map<String, dynamic>> fetchCalendar({
     required int userId,
     int? month,

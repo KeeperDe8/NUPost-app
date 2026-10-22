@@ -7,8 +7,10 @@ use App\Models\PostRequest;
 use App\Models\RequestComment;
 use App\Models\RequestActivity;
 use App\Models\Notification;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class RequestController extends Controller
 {
@@ -729,9 +731,363 @@ class RequestController extends Controller
                     }
                 }
             }
+
+            // Auto-respond with Instant Assistant if message is an inquiry / FAQ
+            try {
+                $assistantReply = $this->generateAssistantFaqReply($message);
+                if ($assistantReply) {
+                    RequestComment::create([
+                        'request_id'  => $id,
+                        'sender_role' => 'admin',
+                        'sender_name' => 'NUPost Assistant (AI)',
+                        'message'     => $assistantReply,
+                        'admin_seen'  => true,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[NUPost] Chat assistant reply error: ' . $e->getMessage());
+            }
         }
 
         return redirect()->route('requestor.requests.chat', $id);
+    }
+
+    /**
+     * Instant Help / Submission Assistant in Chat
+     * Answers common guidelines (IG carousel dimensions, lead times, file formats)
+     * using zero-token local rules first, with micro-token Gemini fallback.
+     */
+    public function generateAssistantFaqReply(string $message): ?string
+    {
+        $lower = strtolower(trim($message));
+
+        // 1. Zero-Token Local FAQ Knowledge Base
+        // A. Dimensions & Instagram Carousel / Aspect Ratio
+        if (preg_match('/\b(dimension|carousel|aspect ratio|ig size|instagram size|ratio|resolution|pixels|width|height|tarpaulin size|story size)\b/i', $lower)) {
+            return "📐 **NU Social Media Dimensions Guide:**\n"
+                . "• **Square Feed Post:** 1080 × 1080 px (1:1)\n"
+                . "• **IG Carousel / Portrait:** 1080 × 1350 px (4:5) — *Recommended for carousels*\n"
+                . "• **Stories / Reels / TikTok:** 1080 × 1920 px (9:16)\n"
+                . "• **Facebook Cover / Landscape:** 1920 × 1080 px (16:9)\n"
+                . "• Keep critical text within the central 80% safe zone.";
+        }
+
+        // B. SLA Lead Times & Submission Deadlines
+        if (preg_match('/\b(lead time|deadline|turnaround|days before|how many days|when to submit|how early|sla|how long)\b/i', $lower)) {
+            return "⏱️ **NU Lipa SLA Turnaround Times:**\n"
+                . "• **Checking of Materials:** 24 hours\n"
+                . "• **Posting with Ready-Made PubMat:** Up to 24 hours\n"
+                . "• **Template-Based PubMat:** 2 working days\n"
+                . "• **Standard PubMat:** 3–4 working days\n"
+                . "• **Multiple Collaterals / Tarpaulins:** 5–10 working days\n"
+                . "• **Event Documentation:** At least 1 month prior to event date.";
+        }
+
+        // C. File Formats & Upload Limits
+        if (preg_match('/\b(format|file type|mb|file size|extension|png|jpg|jpeg|webp|can i upload|max size)\b/i', $lower)) {
+            return "📁 **Media Upload Guidelines:**\n"
+                . "• **Supported Formats:** PNG, JPG, JPEG, WEBP, MP4\n"
+                . "• **Size Limit:** Up to 10 MB per file (maximum 10 files per request)\n"
+                . "• PNG is recommended for crisp typography and official logos.";
+        }
+
+        // D. Branding & Logo Guidelines
+        if (preg_match('/\b(branding|logo|colors|font|brand guideline|official logo)\b/i', $lower)) {
+            return "🎨 **NU Lipa Branding Quick Tips:**\n"
+                . "• Official Colors: **NU Blue (`#002366`)** and **Gold (`#FFD100`)**\n"
+                . "• Do not distort, stretch, or alter the colors of the NU Lipa crest or Bulldog logo.\n"
+                . "• Always leave sufficient clear padding around official branding elements.";
+        }
+
+        // 2. Micro-Token Gemini Flash Fallback for novel questions
+        $isQuestion = str_contains($message, '?') || preg_match('/\b(how|what|can|when|where|is it|why|tell me)\b/i', $lower);
+        if (!$isQuestion) {
+            return null;
+        }
+
+        $apiKey = Setting::get('gemini_api_key', config('services.gemini.key') ?: env('GEMINI_API_KEY'));
+        if ($apiKey) {
+            $shortQ = mb_substr($message, 0, 100);
+            $prompt = "You are NUPost Assistant for NU Lipa Social Media. Answer this student question in under 35 words based on NU guidelines (3-4 days lead time, 1080x1080 square). Question: {$shortQ}";
+
+            try {
+                $response = Http::withoutVerifying()->timeout(4)->post(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={$apiKey}",
+                    [
+                        'contents' => [
+                            ['parts' => [['text' => $prompt]]]
+                        ],
+                        'generationConfig' => [
+                            'temperature'     => 0.2,
+                            'maxOutputTokens' => 60,
+                        ]
+                    ]
+                );
+
+                if ($response->successful()) {
+                    $reply = $response->json('candidates.0.content.parts.0.text');
+                    if ($reply && trim($reply) !== '') {
+                        return "🤖 " . trim($reply);
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 3. Fallback when AI token is unavailable or question is general
+        if (str_contains($lower, 'guideline') || str_contains($lower, 'help')) {
+            return "💡 **Quick Tip:** For urgent questions or custom design requests, our Marketing admin will review your message shortly. For dimensions, ask *'carousel dimensions'*; for deadlines, ask *'lead times'*!";
+        }
+
+        return null;
+    }
+
+    /**
+     * Smart Category Suggester
+     * Automatically suggests the best category based on the post title.
+     * The student can freely override/change the category anytime.
+     */
+    public function suggestCategory(Request $request)
+    {
+        $title = trim((string) $request->input('title', ''));
+        $lower = strtolower($title);
+
+        if (mb_strlen($title) < 3) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Standard PubMat',
+                'confidence' => 'low',
+                'source'     => 'default',
+            ]);
+        }
+
+        // Local Rule Engine (0 Tokens)
+        if (preg_match('/\b(docu|documentation|coverage|photo doc|livestream|recording|video coverage|photographer|videographer)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Event Documentation',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 30,
+            ]);
+        }
+
+        if (preg_match('/\b(tarpaulin|tarp|banner|backdrop|standee|collaterals|billboard|streamer|signage)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Multiple Collaterals / Tarpaulins',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 5,
+            ]);
+        }
+
+        if (preg_match('/\b(campaign|creative concept|advocacy|rebrand|series|movement|theme launch|awareness)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'New Campaign / Creative Concept',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 10,
+            ]);
+        }
+
+        if (preg_match('/\b(ready[- ]made|ready pubmat|ready to post|final pubmat|ready layout|post this)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Posting with Ready-Made PubMat',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 1,
+            ]);
+        }
+
+        if (preg_match('/\b(template|congratulatory|announcement|quote of the day|greeting|greetings|holiday|congrats|passer|passers|board exam|welcome|orientation)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Template-Based PubMat',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 2,
+            ]);
+        }
+
+        if (preg_match('/\b(check|review|proofing|validation|materials check|evaluation)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Checking of Materials',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 1,
+            ]);
+        }
+
+        // Micro-Token Gemini check if ambiguous (max 15 output tokens)
+        $apiKey = Setting::get('gemini_api_key', config('services.gemini.key') ?: env('GEMINI_API_KEY'));
+        if ($apiKey) {
+            try {
+                $prompt = "Classify this school post title into ONE of these categories:\n"
+                    . "- Checking of Materials\n"
+                    . "- Posting with Ready-Made PubMat\n"
+                    . "- Template-Based PubMat\n"
+                    . "- Standard PubMat\n"
+                    . "- Multiple Collaterals / Tarpaulins\n"
+                    . "- New Campaign / Creative Concept\n"
+                    . "- Event Documentation\n\n"
+                    . "Title: " . mb_substr($title, 0, 70) . "\n"
+                    . "Reply with ONLY the exact category name.";
+
+                $response = Http::withoutVerifying()->timeout(3)->post(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={$apiKey}",
+                    [
+                        'contents' => [
+                            ['parts' => [['text' => $prompt]]]
+                        ],
+                        'generationConfig' => [
+                            'temperature'     => 0.1,
+                            'maxOutputTokens' => 15,
+                        ]
+                    ]
+                );
+
+                if ($response->successful()) {
+                    $aiCat = trim((string) $response->json('candidates.0.content.parts.0.text'));
+                    $validCats = [
+                        'Checking of Materials',
+                        'Posting with Ready-Made PubMat',
+                        'Template-Based PubMat',
+                        'Standard PubMat',
+                        'Multiple Collaterals / Tarpaulins',
+                        'New Campaign / Creative Concept',
+                        'Event Documentation',
+                    ];
+                    foreach ($validCats as $vc) {
+                        if (stripos($aiCat, $vc) !== false) {
+                            return response()->json([
+                                'success'    => true,
+                                'category'   => $vc,
+                                'confidence' => 'high',
+                                'source'     => 'gemini',
+                            ]);
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // Fallback default
+        return response()->json([
+            'success'    => true,
+            'category'   => 'Standard PubMat',
+            'confidence' => 'medium',
+            'source'     => 'local',
+            'sla_days'   => 3,
+        ]);
+    }
+
+    /**
+     * Poster Proofreader (Multimodal Image Check)
+     * Checks for date-day mismatches (e.g. "Monday, Oct 25" when Oct 25 is Sunday)
+     * and low resolution issues.
+     */
+    public function proofreadPoster(Request $request)
+    {
+        $issues = [];
+        $prefDate = $request->input('post_date');
+        $title = (string) $request->input('title', '');
+        $description = (string) $request->input('description', '');
+        $combinedText = strtolower($title . ' ' . $description);
+
+        // 1. Zero-Token Local Date-Day Consistency Check
+        if ($prefDate) {
+            try {
+                $carbonDate = \Carbon\Carbon::parse($prefDate);
+                $actualDay = $carbonDate->format('l'); // e.g., 'Sunday'
+                $actualDateStr = $carbonDate->format('M j, Y');
+
+                $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                $shortDays  = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+                // Check if user text explicitly mentions a DIFFERENT day of the week
+                foreach ($daysOfWeek as $idx => $day) {
+                    if (strtolower($actualDay) !== $day) {
+                        $short = $shortDays[$idx];
+                        if (preg_match('/\b(' . $day . '|' . $short . ')\b/i', $combinedText)) {
+                            $issues[] = "Calendar Note: Your selected preferred date ({$actualDateStr}) is a {$actualDay}, but your text mentions " . ucfirst($day) . ". Please verify!";
+                            break;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 2. Check attached file dimensions & resolution if uploaded
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            if ($file->isValid()) {
+                $imageInfo = @getimagesize($file->getRealPath());
+                if ($imageInfo) {
+                    $width = $imageInfo[0];
+                    $height = $imageInfo[1];
+                    if ($width < 600 || $height < 600) {
+                        $issues[] = "Low resolution graphic ({$width}×{$height}px). Recommended size is at least 1080×1080px for crisp social media feeds.";
+                    }
+                }
+
+                // 3. Micro-Token Multimodal Gemini Scan
+                $apiKey = Setting::get('gemini_api_key', config('services.gemini.key') ?: env('GEMINI_API_KEY'));
+                if ($apiKey && $imageInfo) {
+                    try {
+                        $imagePath = $file->getRealPath();
+                        $mime = $imageInfo['mime'] ?? 'image/jpeg';
+                        $base64 = base64_encode(file_get_contents($imagePath));
+
+                        // Only send if reasonably compressed (< 400KB) to preserve bandwidth & tokens
+                        if (strlen($base64) < 400000) {
+                            $prompt = "Examine this campus pubmat poster image for text clarity, date typos, or day-of-week mismatches. Output JSON ONLY: {\"issues\":[\"short note\"],\"has_issues\":bool}. Max 15 words.";
+
+                            $response = Http::withoutVerifying()->timeout(5)->post(
+                                "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={$apiKey}",
+                                [
+                                    'contents' => [
+                                        [
+                                            'parts' => [
+                                                ['text' => $prompt],
+                                                [
+                                                    'inline_data' => [
+                                                        'mime_type' => $mime,
+                                                        'data'      => $base64,
+                                                    ]
+                                                ]
+                                            ]
+                                        ]
+                                    ],
+                                    'generationConfig' => [
+                                        'temperature'      => 0.1,
+                                        'maxOutputTokens'  => 60,
+                                        'responseMimeType' => 'application/json',
+                                    ]
+                                ]
+                            );
+
+                            if ($response->successful()) {
+                                $data = json_decode($response->json('candidates.0.content.parts.0.text'), true);
+                                if (is_array($data) && !empty($data['issues'])) {
+                                    foreach ($data['issues'] as $aiIssue) {
+                                        $issues[] = "AI Poster Note: " . trim($aiIssue);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {}
+                }
+            }
+        }
+
+        return response()->json([
+            'success'    => true,
+            'has_issues' => !empty($issues),
+            'issues'     => array_values(array_unique($issues)),
+        ]);
     }
 
     /**

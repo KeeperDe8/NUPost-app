@@ -84,6 +84,7 @@
     }
     .chat-avatar--me { background: #7c3aed; }
     .chat-avatar--admin { background: #1e3a8a; }
+    .chat-avatar--assistant { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); font-size: 14px; }
 
     .chat-bubble {
         max-width: 75%;
@@ -111,6 +112,45 @@
         border: 1px solid var(--color-border);
         border-radius: 18px 18px 18px 4px;
     }
+    .chat-bubble--assistant {
+        background: #f0f9ff;
+        color: #0c4a6e;
+        border: 1px solid #bae6fd;
+        border-radius: 18px 18px 18px 4px;
+    }
+
+    .chat-quick-faqs {
+        padding: 8px 16px;
+        background: #fafbfd;
+        border-top: 1px solid var(--color-border);
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+    }
+    .chat-quick-faqs::-webkit-scrollbar { display: none; }
+    .faq-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: #0369a1;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all .15s;
+        flex-shrink: 0;
+    }
+    .faq-chip:hover {
+        background: #e0f2fe;
+        border-color: #7dd3fc;
+        transform: translateY(-1px);
+    }
 
     .chat-text {
         word-break: break-word;
@@ -133,6 +173,11 @@
     }
     .chat-bubble--admin .chat-meta {
         color: #64748b;
+        align-self: flex-start;
+    }
+    .chat-bubble--assistant .chat-meta {
+        color: #0284c7;
+        font-weight: 600;
         align-self: flex-start;
     }
 
@@ -208,15 +253,22 @@
 
         <div class="chat-messages" id="chat-messages">
             @forelse($chat_messages as $msg)
-                @php $is_me = $msg->sender_role === 'requestor'; @endphp
+                @php
+                    $is_me = $msg->sender_role === 'requestor';
+                    $is_assistant = str_contains($msg->sender_name, 'Assistant');
+                @endphp
                 <div class="chat-bubble-row {{ $is_me ? 'chat-bubble-row--me' : '' }}">
-                    <div class="chat-avatar {{ $is_me ? 'chat-avatar--me' : 'chat-avatar--admin' }}">
-                        {{ strtoupper(substr($msg->sender_name, 0, 1)) }}
+                    <div class="chat-avatar {{ $is_me ? 'chat-avatar--me' : ($is_assistant ? 'chat-avatar--assistant' : 'chat-avatar--admin') }}">
+                        @if($is_assistant)
+                            🤖
+                        @else
+                            {{ strtoupper(substr($msg->sender_name, 0, 1)) }}
+                        @endif
                     </div>
-                    <div class="chat-bubble {{ $is_me ? 'chat-bubble--me' : 'chat-bubble--admin' }}">
+                    <div class="chat-bubble {{ $is_me ? 'chat-bubble--me' : ($is_assistant ? 'chat-bubble--assistant' : 'chat-bubble--admin') }}">
                         <div class="chat-text">{!! nl2br(e($msg->message)) !!}</div>
                         <div class="chat-meta">
-                            {{ $is_me ? 'You' : 'Admin' }} &middot; {{ $msg->created_at->format('M j, g:i A') }}
+                            {{ $is_me ? 'You' : ($is_assistant ? 'NUPost Assistant (AI)' : 'Admin') }} &middot; {{ $msg->created_at->format('M j, g:i A') }}
                         </div>
                     </div>
                 </div>
@@ -225,15 +277,23 @@
                     <svg width="40" height="40" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
-                    <p style="font-size: 14px;">No messages yet. Send a query to admin.</p>
+                    <p style="font-size: 14px;">No messages yet. Send a query to admin or ask the Assistant below.</p>
                 </div>
             @endforelse
+        </div>
+
+        {{-- QUICK FAQ SUGGESTIONS --}}
+        <div class="chat-quick-faqs">
+            <button type="button" class="faq-chip" onclick="askQuickFaq('What are the dimensions for IG carousel?')">📐 IG Dimensions</button>
+            <button type="button" class="faq-chip" onclick="askQuickFaq('What are the SLA turnaround lead times before an event?')">⏱️ Lead Times</button>
+            <button type="button" class="faq-chip" onclick="askQuickFaq('What file formats and sizes can I upload?')">📁 File Formats</button>
+            <button type="button" class="faq-chip" onclick="askQuickFaq('What are the official NU branding guidelines?')">🎨 NU Branding</button>
         </div>
 
         <form method="POST" action="{{ route('requestor.requests.chat.send', $req->id) }}" class="chat-input-area" id="chat-form" onsubmit="return handleChatSubmit(event)">
             @csrf
             <textarea class="chat-input" name="chat_message" id="chat-input"
-                      placeholder="Type your message here..."
+                      placeholder="Type your message here or ask for guidelines..."
                       rows="1"
                       onkeydown="handleChatKey(event)"></textarea>
             <button type="submit" class="chat-send-btn" id="chat-send-btn">
@@ -254,6 +314,16 @@
         if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
     }
     document.addEventListener('DOMContentLoaded', scrollChatBottom);
+
+    function askQuickFaq(questionText) {
+        const input = document.getElementById('chat-input');
+        if (!input) return;
+        input.value = questionText;
+        const form = document.getElementById('chat-form');
+        if (handleChatSubmit()) {
+            form.submit();
+        }
+    }
 
     function handleChatSubmit(e) {
         if (isSubmittingChat) {

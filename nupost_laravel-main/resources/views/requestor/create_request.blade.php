@@ -983,6 +983,9 @@
                                 <option value="{{ $cat }}" {{ old('category') === $cat ? 'selected' : '' }}>{{ $cat }}</option>
                             @endforeach
                         </select>
+                        <div id="cat-suggest-badge" style="display:none;margin-top:6px;font-size:11.5px;color:#2563eb;font-weight:600;align-items:center;gap:4px;">
+                            <span>💡</span> <span id="cat-suggest-text">Suggested based on title. (You can change this anytime)</span>
+                        </div>
                     </div>
                     <div class="field" style="margin-bottom:0;">
                         <label>Priority <span class="req">*</span></label>
@@ -1085,6 +1088,15 @@
                     </div>
                 </label>
                 <div class="upload-previews" id="upload-previews"></div>
+                {{-- POSTER PROOFREADER QUALITY ADVISORY --}}
+                <div id="proofread-advisory" style="display:none;margin-top:12px;padding:12px 16px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:12px;">
+                    <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:#b45309;margin-bottom:6px;">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        <span>Poster Proofreader Quality Tips</span>
+                    </div>
+                    <div id="proofread-issues-list" style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#92400e;line-height:1.4;">
+                    </div>
+                </div>
                 <input type="file" id="media-input" name="media[]" multiple accept="image/*,video/mp4,video/quicktime">
             </div>
         </div>
@@ -1597,5 +1609,129 @@ document.getElementById('title-field').addEventListener('input', updateProgress)
 document.getElementById('desc-field').addEventListener('input', updateProgress);
 document.getElementById('cat-field').addEventListener('change', updateProgress);
 document.querySelectorAll('.platform-btn').forEach(b => b.addEventListener('click', updateProgress));
+
+// ── SMART CATEGORY SUGGESTER ─────────────────────────────────────
+let hasManualCategoryOverride = false;
+const catField = document.getElementById('cat-field');
+const catSuggestBadge = document.getElementById('cat-suggest-badge');
+const catSuggestText = document.getElementById('cat-suggest-text');
+const titleField = document.getElementById('title-field');
+
+if (catField) {
+    catField.addEventListener('change', function(e) {
+        // If triggered programmatically with e.isAutoSuggest, don't set manual override
+        if (!e.isAutoSuggest) {
+            hasManualCategoryOverride = true;
+            if (catSuggestBadge) catSuggestBadge.style.display = 'none';
+        }
+    });
+}
+
+function autoSuggestCategory(title) {
+    if (hasManualCategoryOverride || !title || title.trim().length < 3 || !catField) return;
+    const lower = title.toLowerCase();
+    let suggested = null;
+
+    if (/\b(docu|documentation|coverage|photo doc|livestream|recording|video coverage|photographer|videographer)\b/i.test(lower)) {
+        suggested = 'Event Documentation';
+    } else if (/\b(tarpaulin|tarp|banner|backdrop|standee|collaterals|billboard|streamer|signage)\b/i.test(lower)) {
+        suggested = 'Multiple Collaterals / Tarpaulins';
+    } else if (/\b(campaign|creative concept|advocacy|rebrand|series|movement|theme launch|awareness)\b/i.test(lower)) {
+        suggested = 'New Campaign / Creative Concept';
+    } else if (/\b(ready[- ]made|ready pubmat|ready to post|final pubmat|ready layout|post this)\b/i.test(lower)) {
+        suggested = 'Posting with Ready-Made PubMat';
+    } else if (/\b(template|congratulatory|announcement|quote of the day|greeting|greetings|holiday|congrats|passer|passers|board exam|welcome|orientation)\b/i.test(lower)) {
+        suggested = 'Template-Based PubMat';
+    } else if (/\b(check|review|proofing|validation|materials check|evaluation)\b/i.test(lower)) {
+        suggested = 'Checking of Materials';
+    }
+
+    if (suggested && catField.value !== suggested) {
+        catField.value = suggested;
+        const evt = new Event('change', { bubbles: true });
+        evt.isAutoSuggest = true;
+        catField.dispatchEvent(evt);
+        if (catSuggestBadge) {
+            catSuggestBadge.style.display = 'flex';
+            catSuggestText.textContent = `Suggested based on title: "${suggested}". (You can change this anytime)`;
+        }
+    }
+}
+
+let titleDebounceTimer = null;
+if (titleField) {
+    titleField.addEventListener('input', function() {
+        clearTimeout(titleDebounceTimer);
+        titleDebounceTimer = setTimeout(() => autoSuggestCategory(this.value), 350);
+    });
+}
+
+// ── POSTER PROOFREADER ───────────────────────────────────────────
+function runPosterProofreader() {
+    const advisory = document.getElementById('proofread-advisory');
+    const issuesList = document.getElementById('proofread-issues-list');
+    if (!advisory || !issuesList) return;
+
+    const files = mediaInput?.files;
+    const prefDate = dateInput?.value;
+    const title = titleField?.value || '';
+    const desc = document.getElementById('desc-field')?.value || '';
+    const combined = (title + ' ' + desc).toLowerCase();
+    let localIssues = [];
+
+    // 1. Zero-Token Local Date-Day Consistency Check
+    if (prefDate) {
+        const parts = prefDate.split('-').map(Number);
+        if (parts.length === 3) {
+            const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+            const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+            const actualDay = days[dt.getDay()];
+            const actualDayCap = actualDay.charAt(0).toUpperCase() + actualDay.slice(1);
+
+            days.forEach(day => {
+                if (day !== actualDay) {
+                    const short = day.slice(0, 3);
+                    const reg = new RegExp('\\b(' + day + '|' + short + ')\\b', 'i');
+                    if (reg.test(combined)) {
+                        localIssues.push(`Calendar Tip: Preferred date (${prefDate}) is a ${actualDayCap}, but your text mentions ${day.charAt(0).toUpperCase() + day.slice(1)}. Please verify!`);
+                    }
+                }
+            });
+        }
+    }
+
+    // 2. Resolution Check on attached image
+    if (files && files.length > 0 && files[0].type.startsWith('image/')) {
+        const img = new Image();
+        img.onload = function() {
+            if (img.width < 600 || img.height < 600) {
+                localIssues.push(`Resolution Note: Attached image is ${img.width}×${img.height}px. High resolution (at least 1080×1080px) is recommended for crisp social media feeds.`);
+            }
+            displayProofreadIssues(localIssues);
+        };
+        img.src = URL.createObjectURL(files[0]);
+    } else {
+        displayProofreadIssues(localIssues);
+    }
+}
+
+function displayProofreadIssues(issues) {
+    const advisory = document.getElementById('proofread-advisory');
+    const issuesList = document.getElementById('proofread-issues-list');
+    if (!advisory || !issuesList) return;
+
+    if (issues && issues.length > 0) {
+        issuesList.innerHTML = issues.map(iss => `<div>⚠️ ${escHtml(iss)}</div>`).join('');
+        advisory.style.display = 'block';
+    } else {
+        advisory.style.display = 'none';
+        issuesList.innerHTML = '';
+    }
+}
+
+if (mediaInput) mediaInput.addEventListener('change', runPosterProofreader);
+if (dateInput) dateInput.addEventListener('change', runPosterProofreader);
+const descEl = document.getElementById('desc-field');
+if (descEl) descEl.addEventListener('blur', runPosterProofreader);
 </script>
 @endsection

@@ -2180,6 +2180,26 @@ class LegacyMobileApiController extends Controller
             }
         }
 
+        // Auto-respond with Instant Assistant if message is an inquiry / FAQ
+        if (!$isAdmin) {
+            try {
+                $assistantReply = $this->generateAssistantFaqReply($message);
+                if ($assistantReply) {
+                    $asstPayload = [
+                        'request_id'  => $requestId,
+                        'sender_role' => 'admin',
+                        'sender_name' => 'NUPost Assistant (AI)',
+                        'message'     => $assistantReply,
+                        'created_at'  => now()->addSecond(),
+                    ];
+                    if (Schema::hasColumn('request_comments', 'updated_at')) {
+                        $asstPayload['updated_at'] = now()->addSecond();
+                    }
+                    DB::table('request_comments')->insert($asstPayload);
+                }
+            } catch (\Throwable $e) {}
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Message sent',
@@ -2632,6 +2652,231 @@ class LegacyMobileApiController extends Controller
                 'total' => $total,
             ],
         ], 200);
+    }
+
+    /**
+     * Instant Help / Submission Assistant in Chat for Mobile
+     */
+    public function generateAssistantFaqReply(string $message): ?string
+    {
+        $lower = strtolower(trim($message));
+
+        // 1. Zero-Token Local FAQ Knowledge Base
+        if (preg_match('/\b(dimension|carousel|aspect ratio|ig size|instagram size|ratio|resolution|pixels|width|height|tarpaulin size|story size)\b/i', $lower)) {
+            return "📐 **NU Social Media Dimensions Guide:**\n"
+                . "• **Square Feed Post:** 1080 × 1080 px (1:1)\n"
+                . "• **IG Carousel / Portrait:** 1080 × 1350 px (4:5) — *Recommended for carousels*\n"
+                . "• **Stories / Reels / TikTok:** 1080 × 1920 px (9:16)\n"
+                . "• **Facebook Cover / Landscape:** 1920 × 1080 px (16:9)\n"
+                . "• Keep critical text within the central 80% safe zone.";
+        }
+
+        if (preg_match('/\b(lead time|deadline|turnaround|days before|how many days|when to submit|how early|sla|how long)\b/i', $lower)) {
+            return "⏱️ **NU Lipa SLA Turnaround Times:**\n"
+                . "• **Checking of Materials:** 24 hours\n"
+                . "• **Posting with Ready-Made PubMat:** Up to 24 hours\n"
+                . "• **Template-Based PubMat:** 2 working days\n"
+                . "• **Standard PubMat:** 3–4 working days\n"
+                . "• **Multiple Collaterals / Tarpaulins:** 5–10 working days\n"
+                . "• **Event Documentation:** At least 1 month prior to event date.";
+        }
+
+        if (preg_match('/\b(format|file type|mb|file size|extension|png|jpg|jpeg|webp|can i upload|max size)\b/i', $lower)) {
+            return "📁 **Media Upload Guidelines:**\n"
+                . "• **Supported Formats:** PNG, JPG, JPEG, WEBP, MP4\n"
+                . "• **Size Limit:** Up to 10 MB per file (maximum 10 files per request)\n"
+                . "• PNG is recommended for crisp typography and official logos.";
+        }
+
+        if (preg_match('/\b(branding|logo|colors|font|brand guideline|official logo)\b/i', $lower)) {
+            return "🎨 **NU Lipa Branding Quick Tips:**\n"
+                . "• Official Colors: **NU Blue (`#002366`)** and **Gold (`#FFD100`)**\n"
+                . "• Do not distort, stretch, or alter the colors of the NU Lipa crest or Bulldog logo.\n"
+                . "• Always leave sufficient clear padding around official branding elements.";
+        }
+
+        // 2. Micro-Token Gemini Flash Fallback for novel questions
+        $isQuestion = str_contains($message, '?') || preg_match('/\b(how|what|can|when|where|is it|why|tell me)\b/i', $lower);
+        if (!$isQuestion) {
+            return null;
+        }
+
+        $apiKey = (string) env('GEMINI_API_KEY', '');
+        if ($apiKey === '') {
+            $apiKey = (string) \App\Models\Setting::get('gemini_api_key', config('services.gemini.key') ?: '');
+        }
+
+        if ($apiKey !== '') {
+            $shortQ = mb_substr($message, 0, 100);
+            $prompt = "You are NUPost Assistant for NU Lipa Social Media. Answer this student question in under 35 words based on NU guidelines (3-4 days lead time, 1080x1080 square). Question: {$shortQ}";
+
+            try {
+                $response = Http::withoutVerifying()->timeout(4)->post(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={$apiKey}",
+                    [
+                        'contents' => [
+                            ['parts' => [['text' => $prompt]]]
+                        ],
+                        'generationConfig' => [
+                            'temperature'     => 0.2,
+                            'maxOutputTokens' => 60,
+                        ]
+                    ]
+                );
+
+                if ($response->successful()) {
+                    $reply = $response->json('candidates.0.content.parts.0.text');
+                    if ($reply && trim($reply) !== '') {
+                        return "🤖 " . trim($reply);
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        if (str_contains($lower, 'guideline') || str_contains($lower, 'help')) {
+            return "💡 **Quick Tip:** For urgent questions or custom design requests, our Marketing admin will review your message shortly. For dimensions, ask *'carousel dimensions'*; for deadlines, ask *'lead times'*!";
+        }
+
+        return null;
+    }
+
+    /**
+     * Smart Category Suggester for Mobile
+     */
+    public function suggestCategory(Request $request): JsonResponse
+    {
+        $title = trim((string) $request->input('title', ''));
+        $lower = strtolower($title);
+
+        if (mb_strlen($title) < 3) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Standard PubMat',
+                'confidence' => 'low',
+                'source'     => 'default',
+            ]);
+        }
+
+        if (preg_match('/\b(docu|documentation|coverage|photo doc|livestream|recording|video coverage|photographer|videographer)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Event Documentation',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 30,
+            ]);
+        }
+
+        if (preg_match('/\b(tarpaulin|tarp|banner|backdrop|standee|collaterals|billboard|streamer|signage)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Multiple Collaterals / Tarpaulins',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 5,
+            ]);
+        }
+
+        if (preg_match('/\b(campaign|creative concept|advocacy|rebrand|series|movement|theme launch|awareness)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'New Campaign / Creative Concept',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 10,
+            ]);
+        }
+
+        if (preg_match('/\b(ready[- ]made|ready pubmat|ready to post|final pubmat|ready layout|post this)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Posting with Ready-Made PubMat',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 1,
+            ]);
+        }
+
+        if (preg_match('/\b(template|congratulatory|announcement|quote of the day|greeting|greetings|holiday|congrats|passer|passers|board exam|welcome|orientation)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Template-Based PubMat',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 2,
+            ]);
+        }
+
+        if (preg_match('/\b(check|review|proofing|validation|materials check|evaluation)\b/i', $lower)) {
+            return response()->json([
+                'success'    => true,
+                'category'   => 'Checking of Materials',
+                'confidence' => 'high',
+                'source'     => 'rules',
+                'sla_days'   => 1,
+            ]);
+        }
+
+        return response()->json([
+            'success'    => true,
+            'category'   => 'Standard PubMat',
+            'confidence' => 'medium',
+            'source'     => 'local',
+            'sla_days'   => 3,
+        ]);
+    }
+
+    /**
+     * Poster Proofreader for Mobile
+     */
+    public function proofreadPoster(Request $request): JsonResponse
+    {
+        $issues = [];
+        $prefDate = $request->input('post_date');
+        $title = (string) $request->input('title', '');
+        $description = (string) $request->input('description', '');
+        $combinedText = strtolower($title . ' ' . $description);
+
+        if ($prefDate) {
+            try {
+                $carbonDate = \Carbon\Carbon::parse($prefDate);
+                $actualDay = $carbonDate->format('l');
+                $actualDateStr = $carbonDate->format('M j, Y');
+
+                $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                $shortDays  = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+                foreach ($daysOfWeek as $idx => $day) {
+                    if (strtolower($actualDay) !== $day) {
+                        $short = $shortDays[$idx];
+                        if (preg_match('/\b(' . $day . '|' . $short . ')\b/i', $combinedText)) {
+                            $issues[] = "Calendar Note: Your selected preferred date ({$actualDateStr}) is a {$actualDay}, but your text mentions " . ucfirst($day) . ". Please verify!";
+                            break;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            if ($file->isValid()) {
+                $imageInfo = @getimagesize($file->getRealPath());
+                if ($imageInfo) {
+                    $width = $imageInfo[0];
+                    $height = $imageInfo[1];
+                    if ($width < 600 || $height < 600) {
+                        $issues[] = "Low resolution graphic ({$width}×{$height}px). Recommended size is at least 1080×1080px for crisp social media feeds.";
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'success'    => true,
+            'has_issues' => !empty($issues),
+            'issues'     => array_values(array_unique($issues)),
+        ]);
     }
 }
 

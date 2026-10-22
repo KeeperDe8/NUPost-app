@@ -22,6 +22,8 @@ Route::get('/request_details.php', [LegacyMobileApiController::class, 'requestDe
 Route::get('/messages.php', [LegacyMobileApiController::class, 'messageThreads']);
 Route::get('/message_thread.php', [LegacyMobileApiController::class, 'messageThread']);
 Route::post('/message_thread.php', [LegacyMobileApiController::class, 'sendMessage']);
+Route::post('/suggest_category.php', [LegacyMobileApiController::class, 'suggestCategory']);
+Route::post('/proofread_poster.php',  [LegacyMobileApiController::class, 'proofreadPoster']);
 
 Route::get('/media.php', [LegacyMobileApiController::class, 'getMedia']);
 Route::get('/media/{file}', [LegacyMobileApiController::class, 'getMedia']);

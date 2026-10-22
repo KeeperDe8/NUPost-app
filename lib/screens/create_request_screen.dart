@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../main_shell.dart';
@@ -40,6 +41,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   final Map<String, bool> _platforms = {'Facebook': false, 'LinkedIn': false};
 
   String? _selectedCategory;
+  bool _hasManualCategoryOverride = false;
+  String? _suggestedCategory;
+  bool _isSuggestingCategory = false;
+  List<String> _proofreadIssues = [];
+  Timer? _suggestDebounce;
+
   String? _selectedPriority;
   DateTime? _selectedDate;
 
@@ -224,10 +231,17 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       curve: Curves.easeOut,
     );
 
-    _titleController.addListener(() => setState(() {}));
-    _descriptionController.addListener(() => setState(() {}));
+    _titleController.addListener(() {
+      setState(() {});
+      _onTitleChanged(_titleController.text);
+    });
+    _descriptionController.addListener(() {
+      setState(() {});
+      _runPosterProofreader();
+    });
 
     if (widget.isEditing && widget.initialData != null) {
+      _hasManualCategoryOverride = true;
       final init = widget.initialData!;
       _titleController.text = (init['title'] ?? '').toString();
       _descriptionController.text = (init['description'] ?? '').toString();
@@ -274,6 +288,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
   @override
   void dispose() {
+    _suggestDebounce?.cancel();
     _entryCtrl.dispose();
     _submitScaleController.dispose();
     _successController.dispose();
@@ -281,6 +296,240 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     _descriptionController.dispose();
     _captionController.dispose();
     super.dispose();
+  }
+
+  // ── Smart Category Suggester ──────────────────────────────────────────────
+  void _onTitleChanged(String title) {
+    _runPosterProofreader();
+    if (_hasManualCategoryOverride) return;
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) return;
+
+    // 1. Instant local zero-token check
+    final local = _matchLocalCategory(trimmed);
+    if (local != null) {
+      if (_selectedCategory != local) {
+        setState(() {
+          _selectedCategory = local;
+          _suggestedCategory = local;
+        });
+      }
+      return;
+    }
+
+    // 2. Fallback to API if > 4 chars, debounced 500ms
+    if (trimmed.length >= 5) {
+      _suggestDebounce?.cancel();
+      _suggestDebounce = Timer(const Duration(milliseconds: 500), () async {
+        if (!mounted || _hasManualCategoryOverride) return;
+        try {
+          setState(() => _isSuggestingCategory = true);
+          final res = await ApiService.suggestCategory(title: trimmed);
+          if (!mounted || _hasManualCategoryOverride) return;
+          final cat = (res['category'] ?? '').toString();
+          if (cat.isNotEmpty && _categories.contains(cat)) {
+            setState(() {
+              _selectedCategory = cat;
+              _suggestedCategory = cat;
+            });
+          }
+        } catch (_) {
+        } finally {
+          if (mounted) setState(() => _isSuggestingCategory = false);
+        }
+      });
+    }
+  }
+
+  String? _matchLocalCategory(String title) {
+    final lower = title.toLowerCase();
+    if (RegExp(r'\b(docu|documentation|coverage|photo doc|livestream|recording|video coverage|photographer|videographer)\b').hasMatch(lower)) {
+      return 'Event Documentation';
+    }
+    if (RegExp(r'\b(ready[- ]made|ready pubmat|ready to post|final pubmat|ready layout|post this)\b').hasMatch(lower)) {
+      return 'Posting with Ready-Made PubMat';
+    }
+    if (RegExp(r'\b(tarpaulin|tarp|banner|backdrop|standee|collaterals|billboard|streamer|signage)\b').hasMatch(lower)) {
+      return 'Multiple Collaterals / Tarpaulins';
+    }
+    if (RegExp(r'\b(campaign|creative concept|advocacy|rebrand|series|movement|theme launch|awareness)\b').hasMatch(lower)) {
+      return 'New Campaign / Creative Concept';
+    }
+    if (RegExp(r'\b(template|congratulatory|announcement|quote of the day|greeting|greetings|holiday|congrats|passer|passers|board exam|welcome|orientation)\b').hasMatch(lower)) {
+      return 'Template-Based PubMat';
+    }
+    if (RegExp(r'\b(check|review|proofing|validation|materials check|evaluation)\b').hasMatch(lower)) {
+      return 'Checking of Materials';
+    }
+    return null;
+  }
+
+  // ── Poster Proofreader (Multimodal & Date Mismatch) ────────────────────────
+  Future<void> _runPosterProofreader() async {
+    final List<String> issues = [];
+
+    // Local 0-token check: Date vs day-of-week mismatch
+    if (_selectedDate != null) {
+      final d = _selectedDate!;
+      const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      final actualDay = weekdays[d.weekday - 1];
+      final fullText = '${_titleController.text} ${_descriptionController.text}'.toLowerCase();
+
+      for (int i = 0; i < weekdays.length; i++) {
+        final day = weekdays[i];
+        if (day != actualDay) {
+          final short = day.substring(0, 3).toLowerCase();
+          if (RegExp(r'\b(' + day.toLowerCase() + r'|' + short + r')\b').hasMatch(fullText)) {
+            issues.add(
+              'Calendar Note: Your preferred posting date is a $actualDay, but your text mentions $day. Please double-check!',
+            );
+            break;
+          }
+        }
+      }
+    }
+
+    // Server check if media file attached
+    if (_mediaFiles.isNotEmpty) {
+      final first = _mediaFiles.first;
+      final ext = first.extension?.toLowerCase() ?? '';
+      if (['png', 'jpg', 'jpeg', 'webp'].contains(ext)) {
+        try {
+          final postDateStr = _selectedDate != null
+              ? '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}'
+              : null;
+          final res = await ApiService.proofreadPoster(
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            postDate: postDateStr,
+            mediaFile: first,
+          );
+          final serverIssues = (res['issues'] as List?)?.map((e) => e.toString()).toList() ?? [];
+          for (final s in serverIssues) {
+            if (!issues.contains(s)) {
+              issues.add(s);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _proofreadIssues = issues;
+      });
+    }
+  }
+
+  Widget _buildCategorySuggestionBadge() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isOverridden = _hasManualCategoryOverride && _selectedCategory != _suggestedCategory;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1735) : const Color(0xFFF3E8FF),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFF8B5CF6).withOpacity(0.4),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.auto_awesome_rounded, size: 12, color: Color(0xFF8B5CF6)),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              isOverridden
+                  ? 'AI suggested: $_suggestedCategory (Tap to use)'
+                  : '✨ Auto-detected from title (editable anytime)',
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF8B5CF6),
+              ),
+            ),
+          ),
+          if (isOverridden) ...[
+            const SizedBox(width: 5),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedCategory = _suggestedCategory;
+                  _hasManualCategoryOverride = false;
+                });
+              },
+              child: const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF8B5CF6)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProofreadAdvisory() {
+    if (_proofreadIssues.isEmpty) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF231C10) : const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withOpacity(0.45),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.shield_outlined, size: 16, color: Color(0xFFD97706)),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'Smart Proofreader Notice',
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _proofreadIssues.clear()),
+                child: const Icon(Icons.close_rounded, size: 15, color: Color(0xFFD97706)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ..._proofreadIssues.map((issue) => Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('• ', style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.bold, fontSize: 12)),
+                Expanded(
+                  child: Text(
+                    issue,
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 11.5,
+                      color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
   }
 
   // ── All original logic preserved ─────────────────────────────────────────
@@ -363,6 +612,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           _selectedDate!.day != picked.day) {
         setState(() => _selectedDate = picked);
         _fetchDateInfo(picked);
+        _runPosterProofreader();
       }
     }
   }
@@ -434,6 +684,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     setState(() {
       _mediaFiles = picked.take(4).toList();
     });
+    _runPosterProofreader();
     if (picked.length > 4 && mounted) {
       AppSnackbar.show(context, 'Only first 4 files were selected.');
     }
@@ -1598,10 +1849,15 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                                       value: _selectedCategory,
                                       hint: 'Select',
                                       items: _categories,
-                                      onChanged: (val) => setState(
-                                        () => _selectedCategory = val,
-                                      ),
+                                      onChanged: (val) => setState(() {
+                                        _hasManualCategoryOverride = true;
+                                        _selectedCategory = val;
+                                      }),
                                     ),
+                                    if (_suggestedCategory != null) ...[
+                                      const SizedBox(height: 6),
+                                      _buildCategorySuggestionBadge(),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -1668,7 +1924,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                       _SectionCard(
                         icon: Icons.perm_media_rounded,
                         title: 'Media Upload',
-                        children: [_buildMediaUpload()],
+                        children: [
+                          _buildMediaUpload(),
+                          if (_proofreadIssues.isNotEmpty)
+                            _buildProofreadAdvisory(),
+                        ],
                       ),
                       const SizedBox(height: 14),
 

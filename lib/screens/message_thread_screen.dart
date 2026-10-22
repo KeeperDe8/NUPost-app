@@ -511,6 +511,20 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
 
   // ── Chat Bubble ───────────────────────────────────────────────────────────
   Widget _buildBubble(_ChatMessage m, bool isDark) {
+    final isAssistant = m.senderName.contains('Assistant') || m.senderName.contains('(AI)');
+    if (isAssistant) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.84,
+          ),
+          margin: const EdgeInsets.only(bottom: 12),
+          child: _assistantBubble(m, isDark),
+        ),
+      );
+    }
+
     final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
     final isMine = isAdmin ? (m.senderRole == 'admin') : (m.senderRole != 'admin');
 
@@ -522,6 +536,117 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
         ),
         margin: const EdgeInsets.only(bottom: 10),
         child: isMine ? _outBubble(m) : _inBubble(m, isDark),
+      ),
+    );
+  }
+
+  Widget _assistantBubble(_ChatMessage m, bool isDark) {
+    final bubbleBg = isDark ? const Color(0xFF1E1735) : const Color(0xFFF5F3FF);
+    final borderColor = const Color(0xFF8B5CF6).withOpacity(isDark ? 0.45 : 0.35);
+    final textColor = isDark ? const Color(0xFFF3E8FF) : const Color(0xFF2E1065);
+    final timeColor = isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: bubbleBg,
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8B5CF6).withOpacity(isDark ? 0.15 : 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 13,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'NUPost Assistant',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF4C1D95),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: const Text(
+                  'BOT / FAQ',
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF8B5CF6),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            m.message,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 13.5,
+              color: textColor,
+              fontWeight: FontWeight.w400,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _formatTime(m.createdAt),
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 10,
+                  color: timeColor.withOpacity(0.8),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '• Instant Help',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 10,
+                  color: timeColor.withOpacity(0.6),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -637,6 +762,51 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
 
   String _formatTime(String raw) => AppDateTimeUtils.formatTimeOnly(raw);
 
+  Widget _buildQuickFaqChips(bool isDark) {
+    final chips = [
+      {'label': '📐 IG Dimensions', 'query': 'What are the dimensions for IG carousel?'},
+      {'label': '⏱️ Lead Times', 'query': 'How many days before the event can I submit?'},
+      {'label': '📁 File Formats', 'query': 'What file formats are accepted for PubMat?'},
+      {'label': '🎨 NU Branding', 'query': 'What are the official NU Lipa brand colors and guidelines?'},
+    ];
+
+    return Container(
+      height: 34,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: chips.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        itemBuilder: (context, i) {
+          final item = chips[i];
+          return ActionChip(
+            label: Text(
+              item['label']!,
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: isDark ? const Color(0xFFDDD6FE) : const Color(0xFF6D28D9),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+            backgroundColor: isDark ? const Color(0xFF2E1065).withOpacity(0.5) : const Color(0xFFEDE9FE),
+            side: BorderSide(
+              color: const Color(0xFF8B5CF6).withOpacity(isDark ? 0.4 : 0.25),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            onPressed: () {
+              _input.text = item['query']!;
+              _send();
+            },
+          );
+        },
+      ),
+    );
+  }
+
   // ── Composer ──────────────────────────────────────────────────────────────
   Widget _buildComposer(bool isDark) {
     final isAdmin = SessionStore.role?.toLowerCase() == 'admin';
@@ -660,9 +830,13 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          if (!isAdmin) _buildQuickFaqChips(isDark),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
           Expanded(
             child: Container(
               constraints: const BoxConstraints(maxHeight: 120),
@@ -746,6 +920,8 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
               ),
             ),
           ),
+        ],
+      ),
         ],
       ),
     );
