@@ -685,11 +685,13 @@ class LegacyMobileApiController extends Controller
                 $cleanTitle = $this->cleanTextForComparison($title);
                 $cleanDesc  = $this->cleanTextForComparison($description);
 
-                // 4. Smart Fuzzy & Semantic Duplicate Detection (within 24h)
+                // 4. Smart Fuzzy & Semantic Duplicate Detection (within 48h)
                 $recentDuplicates = DB::table($table)
                     ->where('status', '!=', 'Rejected')
-                    ->where('created_at', '>=', now()->subHours(24))
+                    ->where('created_at', '>=', now()->subHours(48))
                     ->get();
+
+                $targetDate = $request->input('preferred_date', $request->input('post_date'));
 
                 foreach ($recentDuplicates as $dup) {
                     $dupTitleRaw = trim((string) ($dup->title ?? ''));
@@ -715,7 +717,7 @@ class LegacyMobileApiController extends Controller
                     $wordsDupTitle = $this->extractWordTokens($dupTitleRaw);
                     $tokenOverlap = $this->tokenOverlapRatio($wordsTitle, $wordsDupTitle);
 
-                    // Title normalized match (e.g. "College Week Ceremony 2026" vs "College Week Ceremony" OR "College Ceremony Week")
+                    // Title normalized match
                     $titleNormalizedMatch = ($cleanTitle !== '' && $cleanTitle === $cleanDupTitle) || $sortedMatch;
 
                     $titleSim = 0.0;
@@ -747,8 +749,17 @@ class LegacyMobileApiController extends Controller
                         ($titleSim >= 60.0 && $descSim >= 60.0)
                     );
 
+                    // Rule B (System-wide cross-account):
+                    // Stops users creating alt accounts to bypass checks
+                    $dupDate = isset($dup->preferred_date) && $dup->preferred_date ? \Carbon\Carbon::parse($dup->preferred_date)->format('Y-m-d') : null;
+                    $sameTargetDate = ($targetDate && $dupDate && $targetDate === $dupDate);
+                    $sameCategory = (strcasecmp((string)$request->input('category'), (string)($dup->category ?? '')) === 0);
+
                     $isSystemDuplicate = (
-                        (($titleNormalizedMatch || $sortedMatch) && $descSim >= 75.0) ||
+                        (($titleNormalizedMatch || $sortedMatch) && $descSim >= 60.0) ||
+                        ($sameTargetDate && $sameCategory && ($titleSim >= 70.0 || $tokenOverlap >= 70.0)) ||
+                        ($sameTargetDate && ($titleSim >= 80.0 || $tokenOverlap >= 80.0)) ||
+                        ($titleSim >= 80.0 && ($descSim >= 70.0 || $tokenOverlap >= 75.0)) ||
                         (md5(strtolower($title) . '|' . strtolower($description)) === md5(strtolower($dupTitleRaw) . '|' . strtolower($dupDescRaw)))
                     );
 
@@ -775,6 +786,47 @@ class LegacyMobileApiController extends Controller
             }
             if (!is_array($files)) {
                 $files = [];
+            }
+
+            // 5. Media SHA-256 Fingerprinting
+            if (!empty($files)) {
+                $incomingHashes = [];
+                foreach ($files as $file) {
+                    if ($file instanceof UploadedFile && $file->isValid()) {
+                        $incomingHashes[] = hash_file('sha256', $file->getRealPath());
+                    }
+                }
+
+                if (!empty($incomingHashes)) {
+                    $activeMediaRows = DB::table($table)
+                        ->whereIn('status', ['Pending', 'Pending Review', 'Under Review'])
+                        ->where('created_at', '>=', now()->subDays(14))
+                        ->whereNotNull('media_file')
+                        ->where('media_file', '!=', '')
+                        ->select(['id', 'title', 'media_file'])
+                        ->get();
+
+                    foreach ($activeMediaRows as $amr) {
+                        $existingFilenames = array_filter(array_map('trim', explode(',', $amr->media_file)));
+                        foreach ($existingFilenames as $efn) {
+                            $filePath = public_path('uploads/' . $efn);
+                            if (file_exists($filePath)) {
+                                $existingHash = Cache::remember('media_sha256_' . $efn, 86400, function () use ($filePath) {
+                                    return hash_file('sha256', $filePath);
+                                });
+
+                                if (in_array($existingHash, $incomingHashes, true)) {
+                                    $existingSnippet = strlen($amr->title) > 35 ? substr($amr->title, 0, 35) . '…' : $amr->title;
+                                    $reqCode = isset($amr->request_id) && $amr->request_id ? $amr->request_id : ('REQ-' . str_pad((string)$amr->id, 5, '0', STR_PAD_LEFT));
+                                    return response()->json([
+                                        'success' => false,
+                                        'message' => "Duplicate publication material detected: The uploaded image matches an active request (\"{$existingSnippet}\", {$reqCode}). Please edit your existing request instead of submitting duplicate materials.",
+                                    ], 422);
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             if (!empty($files)) {

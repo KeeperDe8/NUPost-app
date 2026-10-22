@@ -107,6 +107,8 @@ Route::middleware('auth.nupost:admin')->prefix('admin')->name('admin.')->group(f
     Route::get('/analytics/refresh',  [FacebookAnalyticsController::class, 'refresh'])->name('analytics.refresh');
     Route::get('/analytics/export',   [FacebookAnalyticsController::class, 'exportCsv'])->name('analytics.export');
     Route::get('/reports',            [ReportsController::class, 'index'])->name('reports');
+    Route::get('/reports/refresh',    [FacebookAnalyticsController::class, 'refresh'])->name('reports.refresh');
+    Route::get('/reports/fb-export',  [FacebookAnalyticsController::class, 'exportCsv'])->name('reports.fb-export');
     Route::get('/reports/export',     [ReportsController::class, 'export'])->name('reports.export');
     Route::get('/settings',           [SettingsController::class, 'index'])->name('settings');
     Route::post('/settings/profile',  [SettingsController::class, 'updateProfile'])->name('settings.profile');
@@ -130,6 +132,7 @@ Route::middleware('auth.nupost:admin')->prefix('admin')->name('admin.')->group(f
     Route::post('/requests/{id}/generate-caption', [RequestManagementController::class, 'generateCaption'])->name('requests.generate-caption');
     Route::post('/requests/{id}/save-caption',     [RequestManagementController::class, 'saveCaption'])->name('requests.save-caption');
     Route::post('/requests/{id}/caption',          [RequestManagementController::class, 'updateCaption'])->name('requests.caption');
+    Route::post('/requests/{id}/ai-review',        [RequestManagementController::class, 'aiReviewRequest'])->name('requests.ai-review');
     Route::get('/requests/{id}/download/{filename}', [RequestManagementController::class, 'downloadFile'])->name('requests.download')->where('filename', '.*');
 });
 

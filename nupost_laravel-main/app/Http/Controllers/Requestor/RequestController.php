@@ -196,16 +196,18 @@ class RequestController extends Controller
             $cleanTitle = $this->cleanTextForComparison($title);
             $cleanDesc  = $this->cleanTextForComparison($description);
 
-            // 4. Smart Fuzzy & Semantic Duplicate Detection (within 24h)
-            $selectCols = ['id', 'title', 'description', 'status', 'requester'];
+            // 4. Smart Fuzzy & Semantic Duplicate Detection (within 48h)
+            $selectCols = ['id', 'request_id', 'title', 'description', 'status', 'requester', 'category', 'preferred_date'];
             if (\Illuminate\Support\Facades\Schema::hasColumn('post_requests', 'user_id')) {
                 $selectCols[] = 'user_id';
             }
 
             $recentDuplicates = PostRequest::where('status', '!=', 'Rejected')
-                ->where('created_at', '>=', now()->subHours(24))
+                ->where('created_at', '>=', now()->subHours(48))
                 ->select($selectCols)
                 ->get();
+
+            $targetDate = $request->input('post_date');
 
             foreach ($recentDuplicates as $dup) {
                 $dupTitleRaw = trim((string) ($dup->title ?? ''));
@@ -231,10 +233,10 @@ class RequestController extends Controller
                 $wordsDupTitle = $this->extractWordTokens($dupTitleRaw);
                 $tokenOverlap = $this->tokenOverlapRatio($wordsTitle, $wordsDupTitle);
 
-                // Title normalized match (e.g. "College Week Ceremony 2026" vs "College Week Ceremony" OR "College Ceremony Week")
+                // Title normalized match
                 $titleNormalizedMatch = ($cleanTitle !== '' && $cleanTitle === $cleanDupTitle) || $sortedMatch;
 
-                // Title fuzzy similarity (taking the best of sequential similarity, token-sorted similarity, and word overlap)
+                // Title fuzzy similarity
                 $titleSim = 0.0;
                 if (!$titleNormalizedMatch && $cleanTitle !== '' && $cleanDupTitle !== '') {
                     $simRaw = 0.0;
@@ -256,9 +258,8 @@ class RequestController extends Controller
                     }
                 }
 
-                // Detection rules:
                 // Rule A (Same user):
-                // - Title match (ignoring years like 2026, version tags, punctuation, or word-order permutation)
+                // - Title match (ignoring years, versions, punctuation, or word-order permutation)
                 // - OR Title similarity >= 75%
                 // - OR Token overlap >= 75% (e.g. 3 of 4 words match)
                 // - OR Description is identical or nearly identical (>= 80%)
@@ -272,11 +273,22 @@ class RequestController extends Controller
                     ($titleSim >= 60.0 && $descSim >= 60.0)
                 );
 
-                // Rule B (System-wide):
-                // - Exact or normalized/token-sorted title match WITH identical/high description (>= 75%)
+                // Rule B (System-wide cross-account):
+                // Stops users creating alt accounts to bypass checks:
+                // - Exact or normalized/token-sorted title match WITH description >= 60%
+                // - OR Same target date + same category AND (titleSim >= 70% OR tokenOverlap >= 70%)
+                // - OR Same target date AND (titleSim >= 80% OR tokenOverlap >= 80%)
+                // - OR High overall similarity (titleSim >= 80% AND (descSim >= 70% OR tokenOverlap >= 75%))
                 // - OR Content hash match
+                $dupDate = $dup->preferred_date ? \Carbon\Carbon::parse($dup->preferred_date)->format('Y-m-d') : null;
+                $sameTargetDate = ($targetDate && $dupDate && $targetDate === $dupDate);
+                $sameCategory = (strcasecmp((string)$request->input('category'), (string)($dup->category ?? '')) === 0);
+
                 $isSystemDuplicate = (
-                    (($titleNormalizedMatch || $sortedMatch) && $descSim >= 75.0) ||
+                    (($titleNormalizedMatch || $sortedMatch) && $descSim >= 60.0) ||
+                    ($sameTargetDate && $sameCategory && ($titleSim >= 70.0 || $tokenOverlap >= 70.0)) ||
+                    ($sameTargetDate && ($titleSim >= 80.0 || $tokenOverlap >= 80.0)) ||
+                    ($titleSim >= 80.0 && ($descSim >= 70.0 || $tokenOverlap >= 75.0)) ||
                     (md5(strtolower($title) . '|' . strtolower($description)) === md5(strtolower($dupTitleRaw) . '|' . strtolower($dupDescRaw)))
                 );
 
@@ -293,6 +305,53 @@ class RequestController extends Controller
                         return response()->json(['success' => false, 'message' => $msg], 422);
                     }
                     return back()->withInput()->with('error', $msg);
+                }
+            }
+
+            // 5. Media SHA-256 Fingerprinting (Blocks re-uploaded identical images across active requests)
+            if ($request->hasFile('media')) {
+                $uploadedFiles = $request->file('media');
+                if (!is_array($uploadedFiles)) {
+                    $uploadedFiles = [$uploadedFiles];
+                }
+
+                $incomingHashes = [];
+                foreach ($uploadedFiles as $file) {
+                    if ($file && $file->isValid()) {
+                        $incomingHashes[] = hash_file('sha256', $file->getRealPath());
+                    }
+                }
+
+                if (!empty($incomingHashes)) {
+                    $activeMediaRequests = PostRequest::whereIn('status', ['Pending', 'Pending Review', 'Under Review'])
+                        ->where('created_at', '>=', now()->subDays(14))
+                        ->whereNotNull('media_file')
+                        ->where('media_file', '!=', '')
+                        ->select('id', 'request_id', 'title', 'media_file')
+                        ->get();
+
+                    foreach ($activeMediaRequests as $amr) {
+                        $existingFilenames = array_filter(array_map('trim', explode(',', $amr->media_file)));
+                        foreach ($existingFilenames as $efn) {
+                            $filePath = public_path('uploads/' . $efn);
+                            if (file_exists($filePath)) {
+                                $existingHash = Cache::remember('media_sha256_' . $efn, 86400, function () use ($filePath) {
+                                    return hash_file('sha256', $filePath);
+                                });
+
+                                if (in_array($existingHash, $incomingHashes, true)) {
+                                    $existingSnippet = strlen($amr->title) > 35 ? substr($amr->title, 0, 35) . '…' : $amr->title;
+                                    $reqCode = $amr->request_id ?: ('REQ-' . str_pad((string)$amr->id, 5, '0', STR_PAD_LEFT));
+                                    $msg = "Duplicate publication material detected: The uploaded image matches an active request (\"{$existingSnippet}\", {$reqCode}). Please edit your existing request instead of submitting duplicate materials.";
+
+                                    if ($request->expectsJson() || $request->is('api/*')) {
+                                        return response()->json(['success' => false, 'message' => $msg], 422);
+                                    }
+                                    return back()->withInput()->with('error', $msg);
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

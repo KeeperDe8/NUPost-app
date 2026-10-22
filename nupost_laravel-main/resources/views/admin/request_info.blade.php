@@ -631,6 +631,57 @@
             </div>
         </div>
 
+        {{-- AI & Policy Pre-Check card --}}
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card__head" style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="card__title" style="display:flex;align-items:center;gap:7px;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--navy);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    AI & Policy Pre-Check
+                </div>
+                <button type="button" id="btn-run-ai-review" class="btn-sm btn-sm--navy" onclick="runAiReview()" style="padding:5px 12px;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;">
+                    <span id="ai-review-spinner" class="spinner" style="width:12px;height:12px;border-width:1.5px;display:none;"></span>
+                    <span id="ai-review-btn-text">Run Check</span>
+                </button>
+            </div>
+            <div class="card__body" style="padding-top:10px;">
+                <div id="ai-review-initial" style="text-align:center;padding:12px 6px;color:var(--ink-soft);font-size:12.5px;">
+                    <p style="margin:0 0 4px;font-weight:600;color:var(--ink-mid);">Micro-Token AI & Duplicate Audit</p>
+                    <p style="margin:0;font-size:11.5px;color:var(--ink-faint);">Checks for alt-account duplicate bypass, content quality, and safety policy.</p>
+                </div>
+
+                <div id="ai-review-results" style="display:none;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(0,0,0,0.06);">
+                        <div>
+                            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-faint);">Safety Status</div>
+                            <div id="ai-review-badge" style="margin-top:3px;"></div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-faint);">Score</div>
+                            <div id="ai-review-score" style="font-size:18px;font-weight:800;color:var(--navy);margin-top:2px;">—</div>
+                        </div>
+                    </div>
+
+                    <div class="info-row" style="padding:6px 0;">
+                        <span class="info-row__label" style="font-size:12px;">Duplicate Risk</span>
+                        <span class="info-row__value" id="ai-review-duplicate" style="font-size:12px;">—</span>
+                    </div>
+
+                    <div class="info-row" style="padding:6px 0;">
+                        <span class="info-row__label" style="font-size:12px;">Audit Engine</span>
+                        <span class="info-row__value" id="ai-review-engine" style="font-size:11.5px;color:var(--ink-soft);">—</span>
+                    </div>
+
+                    <div id="ai-review-flags-wrap" style="margin-top:10px;display:none;">
+                        <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Detected Flags</div>
+                        <div id="ai-review-flags" style="display:flex;flex-direction:column;gap:4px;"></div>
+                    </div>
+
+                    <div id="ai-review-note-box" style="margin-top:10px;padding:9px 12px;border-radius:10px;background:var(--cream);border:1px solid rgba(0,0,0,0.06);font-size:12px;color:var(--ink-mid);line-height:1.4;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- Comments card --}}
         <div class="card">
             <div class="card__head"><div class="card__title" style="display:flex;align-items:center;gap:7px;"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Comments</div></div>
@@ -979,6 +1030,89 @@ function confirmHeroStatus(e, f) {
             f.submit();
         }
     });
+}
+
+async function runAiReview() {
+    const btn = document.getElementById('btn-run-ai-review');
+    const spinner = document.getElementById('ai-review-spinner');
+    const btnText = document.getElementById('ai-review-btn-text');
+    const initial = document.getElementById('ai-review-initial');
+    const results = document.getElementById('ai-review-results');
+
+    if (!btn) return;
+    btn.disabled = true;
+    spinner.style.display = 'inline-block';
+    btnText.textContent = 'Auditing...';
+
+    try {
+        const response = await fetch("{{ route('admin.requests.ai-review', $request->id) }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            initial.style.display = 'none';
+            results.style.display = 'block';
+
+            // Badge
+            const badgeEl = document.getElementById('ai-review-badge');
+            if (data.safe) {
+                badgeEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#ecfdf5;color:#059669;font-size:11px;font-weight:700;border:1px solid #a7f3d0;"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Clean / Passed</span>`;
+            } else {
+                badgeEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:11px;font-weight:700;border:1px solid #fecaca;"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Flags Detected</span>`;
+            }
+
+            // Score
+            const scoreEl = document.getElementById('ai-review-score');
+            scoreEl.textContent = data.score + '/100';
+            if (data.score >= 80) scoreEl.style.color = '#059669';
+            else if (data.score >= 60) scoreEl.style.color = '#d97706';
+            else scoreEl.style.color = '#dc2626';
+
+            // Duplicate Risk
+            const dupEl = document.getElementById('ai-review-duplicate');
+            if (data.duplicate_risk === 'High') {
+                dupEl.innerHTML = `<strong style="color:#dc2626;">High Risk (${data.highest_sim}%)</strong>`;
+            } else if (data.duplicate_risk === 'Moderate') {
+                dupEl.innerHTML = `<span style="color:#d97706;">Moderate (${data.highest_sim}%)</span>`;
+            } else {
+                dupEl.innerHTML = `<span style="color:#059669;">Low (${data.highest_sim || 0}%)</span>`;
+            }
+
+            // Engine
+            document.getElementById('ai-review-engine').textContent = data.engine;
+
+            // Flags
+            const flagsWrap = document.getElementById('ai-review-flags-wrap');
+            const flagsEl = document.getElementById('ai-review-flags');
+            if (data.flags && data.flags.length > 0) {
+                flagsWrap.style.display = 'block';
+                flagsEl.innerHTML = data.flags.map(f => `<div style="font-size:11.5px;color:#991b1b;background:#fee2e2;padding:4px 8px;border-radius:6px;">⚠️ ${esc(f)}</div>`).join('');
+            } else {
+                flagsWrap.style.display = 'none';
+                flagsEl.innerHTML = '';
+            }
+
+            // Note
+            const noteBox = document.getElementById('ai-review-note-box');
+            noteBox.textContent = data.note || 'Review complete.';
+
+            showToast('Quality pre-check completed!');
+        } else {
+            showToast(data.message || 'Audit check failed', 'error');
+        }
+    } catch (err) {
+        showToast('Error running quality check', 'error');
+    } finally {
+        btn.disabled = false;
+        spinner.style.display = 'none';
+        btnText.textContent = 'Re-run Check';
+    }
 }
 </script>
 @endsection
