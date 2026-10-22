@@ -2214,14 +2214,15 @@ class LegacyMobileApiController extends Controller
                 $today = now()->startOfDay();
                 $slackDays = (int) $today->diffInDays($latestStart, false); // negative = overdue
 
-                $isAtRisk = $slackDays < 0;
-                $isDueSoon = $slackDays >= 0 && $slackDays <= 1;
+                $isActive = in_array($status !== '' ? $status : 'Pending Review', ['Pending', 'Pending Review', 'Under Review']);
+                $isAtRisk = $isActive && ($slackDays < 0);
+                $isDueSoon = $isActive && ($slackDays >= 0 && $slackDays <= 1);
 
-                // Priority weight for sorting: Urgent=0, High=1, Med=2, Low=3
-                $prioStr = strtolower(trim((string) ($r->priority ?? 'Low')));
-                $prioWeight = match($prioStr) {
-                    'urgent' => 0,
-                    'high' => 1,
+                // Priority weight for sorting: High=1, Med=2, Low=3 (normalize legacy Urgent to High)
+                $rawPrio = strtolower(trim((string) ($r->priority ?? 'Low')));
+                $prioDisplay = ($rawPrio === 'urgent') ? 'High' : ucfirst($rawPrio ?: 'Low');
+                $prioWeight = match($rawPrio) {
+                    'urgent', 'high' => 1,
                     'medium' => 2,
                     default => 3,
                 };
@@ -2232,7 +2233,7 @@ class LegacyMobileApiController extends Controller
                     'title' => (string) ($r->title ?? ''),
                     'requester' => (string) ($r->requester ?? ''),
                     'status' => $status !== '' ? $status : 'Pending Review',
-                    'priority' => (string) ($r->priority ?? 'Low'),
+                    'priority' => $prioDisplay,
                     'platform' => (string) ($r->platform ?? 'Facebook'),
                     'category' => $category,
                     'description' => (string) ($r->description ?? ''),
@@ -2248,8 +2249,13 @@ class LegacyMobileApiController extends Controller
                 ];
             })
             ->sort(function ($a, $b) {
-                // Sort by slack_days ascending (tighter/negative first), then prio weight, then created_at DESC
-                if ($a['slack_days'] !== $b['slack_days']) {
+                // Active requests (Pending Review / Under Review) come first (0), finalized sink to back (1)
+                $aActive = in_array($a['status'], ['Pending', 'Pending Review', 'Under Review']) ? 0 : 1;
+                $bActive = in_array($b['status'], ['Pending', 'Pending Review', 'Under Review']) ? 0 : 1;
+                if ($aActive !== $bActive) {
+                    return $aActive <=> $bActive;
+                }
+                if ($aActive === 0 && $a['slack_days'] !== $b['slack_days']) {
                     return $a['slack_days'] <=> $b['slack_days'];
                 }
                 if ($a['_prio_weight'] !== $b['_prio_weight']) {

@@ -301,10 +301,10 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
     <select name="filter" onchange="this.form.submit()">
         <option value="all" {{ $filter==='all'?'selected':'' }}>All Requests</option>
         @if(($at_risk_count ?? 0) > 0)
-            <option value="at_risk" {{ $filter==='at_risk'?'selected':'' }}>⚠️ At Risk / Overdue ({{ $at_risk_count }})</option>
+            <option value="at_risk" {{ $filter==='at_risk'?'selected':'' }}>At Risk / Overdue ({{ $at_risk_count }})</option>
         @endif
         @if(($due_soon_count ?? 0) > 0)
-            <option value="due_soon" {{ $filter==='due_soon'?'selected':'' }}>⏰ Due Soon ({{ $due_soon_count }})</option>
+            <option value="due_soon" {{ $filter==='due_soon'?'selected':'' }}>Due Soon ({{ $due_soon_count }})</option>
         @endif
         <option value="pending" {{ $filter==='pending'?'selected':'' }}>Pending Review</option>
         <option value="review" {{ $filter==='review'?'selected':'' }}>Under Review</option>
@@ -313,7 +313,7 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
         <option value="rejected" {{ $filter==='rejected'?'selected':'' }}>Rejected</option>
     </select>
     <select name="sort" onchange="this.form.submit()">
-        <option value="urgency" {{ $sort==='urgency'?'selected':'' }}>⚡ Urgency / SLA Slack</option>
+        <option value="urgency" {{ $sort==='urgency'?'selected':'' }}>Urgency / SLA Slack</option>
         <option value="newest" {{ $sort==='newest'?'selected':'' }}>Newest First</option>
         <option value="oldest" {{ $sort==='oldest'?'selected':'' }}>Oldest First</option>
         <option value="priority" {{ $sort==='priority'?'selected':'' }}>By Priority</option>
@@ -333,7 +333,7 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
 @if(($at_risk_count ?? 0) > 0 && $filter !== 'at_risk')
 <div class="sla-alert-banner">
     <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:20px;">⚠️</span>
+        <svg width="20" height="20" fill="none" stroke="#ef4444" stroke-width="2.2" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span><strong>{{ $at_risk_count }} request{{ $at_risk_count > 1 ? 's are' : ' is' }} currently At Risk / Overdue SLA!</strong> Production start date has passed based on lead times.</span>
     </div>
     <a href="{{ route('admin.requests',['filter'=>'at_risk','sort'=>'urgency']) }}" class="btn-view-risk">View Overdue ({{ $at_risk_count }})</a>
@@ -374,7 +374,9 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
                 @php
                     $sl=strtolower($req->status);
                     $sc=match(true){str_contains($sl,'approved')=>'approved',str_contains($sl,'posted')=>'posted',str_contains($sl,'under review')=>'under-review',str_contains($sl,'rejected')=>'rejected',default=>'pending'};
-                    $pc=match(strtolower($req->priority??'')){'urgent'=>'urgent','high'=>'high','medium'=>'medium',default=>'low'};
+                    $rawPrio = strtolower(trim((string) ($req->priority ?? '')));
+                    $displayPrio = ($rawPrio === 'urgent') ? 'HIGH' : strtoupper($req->priority ?: 'LOW');
+                    $pc = match($rawPrio){'urgent','high'=>'high','medium'=>'medium',default=>'low'};
                     $thumb=$req->first_media;
                     $cc=$req->comments()->count();
                 @endphp
@@ -383,9 +385,13 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
                         <div class="req-info" style="cursor:pointer;" onclick="window.location='{{ route('admin.requests.show', $req->id) }}'">
                             @if($thumb)
                                 <img class="req-thumb" src="/uploads/{{ $thumb }}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                                <div class="req-thumb-ph" style="display:none;">📄</div>
+                                <div class="req-thumb-ph" style="display:none;">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                </div>
                             @else
-                                <div class="req-thumb-ph">📄</div>
+                                <div class="req-thumb-ph">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                </div>
                             @endif
                             <div>
                                 <div class="req-title-text">{{ Str::limit($req->title,32) }}</div>
@@ -395,21 +401,36 @@ td { padding:13px 16px; font-size:12.5px; vertical-align:middle; }
                     </td>
                     <td style="font-weight:500;">{{ $req->requester }}</td>
                     <td style="color:var(--ink-soft);">{{ $req->category }}</td>
-                    <td><span class="badge badge--{{ $pc }}">{{ strtoupper($req->priority) }}</span></td>
+                    <td><span class="badge badge--{{ $pc }}">{{ $displayPrio }}</span></td>
                     <td>
-                        @if($req->is_at_risk)
+                        @if($req->status === 'Approved')
+                            <div class="sla-chip sla-chip--ok" title="Request has been approved">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span>Approved</span>
+                            </div>
+                        @elseif($req->status === 'Posted')
+                            <div class="sla-chip" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;" title="Request completed and published">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                                <span>Published</span>
+                            </div>
+                        @elseif($req->status === 'Rejected')
+                            <div class="sla-chip" style="background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;" title="Request closed">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <span>Closed</span>
+                            </div>
+                        @elseif($req->is_at_risk)
                             <div class="sla-chip sla-chip--risk" title="SLA Lead Time: {{ $req->sla_days }}d | Preferred: {{ $req->preferred_date ? \Carbon\Carbon::parse($req->preferred_date)->format('M j, Y') : 'N/A' }}">
-                                <span>⚠️</span>
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                                 <span>Overdue ({{ abs($req->slack_days) }}d behind)</span>
                             </div>
                         @elseif($req->is_due_soon)
                             <div class="sla-chip sla-chip--soon" title="SLA Lead Time: {{ $req->sla_days }}d | Preferred: {{ $req->preferred_date ? \Carbon\Carbon::parse($req->preferred_date)->format('M j, Y') : 'N/A' }}">
-                                <span>⏰</span>
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                 <span>Due Soon ({{ $req->slack_days === 0 ? 'Today' : '1d slack' }})</span>
                             </div>
                         @else
                             <div class="sla-chip sla-chip--ok" title="SLA Lead Time: {{ $req->sla_days }}d | Preferred: {{ $req->preferred_date ? \Carbon\Carbon::parse($req->preferred_date)->format('M j, Y') : 'N/A' }}">
-                                <span>✓</span>
+                                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                                 <span>{{ $req->slack_days }}d slack</span>
                             </div>
                         @endif

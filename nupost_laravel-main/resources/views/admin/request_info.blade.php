@@ -286,8 +286,10 @@
         str_contains($sl,'rejected')     => 'hchip--red',
         default                          => 'hchip--gray',
     };
-    $priorityChip  = match(strtolower($request->priority ?? '')) {
-        'urgent' => 'hchip--red', 'high' => 'hchip--amber', default => 'hchip--gray',
+    $rawPrio = strtolower(trim((string) ($request->priority ?? '')));
+    $displayPrio = ($rawPrio === 'urgent') ? 'HIGH' : strtoupper($request->priority ?: 'NORMAL');
+    $priorityChip  = match($rawPrio) {
+        'urgent', 'high' => 'hchip--amber', default => 'hchip--gray',
     };
     $comments      = $request->comments()->orderBy('created_at')->get();
     $firstImage    = null;
@@ -311,13 +313,16 @@
             <div class="req-hero__title" style="font-family:'DM Serif Display',Georgia,serif;font-size:26px;color:white;line-height:1.25;margin-bottom:14px;">{{ $request->title }}</div>
             <div class="req-hero__chips" style="display:flex;gap:8px;flex-wrap:wrap;">
                 <span class="hchip {{ $statusChip }}">{{ $request->status }}</span>
-                <span class="hchip {{ $priorityChip }}">{{ strtoupper($request->priority ?? 'NORMAL') }}</span>
+                <span class="hchip {{ $priorityChip }}">{{ $displayPrio }}</span>
                 @if($request->category)<span class="hchip">{{ $request->category }}</span>@endif
                 <span class="hchip">
                     <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     {{ $request->requester }}
                 </span>
-                <span class="hchip">📅 {{ $request->created_at->format('M j, Y') }}</span>
+                <span class="hchip">
+                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {{ $request->created_at->format('M j, Y') }}
+                </span>
             </div>
         </div>
         <form method="POST" action="{{ route('admin.requests.status') }}" class="hero-status-form"
@@ -453,10 +458,14 @@
                             </div>
                             <div class="media-img-wrap">
                                 @if($isImage)
-                                    <div class="no-img" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px;">🖼️</div>
+                                    <div class="no-img" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.35;">
+                                        <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                    </div>
                                     <img src="{{ $fileUrl }}" alt="{{ $filename }}" style="position:relative;z-index:1;" onerror="if(!this.dataset.triedApi){this.dataset.triedApi='1';this.src='{{ $apiUrl }}';}else{this.style.opacity='0';}">
                                 @else
-                                    <div class="no-img">📄</div>
+                                    <div class="no-img" style="display:flex;align-items:center;justify-content:center;opacity:0.35;">
+                                        <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                    </div>
                                 @endif
                             </div>
                             <div class="media-item__actions">
@@ -533,7 +542,9 @@
                                 @if($firstImage)
                                 <img src="/uploads/{{ $firstImage }}" alt="{{ $fn }}">
                                 @else
-                                <div style="background:var(--cream-dark);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:18px;">🖼️</div>
+                                <div style="background:var(--cream-dark);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;opacity:0.35;">
+                                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                </div>
                                 @endif
                                 <p>{{ $fn }}</p>
                             </div>
@@ -579,23 +590,41 @@
                 <div class="info-row"><span class="info-row__label">SLA Lead Time</span><span class="info-row__value" style="font-weight:700;color:var(--navy);">{{ $request->sla_days }} day{{ $request->sla_days > 1 ? 's' : '' }}</span></div>
                 <div class="info-row"><span class="info-row__label">SLA Urgency</span>
                     <span class="info-row__value">
-                        @if($request->is_at_risk)
+                        @if($request->status === 'Approved')
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#ecfdf5;color:#059669;font-size:11px;font-weight:700;border:1px solid #a7f3d0;">
+                                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                Approved
+                            </span>
+                        @elseif($request->status === 'Posted')
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#f5f3ff;color:#7c3aed;font-size:11px;font-weight:700;border:1px solid #ddd6fe;">
+                                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                                Published
+                            </span>
+                        @elseif($request->status === 'Rejected')
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#f1f5f9;color:#64748b;font-size:11px;font-weight:700;border:1px solid #cbd5e1;">
+                                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                Closed
+                            </span>
+                        @elseif($request->is_at_risk)
                             <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:11px;font-weight:700;border:1px solid #fecaca;">
-                                ⚠️ Overdue ({{ abs($request->slack_days) }}d behind)
+                                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                Overdue ({{ abs($request->slack_days) }}d behind)
                             </span>
                         @elseif($request->is_due_soon)
                             <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#fffbeb;color:#d97706;font-size:11px;font-weight:700;border:1px solid #fde68a;">
-                                ⏰ Due Soon ({{ $request->slack_days === 0 ? 'Start Today' : '1d slack' }})
+                                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                Due Soon ({{ $request->slack_days === 0 ? 'Start Today' : '1d slack' }})
                             </span>
                         @else
                             <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:#ecfdf5;color:#059669;font-size:11px;font-weight:700;border:1px solid #a7f3d0;">
-                                ✓ On Track ({{ $request->slack_days }}d slack)
+                                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                On Track ({{ $request->slack_days }}d slack)
                             </span>
                         @endif
                     </span>
                 </div>
                 <div class="info-row"><span class="info-row__label">Latest Start</span><span class="info-row__value">{{ $request->preferred_date ? \Carbon\Carbon::parse($request->preferred_date)->subDays($request->sla_days)->format('M j, Y') : '—' }}</span></div>
-                <div class="info-row"><span class="info-row__label">Priority</span><span class="info-row__value">{{ strtoupper($request->priority ?? 'Normal') }}</span></div>
+                <div class="info-row"><span class="info-row__label">Priority</span><span class="info-row__value">{{ $displayPrio }}</span></div>
                 <div class="info-row"><span class="info-row__label">Preferred Date</span><span class="info-row__value">{{ $request->preferred_date ? \Carbon\Carbon::parse($request->preferred_date)->format('M j, Y') : '—' }}</span></div>
                 <div class="info-row"><span class="info-row__label">Media Files</span><span class="info-row__value">{{ count($mediaFiles) }} file(s)</span></div>
                 <div class="info-row"><span class="info-row__label">Status</span><span class="info-row__value">{{ $request->status }}</span></div>
@@ -604,7 +633,7 @@
 
         {{-- Comments card --}}
         <div class="card">
-            <div class="card__head"><div class="card__title">💬 Comments</div></div>
+            <div class="card__head"><div class="card__title" style="display:flex;align-items:center;gap:7px;"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Comments</div></div>
             <div class="card__body">
                 <div class="comment-list" id="comment-list">
                     @forelse($comments as $c)

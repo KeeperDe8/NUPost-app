@@ -76,17 +76,25 @@ class RequestManagementController extends Controller
             });
         }
 
+        // Normalize legacy 'Urgent' priority to 'High'
+        try {
+            PostRequest::where('priority', 'Urgent')->update(['priority' => 'High']);
+        } catch (\Throwable $e) {}
+
         if ($sort === 'oldest') {
             $query->orderBy('created_at', 'asc');
         } elseif ($sort === 'priority') {
-            $query->orderByRaw("FIELD(priority, 'Urgent', 'High', 'Medium', 'Low') ASC")
+            $query->orderByRaw("CASE WHEN status IN ('Pending', 'Pending Review', 'Under Review') THEN 0 ELSE 1 END ASC")
+                  ->orderByRaw("FIELD(priority, 'High', 'Medium', 'Low') ASC")
                   ->orderBy('created_at', 'desc');
         } elseif ($sort === 'newest') {
             $query->orderBy('created_at', 'desc');
         } else {
-            // Default: Urgency / SLA Slack (tightest/overdue first, priority, then created_at desc)
-            $query->orderByRaw("($slackSql) ASC")
-                  ->orderByRaw("FIELD(priority, 'Urgent', 'High', 'Medium', 'Low') ASC")
+            // Default: Urgency / SLA Slack with "Actionable First"
+            // Active requests (Pending / Under Review) come first (0), finalized (Approved / Posted / Rejected) sink to the back (1)
+            $query->orderByRaw("CASE WHEN status IN ('Pending', 'Pending Review', 'Under Review') THEN 0 ELSE 1 END ASC")
+                  ->orderByRaw("CASE WHEN status IN ('Pending', 'Pending Review', 'Under Review') THEN ($slackSql) ELSE 9999 END ASC")
+                  ->orderByRaw("FIELD(priority, 'High', 'Medium', 'Low') ASC")
                   ->orderBy('created_at', 'desc');
         }
 

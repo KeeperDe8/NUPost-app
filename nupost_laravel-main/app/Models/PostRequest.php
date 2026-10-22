@@ -92,24 +92,29 @@ class PostRequest extends Model
         return (int) $today->diffInDays($latestStart, false);
     }
 
-    // At risk if slack is negative
+    // At risk if active and slack is negative
     public function getIsAtRiskAttribute(): bool
     {
+        if (!in_array($this->status, ['Pending', 'Pending Review', 'Under Review'])) {
+            return false;
+        }
         return $this->slack_days < 0;
     }
 
-    // Due soon if slack is 0 or 1 day
+    // Due soon if active and slack is 0 or 1 day
     public function getIsDueSoonAttribute(): bool
     {
+        if (!in_array($this->status, ['Pending', 'Pending Review', 'Under Review'])) {
+            return false;
+        }
         return $this->slack_days >= 0 && $this->slack_days <= 1;
     }
 
-    // Priority weight for sorting: Urgent=0, High=1, Medium=2, Low=3
+    // Priority weight for sorting: High=1, Medium=2, Low=3
     public function getPrioWeightAttribute(): int
     {
         return match(strtolower(trim((string) ($this->priority ?? 'Low')))) {
-            'urgent' => 0,
-            'high' => 1,
+            'urgent', 'high' => 1,
             'medium' => 2,
             default => 3,
         };
