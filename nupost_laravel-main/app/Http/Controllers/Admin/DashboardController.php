@@ -29,12 +29,29 @@ class DashboardController extends Controller
 
         $recent = PostRequest::orderBy('created_at', 'desc')->limit(10)->get();
 
+        // 5 most recent system activities for dashboard widget
+        $recentActivities = \Illuminate\Support\Facades\Schema::hasTable('audit_logs')
+            ? \Illuminate\Support\Facades\DB::table('audit_logs')
+                ->leftJoin('users', 'audit_logs.user_id', '=', 'users.id')
+                ->select([
+                    'audit_logs.id',
+                    'audit_logs.action_type',
+                    'audit_logs.created_at',
+                    'users.name as user_name',
+                    'users.email as user_email',
+                    'users.role as user_role',
+                ])
+                ->orderByDesc('audit_logs.created_at')
+                ->limit(5)
+                ->get()
+            : collect();
+
         // Fetch Facebook / Meta Graph API data
         $fbController = new FacebookAnalyticsController();
         $fb = $fbController->getData();
 
         return view('admin.dashboard', compact(
-            'total', 'pending', 'review', 'approved', 'posted', 'rejected', 'users', 'recent', 'fb', 'at_risk', 'due_soon'
+            'total', 'pending', 'review', 'approved', 'posted', 'rejected', 'users', 'recent', 'fb', 'at_risk', 'due_soon', 'recentActivities'
         ));
     }
 }

@@ -264,6 +264,21 @@ body { background: var(--cream) !important; }
 .cat-pill__name { font-size: 11.5px; font-weight: 600; color: var(--ink); flex: 1; line-height: 1.2; white-space: normal; }
 .cat-pill__count { font-size: 13px; font-weight: 700; color: var(--ink); margin-left: 4px; }
 
+/* ── MINI ACTIVITY FEED ──────────────────────────────── */
+.act-mini-list { display: flex; flex-direction: column; }
+.act-mini-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 11px 22px; border-bottom: 1px solid rgba(0,0,0,0.05);
+    transition: background .12s;
+}
+.act-mini-item:last-child { border-bottom: none; }
+.act-mini-item:hover { background: var(--sand); }
+.act-mini-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.act-mini-body { flex: 1; min-width: 0; }
+.act-mini-title { font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act-mini-title strong { font-weight: 600; }
+.act-mini-time { font-size: 10.5px; color: var(--ink-soft); margin-top: 2px; }
+
 /* ── REPORTS SECTION ─────────────────────────────────── */
 .reports-row {
     display: flex; flex-direction: column; gap: 10px;
@@ -796,28 +811,79 @@ body { background: var(--cream) !important; }
             </div>
         </div>
 
-        {{-- Categories --}}
-        <div class="np">
-            <div class="np__head">
-                <div>
-                    <div class="np__title">Category Breakdown</div>
-                    <div class="np__sub">Request distribution</div>
+        {{-- Right Column: Categories & Recent Activity History --}}
+        <div style="display:flex;flex-direction:column;gap:16px;">
+            {{-- Categories --}}
+            <div class="np">
+                <div class="np__head">
+                    <div>
+                        <div class="np__title">Category Breakdown</div>
+                        <div class="np__sub">Request distribution</div>
+                    </div>
                 </div>
-            </div>
-            @if($categories->isEmpty())
-                <div style="padding:24px;text-align:center;color:var(--ink-soft);font-size:13px;">No data yet.</div>
-            @else
-            <div class="cat-grid">
-                @foreach($categories as $i => $cat)
-                @php $col = $cat_colors[$i % count($cat_colors)]; @endphp
-                <div class="cat-pill">
-                    <span class="cat-pill__dot" style="background:{{ $col }};"></span>
-                    <span class="cat-pill__name">{{ trim($cat->category ?? 'Other') }}</span>
-                    <span class="cat-pill__count">{{ $cat->count }}</span>
+                @if($categories->isEmpty())
+                    <div style="padding:24px;text-align:center;color:var(--ink-soft);font-size:13px;">No data yet.</div>
+                @else
+                <div class="cat-grid">
+                    @foreach($categories as $i => $cat)
+                    @php $col = $cat_colors[$i % count($cat_colors)]; @endphp
+                    <div class="cat-pill">
+                        <span class="cat-pill__dot" style="background:{{ $col }};"></span>
+                        <span class="cat-pill__name">{{ trim($cat->category ?? 'Other') }}</span>
+                        <span class="cat-pill__count">{{ $cat->count }}</span>
+                    </div>
+                    @endforeach
                 </div>
-                @endforeach
+                @endif
             </div>
-            @endif
+
+            {{-- Activity History Widget --}}
+            <div class="np">
+                <div class="np__head">
+                    <div>
+                        <div class="np__title">Activity History</div>
+                        <div class="np__sub">Recent actions & logins</div>
+                    </div>
+                    <a href="{{ route('admin.audit-logs') }}" class="np__link">View more →</a>
+                </div>
+                @if(!isset($recentActivities) || $recentActivities->isEmpty())
+                    <div style="padding:22px;text-align:center;color:var(--ink-soft);font-size:12.5px;">No activities recorded yet.</div>
+                @else
+                <div class="act-mini-list">
+                    @foreach($recentActivities as $act)
+                    @php
+                        $action = $act->action_type ?? 'action';
+                        $lbl = ucwords(str_replace('_', ' ', $action));
+                        $dotCol = '#64748b';
+                        if (str_contains($action, 'approved')) {
+                            $lbl = 'Approved Request';
+                            $dotCol = '#10b981';
+                        } elseif (str_contains($action, 'rejected')) {
+                            $lbl = 'Rejected Request';
+                            $dotCol = '#ef4444';
+                        } elseif (str_contains($action, 'login')) {
+                            $lbl = 'Signed In';
+                            $dotCol = '#3b82f6';
+                        } elseif (str_contains($action, 'created')) {
+                            $lbl = 'Submitted Request';
+                            $dotCol = '#f59e0b';
+                        }
+
+                        $uName = $act->user_name ?: 'System User';
+                        $dt = $act->created_at ? \Carbon\Carbon::parse($act->created_at)->setTimezone('Asia/Manila') : null;
+                        $timeStr = $dt ? $dt->format('M j • h:i A') : '';
+                    @endphp
+                    <div class="act-mini-item">
+                        <span class="act-mini-dot" style="background:{{ $dotCol }};" title="{{ $lbl }}"></span>
+                        <div class="act-mini-body">
+                            <div class="act-mini-title"><strong>{{ $uName }}</strong> · {{ $lbl }}</div>
+                            <div class="act-mini-time">{{ $timeStr }}</div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+            </div>
         </div>
     </div>
 

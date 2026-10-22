@@ -2545,7 +2545,8 @@ class LegacyMobileApiController extends Controller
                 $label = 'Edited Post Request';
             }
 
-            $createdAt = $row->created_at ? \Carbon\Carbon::parse($row->created_at) : now();
+            $rawDate = $row->created_at ? \Carbon\Carbon::parse($row->created_at) : now();
+            $manilaDate = $rawDate->copy()->setTimezone('Asia/Manila');
 
             return [
                 'id' => (int) $row->id,
@@ -2554,8 +2555,9 @@ class LegacyMobileApiController extends Controller
                 'user_name' => (string) ($row->user_name ?: 'System User'),
                 'user_email' => (string) ($row->user_email ?: ''),
                 'user_role' => ucfirst((string) ($row->user_role ?: 'user')),
-                'created_at' => $createdAt->format('M d, Y • h:i A'),
-                'time_ago' => $createdAt->diffForHumans(),
+                'created_at' => $manilaDate->format('M d, Y • h:i A'),
+                'created_at_iso' => $rawDate->utc()->toIso8601String(),
+                'time_ago' => $manilaDate->diffForHumans(),
             ];
         })->values();
 
