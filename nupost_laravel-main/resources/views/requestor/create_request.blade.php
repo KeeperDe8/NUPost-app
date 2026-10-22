@@ -922,7 +922,7 @@
     </div>
 </div>
 
-<div class="create-page" id="create-page" style="display:none;">
+<div class="create-page" id="create-page">
 
     {{-- HERO CARD --}}
     <div class="hero-card" style="width:100%;max-width:680px;">
@@ -1150,27 +1150,24 @@
 // ── SLA POLICY MODAL ──────────────────────────────────────────────
 (function() {
     const overlay   = document.getElementById('sla-overlay');
-    const page      = document.getElementById('create-page');
     const proceedBtn= document.getElementById('sla-proceed-btn');
     const dontShow  = document.getElementById('sla-dont-show');
     const KEY       = 'nupost_sla_dismissed';
 
-    if (localStorage.getItem(KEY) === 'true') {
-        // Skip modal, show form directly
-        overlay.style.display = 'none';
-        page.style.display = 'flex';
-    } else {
-        overlay.style.display = 'flex';
-        page.style.display = 'none';
-    }
-
-    proceedBtn.addEventListener('click', function() {
-        if (dontShow.checked) {
-            localStorage.setItem(KEY, 'true');
+    if (overlay && proceedBtn) {
+        if (localStorage.getItem(KEY) === 'true') {
+            overlay.style.display = 'none';
+        } else {
+            overlay.style.display = 'flex';
         }
-        overlay.style.display = 'none';
-        page.style.display = 'flex';
-    });
+
+        proceedBtn.addEventListener('click', function() {
+            if (dontShow && dontShow.checked) {
+                localStorage.setItem(KEY, 'true');
+            }
+            overlay.style.display = 'none';
+        });
+    }
 })();
 
 // ── SLA CATEGORY NOTES ────────────────────────────────────────────
@@ -1612,7 +1609,6 @@ document.querySelectorAll('.platform-btn').forEach(b => b.addEventListener('clic
 
 // ── SMART CATEGORY SUGGESTER ─────────────────────────────────────
 let hasManualCategoryOverride = false;
-const catField = document.getElementById('cat-field');
 const catSuggestBadge = document.getElementById('cat-suggest-badge');
 const catSuggestText = document.getElementById('cat-suggest-text');
 const titleField = document.getElementById('title-field');

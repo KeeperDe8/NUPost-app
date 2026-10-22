@@ -113,16 +113,79 @@
         border-radius: 18px 18px 18px 4px;
     }
     .chat-bubble--assistant {
-        background: #f0f9ff;
-        color: #0c4a6e;
-        border: 1px solid #bae6fd;
+        background: linear-gradient(135deg, #f8faff 0%, #f3f0ff 100%);
+        color: #1e1b4b;
+        border: 1px solid #c4b5fd;
         border-radius: 18px 18px 18px 4px;
+        box-shadow: 0 4px 16px rgba(124, 58, 237, 0.08);
+        padding: 12px 16px;
+    }
+
+    .assistant-tag-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+    }
+    .assistant-tag-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+        color: #7c3aed;
+        text-transform: uppercase;
+    }
+    .assistant-tag-badge {
+        font-size: 8.5px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        background: rgba(124, 58, 237, 0.12);
+        color: #7c3aed;
+        border: 1px solid rgba(124, 58, 237, 0.25);
+        padding: 2px 7px;
+        border-radius: 9999px;
+    }
+
+    .chat-bold {
+        font-weight: 700;
+        color: inherit;
+    }
+    .chat-code {
+        background: rgba(124, 58, 237, 0.1);
+        color: #6d28d9;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11.5px;
+        border: 1px solid rgba(124, 58, 237, 0.2);
+    }
+    .chat-bullet-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 5px 0;
+        line-height: 1.45;
+    }
+    .chat-bullet-dot {
+        color: #8b5cf6;
+        font-size: 10px;
+        margin-top: 3px;
+        flex-shrink: 0;
+    }
+    .chat-bullet-text {
+        flex: 1;
     }
 
     .chat-quick-faqs {
-        padding: 8px 16px;
-        background: #fafbfd;
-        border-top: 1px solid var(--color-border);
+        padding: 10px 16px;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(8px);
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
         display: flex;
         gap: 8px;
         overflow-x: auto;
@@ -133,29 +196,32 @@
     .faq-chip {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
-        padding: 5px 12px;
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 20px;
-        font-size: 11.5px;
-        font-weight: 600;
-        color: #0369a1;
+        gap: 6px;
+        padding: 6px 14px;
+        background: #ffffff;
+        border: 1px solid rgba(139, 92, 246, 0.25);
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #6d28d9;
         cursor: pointer;
         white-space: nowrap;
-        transition: all .15s;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         flex-shrink: 0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
     .faq-chip:hover {
-        background: #e0f2fe;
-        border-color: #7dd3fc;
+        background: #ede9fe;
+        border-color: #8b5cf6;
+        color: #5b21b6;
         transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
     }
 
     .chat-text {
         word-break: break-word;
         overflow-wrap: anywhere;
-        line-height: 1.5;
+        line-height: 1.55;
     }
 
     .chat-meta {
@@ -176,7 +242,7 @@
         align-self: flex-start;
     }
     .chat-bubble--assistant .chat-meta {
-        color: #0284c7;
+        color: #7c3aed;
         font-weight: 600;
         align-self: flex-start;
     }
@@ -220,6 +286,55 @@
     [data-theme="dark"] .chat-bubble--admin .chat-meta {
         color: #94a3b8 !important;
     }
+    [data-theme="dark"] .chat-bubble--assistant {
+        background: linear-gradient(145deg, #15112e 0%, #0d1733 100%) !important;
+        color: #ede9fe !important;
+        border: 1px solid rgba(139, 92, 246, 0.4) !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(124, 58, 237, 0.15) !important;
+    }
+    [data-theme="dark"] .chat-bubble--assistant .assistant-tag-bar {
+        border-bottom-color: rgba(139, 92, 246, 0.25) !important;
+    }
+    [data-theme="dark"] .chat-bubble--assistant .assistant-tag-title {
+        color: #c4b5fd !important;
+    }
+    [data-theme="dark"] .chat-bubble--assistant .assistant-tag-badge {
+        background: rgba(139, 92, 246, 0.2) !important;
+        color: #ddd6fe !important;
+        border-color: rgba(139, 92, 246, 0.45) !important;
+    }
+    [data-theme="dark"] .chat-bubble--assistant strong {
+        color: #ffffff !important;
+    }
+    [data-theme="dark"] .chat-bubble--assistant .chat-code {
+        background: rgba(139, 92, 246, 0.2) !important;
+        color: #fbcfe8 !important;
+        border-color: rgba(139, 92, 246, 0.4) !important;
+    }
+    [data-theme="dark"] .chat-bubble--assistant .chat-meta {
+        color: #a78bfa !important;
+    }
+    [data-theme="dark"] .chat-avatar--assistant {
+        background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%) !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 0 14px rgba(124, 58, 237, 0.45) !important;
+    }
+    [data-theme="dark"] .chat-quick-faqs {
+        background: #061129 !important;
+        border-top: 1px solid rgba(30, 79, 216, 0.25) !important;
+    }
+    [data-theme="dark"] .faq-chip {
+        background: rgba(139, 92, 246, 0.12) !important;
+        border-color: rgba(139, 92, 246, 0.3) !important;
+        color: #ddd6fe !important;
+        box-shadow: none !important;
+    }
+    [data-theme="dark"] .faq-chip:hover {
+        background: rgba(139, 92, 246, 0.28) !important;
+        border-color: rgba(139, 92, 246, 0.65) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35) !important;
+    }
     [data-theme="dark"] .chat-input-area {
         background: #081636 !important;
         border-top-color: rgba(30, 79, 216, 0.25) !important;
@@ -256,6 +371,15 @@
                 @php
                     $is_me = $msg->sender_role === 'requestor';
                     $is_assistant = str_contains($msg->sender_name, 'Assistant');
+
+                    // Markdown rendering: bold, italic, code, bullets
+                    $msgText = e($msg->message);
+                    $msgText = preg_replace('/\*\*(.*?)\*\*/s', '<strong class="chat-bold">$1</strong>', $msgText);
+                    $msgText = preg_replace('/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/s', '<em>$1</em>', $msgText);
+                    $msgText = preg_replace('/`([^`]+)`/', '<code class="chat-code">$1</code>', $msgText);
+                    $msgText = preg_replace('/^[•\-\*]\s+(.+)$/m', '<div class="chat-bullet-item"><span class="chat-bullet-dot">✦</span><span class="chat-bullet-text">$1</span></div>', $msgText);
+
+                    $formattedTime = is_string($msg->created_at) ? \Carbon\Carbon::parse($msg->created_at)->format('M j, g:i A') : $msg->created_at->format('M j, g:i A');
                 @endphp
                 <div class="chat-bubble-row {{ $is_me ? 'chat-bubble-row--me' : '' }}">
                     <div class="chat-avatar {{ $is_me ? 'chat-avatar--me' : ($is_assistant ? 'chat-avatar--assistant' : 'chat-avatar--admin') }}">
@@ -266,9 +390,18 @@
                         @endif
                     </div>
                     <div class="chat-bubble {{ $is_me ? 'chat-bubble--me' : ($is_assistant ? 'chat-bubble--assistant' : 'chat-bubble--admin') }}">
-                        <div class="chat-text">{!! nl2br(e($msg->message)) !!}</div>
+                        @if($is_assistant)
+                            <div class="assistant-tag-bar">
+                                <div class="assistant-tag-title">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                    NUPost Assistant
+                                </div>
+                                <span class="assistant-tag-badge">AI FAQ BOT</span>
+                            </div>
+                        @endif
+                        <div class="chat-text">{!! nl2br($msgText) !!}</div>
                         <div class="chat-meta">
-                            {{ $is_me ? 'You' : ($is_assistant ? 'NUPost Assistant (AI)' : 'Admin') }} &middot; {{ $msg->created_at->format('M j, g:i A') }}
+                            {{ $is_me ? 'You' : ($is_assistant ? 'NUPost Assistant (AI)' : 'Admin') }} &middot; {{ $formattedTime }}
                         </div>
                     </div>
                 </div>
