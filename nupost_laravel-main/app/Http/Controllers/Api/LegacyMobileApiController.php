@@ -883,9 +883,9 @@ class LegacyMobileApiController extends Controller
                 foreach ($adminUsers as $admin) {
                     $notifPayload = [
                         'user_id' => (int) $admin->id,
-                        'title' => 'New Posting Request 📋',
+                        'title' => 'New Posting Request',
                         'message' => "New request \"$title\" ($reqCode) submitted by $requesterName ($priority priority).",
-                        'type' => 'status_update',
+                        'type' => 'new_request',
                         'is_read' => 0,
                         'created_at' => now(),
                     ];
@@ -904,7 +904,7 @@ class LegacyMobileApiController extends Controller
                 // 2. Acknowledge notification for the Requester
                 $userNotifPayload = [
                     'user_id' => $userId,
-                    'title' => 'Request Submitted 📋',
+                    'title' => 'Request Submitted',
                     'message' => "Your request \"$title\" ($reqCode) has been received and is pending review.",
                     'type' => 'status_update',
                     'is_read' => 0,
@@ -1128,9 +1128,9 @@ class LegacyMobileApiController extends Controller
                 foreach ($adminUsers as $admin) {
                     $notifPayload = [
                         'user_id' => (int) $admin->id,
-                        'title' => 'Request Re-submitted 🔄',
+                        'title' => 'Request Re-submitted',
                         'message' => "Request \"$title\" ($reqCode) has been updated and re-submitted by $requesterName.",
-                        'type' => 'status_update',
+                        'type' => 'new_request',
                         'is_read' => 0,
                         'created_at' => now(),
                     ];
@@ -1558,7 +1558,9 @@ class LegacyMobileApiController extends Controller
 
         $unreadCount = DB::table('notifications')
             ->where('user_id', $userId)
-            ->where('is_read', 0)
+            ->where(function($q) {
+                $q->where('is_read', 0)->orWhereNull('is_read');
+            })
             ->count();
 
         return response()->json([
@@ -1593,7 +1595,9 @@ class LegacyMobileApiController extends Controller
         if ($markAll) {
             DB::table('notifications')
                 ->where('user_id', $userId)
-                ->where('is_read', 0)
+                ->where(function($q) {
+                    $q->where('is_read', 0)->orWhereNull('is_read');
+                })
                 ->update(['is_read' => 1]);
 
             return response()->json([

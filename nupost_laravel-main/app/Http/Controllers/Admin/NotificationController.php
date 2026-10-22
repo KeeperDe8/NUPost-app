@@ -35,16 +35,16 @@ class NotificationController extends Controller
     // ── AJAX: fetch admin notifications for bell dropdown ─────────
     public function fetch()
     {
-        $all = $this->collectAllAdminNotifications(15);
+        $all = $this->collectAllAdminNotifications(50);
         $unread_count = $all->where('is_read', false)->count();
 
         return response()->json([
-            'notifications' => $all->take(15)->values(),
+            'notifications' => $all->take(20)->values(),
             'unread_count'  => $unread_count,
         ]);
     }
 
-    private function collectAllAdminNotifications(int $limit = 30)
+    private function collectAllAdminNotifications(int $limit = 50)
     {
         $adminId   = $this->getAdminId();
         $adminIds  = User::where('role', 'admin')->pluck('id')->toArray();
@@ -77,9 +77,7 @@ class NotificationController extends Controller
         foreach ($dbNotifs as $n) {
             $reqId = $hasReqCol ? $n->request_id : null;
             if ($reqId) {
-                if ($n->type === 'new_request') {
-                    $seenRequests[$reqId] = true;
-                }
+                $seenRequests[$reqId] = true;
                 if ($n->type === 'comment' || $n->type === 'message') {
                     $seenComments[$reqId] = true;
                 }
@@ -103,11 +101,9 @@ class NotificationController extends Controller
 
         foreach ($new_comments as $c) {
             $isUnread = !($c->admin_seen ?? false);
-            // If already represented as unread in notifications table, skip duplicate
             if (!empty($seenComments[$c->request_id]) && !$isUnread) {
                 continue;
             }
-            // Check if exact comment already captured
             $alreadyExists = $notifications->contains(function ($item) use ($c) {
                 return $item['type'] === 'comment' && ($item['request_id'] ?? null) == $c->request_id && (bool)$item['is_read'] === (bool)($c->admin_seen ?? false);
             });
@@ -127,7 +123,7 @@ class NotificationController extends Controller
             $seenComments[$c->request_id] = true;
         }
 
-        // 3. Any recent requests
+        // 3. Any active requests needing review
         $new_requests = PostRequest::orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
@@ -138,7 +134,7 @@ class NotificationController extends Controller
                 continue;
             }
             $alreadyExists = $notifications->contains(function ($item) use ($r) {
-                return $item['type'] === 'new_request' && ($item['request_id'] ?? null) == $r->id;
+                return in_array($item['type'], ['new_request', 'status_update']) && ($item['request_id'] ?? null) == $r->id;
             });
             if ($alreadyExists) {
                 continue;
@@ -147,7 +143,7 @@ class NotificationController extends Controller
             $notifications->push([
                 'id'         => 'req_' . $r->id,
                 'title'      => 'New Request: ' . $r->title,
-                'message'    => $r->requester . ' submitted a new post request.',
+                'message'    => $r->requester . ' submitted a new post request (' . ucfirst($r->priority ?? 'Low') . ' priority).',
                 'type'       => 'new_request',
                 'is_read'    => !$isUnread,
                 'request_id' => $r->id,
@@ -156,41 +152,68 @@ class NotificationController extends Controller
             $seenRequests[$r->id] = true;
         }
 
+        // 4. Automated SLA Due Soon & Overdue Reminders for Active Requests
+        $activeRequests = PostRequest::whereIn('status', ['Pending', 'Pending Review', 'Under Review'])->get();
+        foreach ($activeRequests as $ar) {
+            $slack = $ar->slack_days;
+            $isUnread = !($ar->admin_seen ?? false);
+
+            if ($slack < 0) {
+                // Overdue
+                $notifications->push([
+                    'id'         => 'sla_overdue_' . $ar->id,
+                    'title'      => 'Overdue SLA Alert: ' . $ar->title,
+                    'message'    => '"' . $ar->title . '" is ' . abs($slack) . ' day' . (abs($slack) > 1 ? 's' : '') . ' overdue for production! Preferred post date is ' . ($ar->preferred_date ? Carbon::parse($ar->preferred_date)->format('M j') : 'N/A') . '.',
+                    'type'       => 'overdue',
+                    'is_read'    => !$isUnread,
+                    'request_id' => $ar->id,
+                    'created_at' => $ar->created_at,
+                ]);
+            } elseif ($slack >= 0 && $slack <= 1) {
+                // Due Soon
+                $notifications->push([
+                    'id'         => 'sla_due_' . $ar->id,
+                    'title'      => 'Due Soon: ' . $ar->title,
+                    'message'    => 'Production for "' . $ar->title . '" must start ' . ($slack === 0 ? 'today' : 'within 1 day') . ' to meet SLA lead time.',
+                    'type'       => 'due_soon',
+                    'is_read'    => !$isUnread,
+                    'request_id' => $ar->id,
+                    'created_at' => $ar->created_at,
+                ]);
+            }
+        }
+
         return $notifications->sortByDesc('created_at')->values();
     }
 
     // ── AJAX: mark as read ────────────────────────────────────────
     public function markRead(Request $request)
     {
-        $adminId   = $this->getAdminId();
-        $adminIds  = User::where('role', 'admin')->pluck('id')->toArray();
-        if ($adminId && !in_array($adminId, $adminIds)) {
-            $adminIds[] = $adminId;
-        }
         $hasReqCol = \Illuminate\Support\Facades\Schema::hasColumn('notifications', 'request_id');
 
         if ($request->input('all')) {
-            PostRequest::where('admin_seen', false)->update(['admin_seen' => true]);
+            // Mark all requests as seen with NULL safety
+            PostRequest::where(function ($q) {
+                $q->where('admin_seen', false)->orWhereNull('admin_seen');
+            })->update(['admin_seen' => true]);
+
+            // Mark all requestor comments as seen with NULL safety
             RequestComment::where('sender_role', 'requestor')
-                ->where('admin_seen', false)
-                ->update(['admin_seen' => true]);
-            Notification::where(function ($q) use ($adminId, $adminIds) {
-                if ($adminId) {
-                    $q->where('user_id', $adminId)
-                      ->orWhereNull('user_id')
-                      ->orWhere('user_id', 0);
-                } else {
-                    $q->whereIn('user_id', $adminIds)
-                      ->orWhereNull('user_id')
-                      ->orWhere('user_id', 0);
-                }
-            })->where('is_read', false)->update(['is_read' => true]);
+                ->where(function ($q) {
+                    $q->where('admin_seen', false)->orWhereNull('admin_seen');
+                })->update(['admin_seen' => true]);
+
+            // Mark all notifications as read with NULL safety
+            Notification::where(function ($q) {
+                $q->where('is_read', false)->orWhereNull('is_read');
+            })->update(['is_read' => true]);
+
         } elseif ($id = $request->input('id')) {
-            if (str_starts_with($id, 'req_')) {
-                $reqId = str_replace('req_', '', $id);
+            if (str_starts_with($id, 'req_') || str_starts_with($id, 'sla_overdue_') || str_starts_with($id, 'sla_due_')) {
+                $reqId = preg_replace('/^(req_|sla_overdue_|sla_due_)/', '', $id);
                 PostRequest::where('id', $reqId)->update(['admin_seen' => true]);
                 if ($hasReqCol) {
-                    Notification::where('request_id', $reqId)->where('type', 'new_request')->update(['is_read' => true]);
+                    Notification::where('request_id', $reqId)->update(['is_read' => true]);
                 }
             } elseif (str_starts_with($id, 'cmt_')) {
                 $cmtId = str_replace('cmt_', '', $id);
@@ -198,7 +221,7 @@ class NotificationController extends Controller
                 if ($comment) {
                     $comment->update(['admin_seen' => true]);
                     if ($hasReqCol) {
-                        Notification::where('request_id', $comment->request_id)->whereIn('type', ['comment', 'message'])->update(['is_read' => true]);
+                        Notification::where('request_id', $comment->request_id)->update(['is_read' => true]);
                     }
                 }
             } elseif (str_starts_with($id, 'notif_')) {

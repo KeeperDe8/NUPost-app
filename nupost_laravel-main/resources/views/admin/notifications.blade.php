@@ -88,6 +88,8 @@
 }
 .n-icon--request { background: #dbeafe; color: #2563eb; }
 .n-icon--comment { background: #dcfce7; color: #16a34a; }
+.n-icon--due     { background: #fef3c7; color: #d97706; }
+.n-icon--overdue { background: #fee2e2; color: #dc2626; }
 .n-icon--default { background: var(--cream-dark); color: var(--ink-soft); }
 
 .notif-body { flex: 1; min-width: 0; padding-right: 28px; }
@@ -111,6 +113,12 @@
 }
 .notif-type-tag--comment {
     background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;
+}
+.notif-type-tag--due {
+    background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+}
+.notif-type-tag--overdue {
+    background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;
 }
 
 /* EMPTY */
@@ -153,10 +161,13 @@
     <div class="filter-tabs">
         <div class="filter-tab active" data-filter="all" onclick="filterNotifs('all', this)">All</div>
         <div class="filter-tab" data-filter="new_request" onclick="filterNotifs('new_request', this)">
-            📄 New Requests
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>New Requests
         </div>
         <div class="filter-tab" data-filter="comment" onclick="filterNotifs('comment', this)">
-            💬 Replies
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Replies
+        </div>
+        <div class="filter-tab" data-filter="sla" onclick="filterNotifs('sla', this)">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>SLA Alerts
         </div>
     </div>
 
@@ -173,25 +184,33 @@
 
                 $iconClass = match($type) {
                     'new_request' => 'n-icon--request',
-                    'comment'     => 'n-icon--comment',
+                    'comment', 'message' => 'n-icon--comment',
+                    'due_soon', 'sla_due' => 'n-icon--due',
+                    'overdue', 'sla_overdue' => 'n-icon--overdue',
                     default       => 'n-icon--default',
                 };
 
                 $iconSvg = match($type) {
                     'new_request' => '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
-                    'comment'     => '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+                    'comment', 'message' => '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+                    'due_soon', 'sla_due' => '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+                    'overdue', 'sla_overdue' => '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
                     default       => '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
                 };
 
                 $tagClass = match($type) {
                     'new_request' => 'notif-type-tag--request',
-                    'comment'     => 'notif-type-tag--comment',
+                    'comment', 'message' => 'notif-type-tag--comment',
+                    'due_soon', 'sla_due' => 'notif-type-tag--due',
+                    'overdue', 'sla_overdue' => 'notif-type-tag--overdue',
                     default       => '',
                 };
 
                 $tagLabel = match($type) {
                     'new_request' => 'New Request',
-                    'comment'     => 'Requestor Reply',
+                    'comment', 'message' => 'Requestor Reply',
+                    'due_soon', 'sla_due' => 'Due Soon SLA',
+                    'overdue', 'sla_overdue' => 'Overdue SLA',
                     default       => 'Notification',
                 };
 
@@ -242,8 +261,8 @@
 
 @section('scripts')
 <script>
-const NOTIF_READ_URL = '{{ route("admin.notifications.read") }}';
-const CSRF = document.querySelector('meta[name="csrf-token"]')?.content;
+var PAGE_NOTIF_READ_URL = window.NOTIF_READ_URL || '{{ route("admin.notifications.read") }}';
+var PAGE_CSRF = window.CSRF || document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
 
 // ── Filter tabs ──────────────────────────────────────────────────
 function filterNotifs(type, tabEl) {
@@ -251,7 +270,16 @@ function filterNotifs(type, tabEl) {
     tabEl.classList.add('active');
 
     document.querySelectorAll('.notif-row').forEach(row => {
-        if (type === 'all' || row.dataset.type === type) {
+        const rowType = row.dataset.type;
+        if (type === 'all') {
+            row.classList.remove('hidden');
+        } else if (type === 'sla') {
+            if (rowType === 'due_soon' || rowType === 'overdue' || rowType === 'sla_due' || rowType === 'sla_overdue') {
+                row.classList.remove('hidden');
+            } else {
+                row.classList.add('hidden');
+            }
+        } else if (rowType === type) {
             row.classList.remove('hidden');
         } else {
             row.classList.add('hidden');
@@ -265,11 +293,12 @@ function markReadPage(e, id, url) {
         e.preventDefault();
         e.stopPropagation();
     }
-    fetch(NOTIF_READ_URL, {
+    fetch(PAGE_NOTIF_READ_URL, {
         method: 'POST',
+        keepalive: true,
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': CSRF,
+            'X-CSRF-TOKEN': PAGE_CSRF,
             'Accept': 'application/json'
         },
         body: JSON.stringify({ id })
@@ -280,20 +309,28 @@ function markReadPage(e, id, url) {
 
 // ── Mark all as read ─────────────────────────────────────────────
 function markAllReadPage() {
-    fetch(NOTIF_READ_URL, {
+    // Optimistic UI updates
+    document.querySelectorAll('.notif-row--unread').forEach(row => {
+        row.classList.remove('notif-row--unread');
+        const dot = row.querySelector('.notif-unread-dot');
+        if (dot) dot.remove();
+    });
+
+    const badge = document.getElementById('notif-badge');
+    if (badge) {
+        badge.textContent = '';
+        badge.classList.remove('has-count');
+    }
+
+    fetch(PAGE_NOTIF_READ_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': CSRF,
+            'X-CSRF-TOKEN': PAGE_CSRF,
             'Accept': 'application/json'
         },
         body: JSON.stringify({ all: true })
     }).then(() => {
-        document.querySelectorAll('.notif-row--unread').forEach(row => {
-            row.classList.remove('notif-row--unread');
-            const dot = row.querySelector('.notif-unread-dot');
-            if (dot) dot.remove();
-        });
         if (typeof loadNotifications === 'function') loadNotifications();
     }).catch(() => {});
 }
