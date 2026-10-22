@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Requestor;
 
 use App\Http\Controllers\Controller;
 use App\Models\PostRequest;
-use App\Models\RequestComment;
 use App\Models\RequestActivity;
 use App\Models\Notification;
 use App\Models\Setting;
@@ -497,9 +496,16 @@ class RequestController extends Controller
                           ->where('requester', $user_name)
                           ->firstOrFail();
 
-        $chat_messages = RequestComment::where('request_id', $id)
-                                       ->orderBy('created_at', 'asc')
-                                       ->get();
+        $chat_messages = \Illuminate\Support\Facades\DB::table('request_comments')
+            ->where('request_id', $id)
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($msg) {
+                if (is_string($msg->created_at)) {
+                    $msg->created_at = \Carbon\Carbon::parse($msg->created_at);
+                }
+                return $msg;
+            });
                                    
         $activities = RequestActivity::where('request_id', $id)
                                      ->orderBy('created_at', 'desc')
@@ -646,7 +652,16 @@ class RequestController extends Controller
     {
         $user_name     = session('name');
         $req           = PostRequest::where('id', $id)->where('requester', $user_name)->firstOrFail();
-        $chat_messages = RequestComment::where('request_id', $id)->orderBy('created_at', 'asc')->get();
+        $chat_messages = \Illuminate\Support\Facades\DB::table('request_comments')
+            ->where('request_id', $id)
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($msg) {
+                if (is_string($msg->created_at)) {
+                    $msg->created_at = \Carbon\Carbon::parse($msg->created_at);
+                }
+                return $msg;
+            });
         $unread_count  = $this->getUnreadCount();
 
         return view('requestor.request_chat', compact('req', 'chat_messages', 'unread_count'));
@@ -671,7 +686,8 @@ class RequestController extends Controller
         $message = trim($request->input('chat_message', ''));
         if ($message !== '') {
             // Deduplication guard: duplicate message submitted within 5 seconds
-            $duplicate = RequestComment::where('request_id', $id)
+            $duplicate = \Illuminate\Support\Facades\DB::table('request_comments')
+                ->where('request_id', $id)
                 ->where('sender_role', 'requestor')
                 ->where('message', $message)
                 ->where('created_at', '>=', now()->subSeconds(5))
@@ -703,11 +719,15 @@ class RequestController extends Controller
                 'sender_role' => 'requestor',
                 'sender_name' => $user_name ?: ($req->requester ?: 'Requestor'),
                 'message'     => $message,
+                'created_at'  => now(),
             ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('request_comments', 'updated_at')) {
+                $commentData['updated_at'] = now();
+            }
             if (\Illuminate\Support\Facades\Schema::hasColumn('request_comments', 'admin_seen')) {
                 $commentData['admin_seen'] = false;
             }
-            RequestComment::create($commentData);
+            \Illuminate\Support\Facades\DB::table('request_comments')->insert($commentData);
 
             // Mark post request as needing attention if column exists
             if (\Illuminate\Support\Facades\Schema::hasColumn('post_requests', 'admin_seen')) {
@@ -763,11 +783,15 @@ class RequestController extends Controller
                         'sender_role' => 'admin',
                         'sender_name' => 'NUPost Assistant (AI)',
                         'message'     => $assistantReply,
+                        'created_at'  => now()->addSecond(),
                     ];
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('request_comments', 'updated_at')) {
+                        $asstData['updated_at'] = now()->addSecond();
+                    }
                     if (\Illuminate\Support\Facades\Schema::hasColumn('request_comments', 'admin_seen')) {
                         $asstData['admin_seen'] = true;
                     }
-                    RequestComment::create($asstData);
+                    \Illuminate\Support\Facades\DB::table('request_comments')->insert($asstData);
                 }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('[NUPost] Chat assistant reply error: ' . $e->getMessage());
