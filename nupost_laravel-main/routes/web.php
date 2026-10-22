@@ -262,6 +262,10 @@ Route::post('/ai/fill-description', [\App\Http\Controllers\Requestor\RequestCont
     ->middleware('auth.nupost:requestor')
     ->name('ai.fill-description');
 
+Route::post('/ai/suggest-category', [\App\Http\Controllers\Requestor\RequestController::class, 'suggestCategory'])
+    ->middleware('auth.nupost:requestor')
+    ->name('ai.suggest-category');
+
 
 Route::post('/api/bulldog-chat', function (Illuminate\Http\Request $request) {
 

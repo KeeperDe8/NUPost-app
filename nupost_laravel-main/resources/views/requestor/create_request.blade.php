@@ -1808,7 +1808,20 @@ if (catField) {
     });
 }
 
-function autoSuggestCategory(title) {
+let aiSuggestAbortCtrl = null;
+function applyCategorySuggestion(catName, sourceLabel) {
+    if (!catField || catField.value === catName) return;
+    catField.value = catName;
+    const evt = new Event('change', { bubbles: true });
+    evt.isAutoSuggest = true;
+    catField.dispatchEvent(evt);
+    if (catSuggestBadge) {
+        catSuggestBadge.style.display = 'flex';
+        catSuggestText.textContent = `${sourceLabel}: "${catName}". (You can change this anytime)`;
+    }
+}
+
+async function autoSuggestCategory(title) {
     if (hasManualCategoryOverride || !title || title.trim().length < 3 || !catField) return;
     const lower = title.toLowerCase();
     let suggested = null;
@@ -1827,15 +1840,35 @@ function autoSuggestCategory(title) {
         suggested = 'Checking of Materials';
     }
 
-    if (suggested && catField.value !== suggested) {
-        catField.value = suggested;
-        const evt = new Event('change', { bubbles: true });
-        evt.isAutoSuggest = true;
-        catField.dispatchEvent(evt);
-        if (catSuggestBadge) {
-            catSuggestBadge.style.display = 'flex';
-            catSuggestText.textContent = `Suggested based on title: "${suggested}". (You can change this anytime)`;
-        }
+    if (suggested) {
+        applyCategorySuggestion(suggested, 'Suggested based on title');
+        return;
+    }
+
+    // Micro-Gemini AI check if title has at least 5 chars and didn't match local keywords
+    if (title.trim().length >= 5) {
+        if (aiSuggestAbortCtrl) aiSuggestAbortCtrl.abort();
+        aiSuggestAbortCtrl = new AbortController();
+        try {
+            const formData = new FormData();
+            formData.append('title', title.trim());
+            formData.append('_token', '{{ csrf_token() }}');
+
+            const res = await fetch('/ai/suggest-category', {
+                method: 'POST',
+                body: formData,
+                signal: aiSuggestAbortCtrl.signal,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success && data.category && !hasManualCategoryOverride) {
+                applyCategorySuggestion(data.category, '✦ AI Suggested');
+            }
+        } catch (_) {}
     }
 }
 
