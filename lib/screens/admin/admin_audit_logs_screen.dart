@@ -29,7 +29,6 @@ class _AdminAuditLogsScreenState extends State<AdminAuditLogsScreen> {
     {'key': 'all', 'label': 'All Activities'},
     {'key': 'requests', 'label': 'Requests'},
     {'key': 'auth', 'label': 'Sign-ins'},
-    {'key': 'system', 'label': 'System Updates'},
   ];
 
   @override

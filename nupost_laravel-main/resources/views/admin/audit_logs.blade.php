@@ -232,8 +232,6 @@ td { padding:14px 18px; font-size:13px; vertical-align:middle; color:var(--ink, 
                class="filter-tab {{ $category === 'requests' ? 'active' : '' }}">Post Requests</a>
             <a href="{{ route('admin.audit-logs', ['category' => 'auth', 'search' => $search]) }}" 
                class="filter-tab {{ $category === 'auth' ? 'active' : '' }}">Sign-ins</a>
-            <a href="{{ route('admin.audit-logs', ['category' => 'system', 'search' => $search]) }}" 
-               class="filter-tab {{ $category === 'system' ? 'active' : '' }}">System Updates</a>
         </div>
 
         <form action="{{ route('admin.audit-logs') }}" method="GET" class="search-form">
